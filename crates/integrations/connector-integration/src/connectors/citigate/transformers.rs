@@ -232,11 +232,11 @@ pub struct CitigatePaymentsRequest<T: PaymentMethodDataTypes> {
     pub email: Email,
     #[serde(rename = "Telephone", skip_serializing_if = "Option::is_none")]
     pub telephone: Option<Secret<String>>,
-    /// `R` — and "Mandatory for Country = "US"" per the field table. Always `None`:
-    /// UCS carries no billing/customer date of birth on the card Authorize path
-    /// (`date_of_birth` exists only on `MifinityData` and the airline passenger
-    /// model), so there is nothing to source it from. Declared rather than omitted
-    /// so the gap is visible here instead of silently missing from the wire format.
+    /// `R` — and "Mandatory for Country = "US"" per the field table. Still always `None`:
+    /// UCS now carries `PaymentsAuthorizeData::customer_date_of_birth` (from
+    /// `Customer.date_of_birth` on the request), but wiring Citigate to it needs the
+    /// processor's expected date shape confirmed first, so the field stays declared and
+    /// unset rather than sent in a guessed format.
     #[serde(rename = "DateOfBirth", skip_serializing_if = "Option::is_none")]
     pub date_of_birth: Option<Secret<String>>,
     #[serde(rename = "UserIP")]
@@ -290,7 +290,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let common = &router_data.resource_common_data;
 
         let amount = CitigateAmountConvertor::convert(
-            router_data.request.minor_amount,
+            router_data.request.amount.amount,
             router_data.request.currency,
         )?;
 
@@ -388,7 +388,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             country,
             email,
             telephone,
-            // No domain source on the card path — see the field's doc comment.
+            // Sourceable from `request.customer_date_of_birth` — see the field's doc comment
+            // for why it is not wired up yet.
             date_of_birth: None,
             user_ip: Secret::new(user_ip.peek().to_string()),
             success_url: return_url.clone(),
@@ -825,6 +826,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<CitigatePaymentsRespo
                 incremental_authorization_allowed: None,
                 splits: None,
                 status_code: item.http_code,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status: response.attempt_status(),
@@ -928,6 +930,7 @@ impl TryFrom<ResponseRouterData<CitigateSyncResponse, Self>> for SyncRouterData 
                 incremental_authorization_allowed: None,
                 splits: None,
                 status_code: item.http_code,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status: response.sync_attempt_status(),
@@ -981,7 +984,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         //
         // Known gap — a lone partial capture is not detectable here. The capture contract
         // (`PaymentServiceCaptureRequest`) carries `amount_to_capture` but never the amount
-        // that was originally authorised, and `PaymentFlowData::minor_amount_authorized` is
+        // that was originally authorised, and `PaymentFlowData::amount_authorized` is
         // a response-reporting field: every request-path constructor sets it to `None`. So a
         // single `Manual` capture for less than the authorisation is indistinguishable from a
         // full one at this layer, and will settle in full. Closing that gap needs the
@@ -1052,6 +1055,7 @@ impl TryFrom<ResponseRouterData<CitigateCaptureResponse, Self>> for CaptureRoute
                 incremental_authorization_allowed: None,
                 splits: None,
                 status_code: item.http_code,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -1100,7 +1104,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Same shape as Capture: the cancel body has no `Amount` field, so Citigate always
         // voids the whole authorisation. `PaymentVoidData::amount` does reach us, but there
-        // is nothing to compare it against — `minor_amount_authorized` is `None` on every
+        // is nothing to compare it against — `amount_authorized` is `None` on every
         // request path — so a partial void cannot be rejected here and will void in full.
 
         let auth = CitigateAuthType::try_from(&router_data.connector_config)?;
@@ -1159,6 +1163,7 @@ impl TryFrom<ResponseRouterData<CitigateVoidResponse, Self>> for VoidRouterData 
                 incremental_authorization_allowed: None,
                 splits: None,
                 status_code: item.http_code,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -1210,11 +1215,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let request = &router_data.request;
         let auth = CitigateAuthType::try_from(&router_data.connector_config)?;
 
-        let amount = if request.minor_refund_amount == request.minor_payment_amount {
+        let amount = if request.refund_amount.amount == request.payment_amount.amount {
             None
         } else {
             Some(CitigateAmountConvertor::convert(
-                request.minor_refund_amount,
+                request.refund_amount.amount,
                 request.currency,
             )?)
         };

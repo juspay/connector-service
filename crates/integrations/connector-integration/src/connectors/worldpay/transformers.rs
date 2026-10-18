@@ -168,7 +168,7 @@ fn fetch_payment_instrument<
                     month: Secret::new(expiry_month),
                     year: Secret::new(expiry_year),
                 },
-                card_number: RawCardNumber(raw_card_details.card_number)
+                card_number: RawCardNumber(raw_card_details.card_number.try_card_number("Worldpay")?)
             }))
         }
         PaymentMethodData::MandatePayment => {
@@ -234,9 +234,10 @@ fn fetch_payment_instrument<
             | WalletDataPaymentMethod::CashfreeRedirect(_)
             | WalletDataPaymentMethod::PayURedirect(_)
             | WalletDataPaymentMethod::EaseBuzzRedirect(_)
-            | WalletDataPaymentMethod::PaymayaRedirect(_)
+            | WalletDataPaymentMethod::PaymayaRedirect(_) | WalletDataPaymentMethod::PayhereRedirect {}
             | WalletDataPaymentMethod::QwikcilverWalletDirect(_)
-            | WalletDataPaymentMethod::Skrill(_) => {
+            | WalletDataPaymentMethod::Skrill(_)
+            | WalletDataPaymentMethod::Neteller(_) => {
                 Err(error_stack::report!(IntegrationError::NotSupported {
                     message: utils::get_unimplemented_payment_method_error_message("worldpay"),
                     connector: "Worldpay",
@@ -567,7 +568,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             instruction: Instruction {
                 settlement: get_settlement_info(
                     &item.router_data,
-                    item.router_data.request.minor_amount,
+                    item.router_data.request.amount.amount,
                 ),
                 method: PaymentMethod::try_from((
                     item.router_data.resource_common_data.payment_method,
@@ -581,7 +582,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     line1: merchant_name.expose(),
                 },
                 value: PaymentValue {
-                    amount: item.router_data.request.minor_amount,
+                    amount: item.router_data.request.amount.amount,
                     currency: item.router_data.request.currency,
                 },
                 debt_repayment: None,
@@ -735,7 +736,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     line1: merchant_name.expose(),
                 },
                 value: PaymentValue {
-                    amount: item.router_data.request.minor_amount,
+                    amount: item.router_data.request.amount.amount,
                     currency: item.router_data.request.currency,
                 },
                 debt_repayment: None,
@@ -903,7 +904,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         item: ResponseRouterData<WorldpayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Extract amount before moving item to pass for correct status determination
-        let amount = item.router_data.request.minor_amount;
+        let amount = item.router_data.request.amount.amount;
         // Use the existing ForeignTryFrom implementation
         Self::foreign_try_from((item, None, amount))
     }
@@ -925,7 +926,7 @@ impl<
         item: ResponseRouterData<WorldpayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Extract amount before moving item to pass for correct status determination
-        let amount = item.router_data.request.minor_amount;
+        let amount = item.router_data.request.amount.amount;
         // Use the existing ForeignTryFrom implementation
         Self::foreign_try_from((item, None, amount))
     }
@@ -1099,6 +1100,7 @@ impl<F, T>
                 incremental_authorization_allowed: None,
                 status_code: router_data.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             (Some(reason), _) => Err(ErrorResponse {
                 code: worldpay_status.to_string(),
@@ -1173,7 +1175,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .connector_request_reference_id
                 .replace('_', "-"),
             value: PaymentValue {
-                amount: item.router_data.request.minor_amount_to_capture,
+                amount: item.router_data.request.amount_to_capture.amount,
                 currency: item.router_data.request.currency,
             },
         })
@@ -1203,6 +1205,7 @@ impl TryFrom<ResponseRouterData<WorldpayPaymentsResponse, Self>>
             incremental_authorization_allowed: None,
             status_code: item.http_code,
             splits: None,
+            payment_account_reference: None,
         });
 
         Ok(Self {
@@ -1275,6 +1278,7 @@ impl<F> TryFrom<ResponseRouterData<WorldpayEventResponse, Self>>
             incremental_authorization_allowed: None,
             status_code: item.http_code,
             splits: None,
+            payment_account_reference: None,
         });
 
         Ok(Self {
@@ -1304,7 +1308,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
         Ok(Self {
             reference: item.router_data.request.refund_id.replace('_', "-"),
             value: PaymentValue {
-                amount: item.router_data.request.minor_refund_amount,
+                amount: item.router_data.request.refund_amount.amount,
                 currency: item.router_data.request.currency,
             },
         })
@@ -1410,6 +1414,7 @@ impl TryFrom<ResponseRouterData<WorldpayPaymentsResponse, Self>>
             incremental_authorization_allowed: None,
             status_code: item.http_code,
             splits: None,
+            payment_account_reference: None,
         });
 
         Ok(Self {
@@ -1780,7 +1785,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             value: PaymentValue {
-                amount: item.router_data.request.minor_amount,
+                amount: item.router_data.request.amount.amount,
                 currency: item.router_data.request.currency,
             },
         })

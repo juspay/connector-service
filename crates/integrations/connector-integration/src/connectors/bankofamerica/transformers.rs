@@ -571,6 +571,7 @@ fn get_payment_response(
                 incremental_authorization_allowed,
                 status_code: http_code,
                 splits: None,
+                payment_account_reference: None,
             })
         }
     }
@@ -610,7 +611,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .get_decrypted_apple_pay_payment_data_optional()
                     {
                         Some(decrypt_data) => {
-                            Self::try_from((&item, Box::new(decrypt_data.clone()), apple_pay_data))
+                            Self::try_from((&item, Box::new(decrypt_data.clone()), *apple_pay_data))
                         }
                         None => {
                             let email = item
@@ -740,8 +741,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletData::PayURedirect(_)
                 | WalletData::EaseBuzzRedirect(_)
                 | WalletData::PaymayaRedirect(_)
+                | WalletData::PayhereRedirect {}
                 | WalletData::QwikcilverWalletDirect(_)
-                | WalletData::Skrill(_) => Err(IntegrationError::NotImplemented(
+                | WalletData::Skrill(_)
+                | WalletData::Neteller(_) => Err(IntegrationError::NotImplemented(
                     domain_types::utils::get_unimplemented_payment_method_error_message(
                         "Bank of America",
                     ),
@@ -989,7 +992,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .connector
                         .amount_converter
                         .convert(
-                            item.router_data.request.minor_refund_amount,
+                            item.router_data.request.refund_amount.amount,
                             item.router_data.request.currency,
                         )
                         .change_context(IntegrationError::AmountConversionFailed {
@@ -2037,8 +2040,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletData::PayURedirect(_)
                 | WalletData::EaseBuzzRedirect(_)
                 | WalletData::PaymayaRedirect(_)
+                | WalletData::PayhereRedirect {}
                 | WalletData::QwikcilverWalletDirect(_)
-                | WalletData::Skrill(_) => Err(IntegrationError::NotImplemented(
+                | WalletData::Skrill(_)
+                | WalletData::Neteller(_) => Err(IntegrationError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("BankOfAmerica"),
                     Default::default(),
                 ))?,
@@ -2170,7 +2175,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
+                item.router_data.request.amount.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -2345,6 +2350,7 @@ impl<F> TryFrom<ResponseRouterData<BankOfAmericaSetupMandatesResponse, Self>>
                             incremental_authorization_allowed: None,
                             status_code: item.http_code,
                             splits: None,
+                            payment_account_reference: None,
                         }),
                     },
                     ..item.router_data
@@ -2546,6 +2552,7 @@ impl<F> TryFrom<ResponseRouterData<BankOfAmericaTransactionResponse, Self>>
                             incremental_authorization_allowed,
                             status_code: item.http_code,
                             splits: None,
+                            payment_account_reference: None,
                         }),
                         ..item.router_data
                     })
@@ -2563,6 +2570,7 @@ impl<F> TryFrom<ResponseRouterData<BankOfAmericaTransactionResponse, Self>>
                     incremental_authorization_allowed: None,
                     status_code: item.http_code,
                     splits: None,
+                    payment_account_reference: None,
                 }),
                 ..item.router_data
             }),
@@ -2599,7 +2607,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .connector
                         .amount_converter
                         .convert(
-                            item.router_data.request.minor_amount_to_capture,
+                            item.router_data.request.amount_to_capture.amount,
                             item.router_data.request.currency,
                         )
                         .change_context(IntegrationError::AmountConversionFailed {
@@ -2677,7 +2685,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     total_amount: item
                         .connector
                         .amount_converter
-                        .convert(amount, currency)
+                        .convert(amount.amount, currency)
                         .change_context(IntegrationError::AmountConversionFailed {
                             context: Default::default(),
                         })?,

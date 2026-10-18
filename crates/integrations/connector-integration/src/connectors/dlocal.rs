@@ -250,6 +250,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         });
 
         Ok(WebhookDetailsResponse {
+            connector_returned_payment_method_details: None,
             resource_id: Some(ResponseId::ConnectorTransactionId(body.id.clone())),
             status,
             connector_response_reference_id: body
@@ -270,7 +271,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             status_code: 200,
             response_headers: None,
             amount_captured: None,
-            minor_amount_captured: None,
             network_txn_id: None,
             payment_method_update: None,
             sender_payment_instrument_id: None,
@@ -550,7 +550,7 @@ macros::macro_connector_implementation!(
                     context: Default::default(),
                 })?;
 
-            if req.request.amount == MinorUnit::new(0) {
+            if req.request.amount.amount == MinorUnit::new(0) {
                 Ok(format!(
                     "{}enrollments/{connector_transaction_id}",
                     self.connector_base_url_payments(req),

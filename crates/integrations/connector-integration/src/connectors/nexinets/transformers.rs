@@ -234,7 +234,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             _ => None,
         };
         Ok(Self {
-            initial_amount: item.router_data.request.amount.get_amount_as_i64(),
+            initial_amount: item.router_data.request.amount.amount.get_amount_as_i64(),
             currency: item.router_data.request.currency,
             channel: NexinetsChannel::Ecom,
             product,
@@ -452,6 +452,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             ..item.router_data
         })
@@ -487,7 +488,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            initial_amount: item.router_data.request.amount_to_capture,
+            initial_amount: item
+                .router_data
+                .request
+                .amount_to_capture
+                .amount
+                .get_amount_as_i64(),
             currency: item.router_data.request.currency,
         })
     }
@@ -525,7 +531,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     context: Default::default(),
                 })?;
         Ok(Self {
-            initial_amount: amount.get_amount_as_i64(),
+            initial_amount: amount.amount.get_amount_as_i64(),
             currency,
         })
     }
@@ -583,6 +589,7 @@ impl<F, T> TryFrom<ResponseRouterData<NexinetsPaymentResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             ..item.router_data
         })
@@ -611,7 +618,12 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            initial_amount: item.router_data.request.refund_amount,
+            initial_amount: item
+                .router_data
+                .request
+                .refund_amount
+                .amount
+                .get_amount_as_i64(),
             currency: item.router_data.request.currency,
         })
     }
@@ -901,8 +913,10 @@ fn get_wallet_details<
         | WalletData::PayURedirect(_)
         | WalletData::EaseBuzzRedirect(_)
         | WalletData::PaymayaRedirect(_)
+        | WalletData::PayhereRedirect {}
         | WalletData::QwikcilverWalletDirect(_)
-        | WalletData::Skrill(_) => Err(IntegrationError::NotImplemented(
+        | WalletData::Skrill(_)
+        | WalletData::Neteller(_) => Err(IntegrationError::NotImplemented(
             utils::get_unimplemented_payment_method_error_message("nexinets"),
             Default::default(),
         ))?,
@@ -996,7 +1010,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         Ok(Self {
-            initial_amount: router_data.request.amount.get_amount_as_i64(),
+            initial_amount: router_data.request.amount.amount.get_amount_as_i64(),
             currency: router_data.request.currency,
             channel: NexinetsChannel::Ecom,
             transaction_type: NexinetsTransactionType::Preauth,
@@ -1162,7 +1176,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // the caller omits amount instead of silently defaulting.
         let initial_amount = request
             .amount
-            .or_else(|| request.minor_amount.map(|m| m.get_amount_as_i64()))
+            .as_ref()
+            .map(|money| money.amount.get_amount_as_i64())
             .ok_or(IntegrationError::MissingRequiredField {
                 field_name: "amount",
                 context: Default::default(),
@@ -1280,6 +1295,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 incremental_authorization_allowed: None,
                 status_code: http_code,
                 splits: None,
+                payment_account_reference: None,
             })
         };
 
@@ -1399,7 +1415,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         );
 
         Ok(Self {
-            initial_amount: request.amount,
+            initial_amount: request.amount.amount.get_amount_as_i64(),
             currency: request.currency,
             channel: NexinetsChannel::Ecom,
             product: NexinetsProduct::Creditcard,
@@ -1488,6 +1504,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 incremental_authorization_allowed: None,
                 status_code: http_code,
                 splits: None,
+                payment_account_reference: None,
             })
         };
 

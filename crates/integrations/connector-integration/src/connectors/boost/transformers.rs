@@ -378,7 +378,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
+                item.router_data.request.amount.amount,
                 item.router_data.request.currency,
             )
             .change_context(errors::IntegrationError::AmountConversionFailed {
@@ -388,7 +388,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     additional_context: Some(format!(
                         "Failed to convert minor_amount {} {} to Boost's FloatMajorUnit \
                          (unquoted JSON decimal, e.g. 1.00) for the Authorize request.",
-                        item.router_data.request.minor_amount.get_amount_as_i64(),
+                        item.router_data.request.amount.amount.get_amount_as_i64(),
                         item.router_data.request.currency
                     )),
                 },
@@ -550,6 +550,7 @@ impl<T: PaymentMethodDataTypes>
                 incremental_authorization_allowed: None,
                 splits: None,
                 status_code: item.http_code,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -608,6 +609,7 @@ impl TryFrom<crate::types::ResponseRouterData<BoostPaymentSyncResponse, Self>>
                 incremental_authorization_allowed: None,
                 splits: None,
                 status_code: item.http_code,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -650,7 +652,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_refund_amount,
+                item.router_data.request.refund_amount.amount,
                 item.router_data.request.currency,
             )
             .change_context(errors::IntegrationError::AmountConversionFailed {
@@ -663,7 +665,8 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                          (refund/void) request against connector_transaction_id {}.",
                         item.router_data
                             .request
-                            .minor_refund_amount
+                            .refund_amount
+                            .amount
                             .get_amount_as_i64(),
                         item.router_data.request.currency,
                         item.router_data.request.connector_transaction_id
@@ -843,17 +846,17 @@ impl BoostWebhookBody {
     ) -> WebhookDetailsResponse {
         let status = AttemptStatus::from(self.status);
 
-        let minor_amount_captured = match (self.amount, self.currency) {
+        let amount_captured = match (self.amount, self.currency) {
             (Some(amount), Some(currency)) => {
                 match FloatMajorUnitForConnector.convert_back(amount, currency) {
-                    Ok(minor_unit) => Some(minor_unit),
+                    Ok(amount) => Some(common_utils::types::Money { amount, currency }),
                     Err(err) => {
                         tracing::warn!(
                             error = ?err,
                             amount = ?amount,
                             currency = ?currency,
                             "Failed to convert Boost webhook amount to minor units; \
-                             leaving amount_captured/minor_amount_captured unset"
+                             leaving amount_captured unset"
                         );
                         None
                     }
@@ -861,10 +864,9 @@ impl BoostWebhookBody {
             }
             _ => None,
         };
-        let amount_captured =
-            minor_amount_captured.map(|minor_unit| minor_unit.get_amount_as_i64());
 
         WebhookDetailsResponse {
+            connector_returned_payment_method_details: None,
             resource_id: Some(ResponseId::ConnectorTransactionId(self.uuid.clone())),
             status,
             connector_response_reference_id: None,
@@ -880,7 +882,6 @@ impl BoostWebhookBody {
             status_code: http_code,
             response_headers: None,
             amount_captured,
-            minor_amount_captured,
             network_txn_id: None,
             payment_method_update: None,
             sender_payment_instrument_id: None,

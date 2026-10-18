@@ -55,7 +55,9 @@ pub use responses::{
 const DISPLAY_METADATA: &str = "Y";
 
 fn convert_metadata_to_request_metadata(metadata: serde_json::Value) -> Vec<RequestMetadata> {
-    let hashmap: std::collections::HashMap<Option<String>, Option<serde_json::Value>> =
+    // BTreeMap, not HashMap: this map's iteration order becomes the ORDER of the
+    // metaData ARRAY in the request body, so it must not vary per process.
+    let hashmap: std::collections::BTreeMap<Option<String>, Option<serde_json::Value>> =
         serde_json::from_str(&metadata.to_string()).unwrap_or_default();
 
     hashmap
@@ -291,7 +293,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         });
 
                 let amount = super::BluesnapAmountConvertor::convert(
-                    router_data.request.minor_amount,
+                    router_data.request.amount.amount,
                     router_data.request.currency,
                 )?;
 
@@ -386,7 +388,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         });
 
                 let amount = super::BluesnapAmountConvertor::convert(
-                    router_data.request.minor_amount,
+                    router_data.request.amount.amount,
                     router_data.request.currency,
                 )?;
 
@@ -435,7 +437,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     let account_type = map_ecp_account_type(*bank_type, *bank_holder_type)?;
 
                     let amount = super::BluesnapAmountConvertor::convert(
-                        router_data.request.minor_amount,
+                        router_data.request.amount.amount,
                         router_data.request.currency,
                     )?;
 
@@ -480,7 +482,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .unwrap_or_else(|| "de".to_string()); // Default to DE for SEPA
 
                     let amount = super::BluesnapAmountConvertor::convert(
-                        router_data.request.minor_amount,
+                        router_data.request.amount.amount,
                         router_data.request.currency,
                     )?;
 
@@ -545,7 +547,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         });
 
                 let amount = super::BluesnapAmountConvertor::convert(
-                    router_data.request.minor_amount,
+                    router_data.request.amount.amount,
                     router_data.request.currency,
                 )?;
 
@@ -608,7 +610,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         let amount = super::BluesnapAmountConvertor::convert(
-            router_data.request.minor_amount_to_capture,
+            router_data.request.amount_to_capture.amount,
             router_data.request.currency,
         )?;
 
@@ -674,7 +676,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         let amount = super::BluesnapAmountConvertor::convert(
-            router_data.request.minor_refund_amount,
+            router_data.request.refund_amount.amount,
             router_data.request.currency,
         )?;
 
@@ -722,6 +724,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BluesnapAuthorizeResp
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -759,6 +762,7 @@ impl TryFrom<ResponseRouterData<BluesnapCaptureResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -799,6 +803,7 @@ impl TryFrom<ResponseRouterData<BluesnapVoidResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -836,6 +841,7 @@ impl TryFrom<ResponseRouterData<BluesnapPSyncResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,

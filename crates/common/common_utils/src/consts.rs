@@ -34,9 +34,17 @@ pub const MIN_GLOBAL_ID_LENGTH: u8 = 32;
 /// Encoded dot separator used in prod infra config keys (e.g. `request_DOT_body`).
 pub const DOT_ENCODED: &str = "_DOT_";
 
-/// Decode `_DOT_` back to `.` in field names from prod config.
+/// Lowercase variant of [`DOT_ENCODED`] for case-insensitive matching.
+/// The `config` crate lowercases all TOML keys at parse time, so runtime
+/// values contain `_dot_` instead of `_DOT_`.
+pub const DOT_ENCODED_LOWER: &str = "_dot_";
+
+/// Decode `_DOT_` back to `.` in field names from config.
+///
+/// Lowercases the input first so that both `_DOT_` (source TOML) and `_dot_`
+/// (lowercased by the `config` crate) are matched.
 pub fn decode_dot(s: &str) -> String {
-    s.replace(DOT_ENCODED, ".")
+    s.to_lowercase().replace(DOT_ENCODED_LOWER, ".")
 }
 
 // =============================================================================
@@ -47,6 +55,12 @@ pub fn decode_dot(s: &str) -> String {
 pub const X_TENANT_ID: &str = "x-tenant-id";
 /// Header key for request ID
 pub const X_REQUEST_ID: &str = "x-request-id";
+
+/// HTTP/2 PING interval (seconds) the gRPC server sends on idle client connections.
+pub const GRPC_HTTP2_KEEPALIVE_INTERVAL_SECS: u64 = 30;
+/// Time (seconds) to wait for a PING acknowledgement before the server drops the connection.
+/// Matches the gRPC-Go default; a tighter value drops connections during ordinary load spikes.
+pub const GRPC_HTTP2_KEEPALIVE_TIMEOUT_SECS: u64 = 20;
 /// Header key for connector identification
 pub const X_CONNECTOR_NAME: &str = "x-connector";
 /// Header key for surcharge connector identification

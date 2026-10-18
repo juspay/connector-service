@@ -3,6 +3,7 @@ pub type RefundsResponseRouterData<F, T> =
 
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
+    pii::Email,
     types::MinorUnit,
 };
 
@@ -130,7 +131,7 @@ pub enum BillwerkPaymentState {
 #[derive(Debug, Serialize)]
 pub struct BillwerkCustomerObject {
     handle: Option<common_utils::id_type::CustomerId>,
-    email: Option<common_utils::pii::Email>,
+    email: Option<Email>,
     address: Option<Secret<String>>,
     address2: Option<Secret<String>>,
     city: Option<Secret<String>>,
@@ -310,7 +311,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
-            amount: item.router_data.request.amount,
+            amount: item.router_data.request.amount.amount,
             source,
             currency: item.router_data.request.currency,
             customer: BillwerkCustomerObject {
@@ -428,6 +429,7 @@ impl<F, T> TryFrom<ResponseRouterData<BillwerkPaymentsResponse, Self>>
             incremental_authorization_allowed: None,
             status_code: http_code,
             splits: None,
+            payment_account_reference: None,
         };
         Ok(Self {
             resource_common_data: PaymentFlowData {
@@ -489,7 +491,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            amount: item.router_data.request.minor_amount_to_capture,
+            amount: item.router_data.request.amount_to_capture.amount,
         })
     }
 }
@@ -507,7 +509,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            amount: item.router_data.request.minor_refund_amount,
+            amount: item.router_data.request.refund_amount.amount,
             invoice: item.router_data.request.connector_transaction_id.clone(),
             text: item.router_data.request.reason.clone(),
         })
@@ -604,7 +606,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .router_data
             .request
-            .minor_amount
+            .amount
+            .as_ref()
+            .map(|money| money.amount)
             .unwrap_or(MinorUnit::new(0));
         Ok(Self {
             handle: item
@@ -704,7 +708,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
-            amount: router_data.request.minor_amount,
+            amount: router_data.request.amount.amount,
             source,
             currency: router_data.request.currency,
             customer_handle: router_data
@@ -742,7 +746,7 @@ pub struct BillwerkSessionOrder {
 #[derive(Debug, Serialize)]
 pub struct BillwerkSessionCustomer {
     pub handle: String,
-    pub email: Option<String>,
+    pub email: Option<Email>,
     pub first_name: Option<String>,
     pub last_name: Option<String>,
 }
@@ -813,10 +817,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let customer = BillwerkSessionCustomer {
             handle: customer_handle,
-            email: customer_info
-                .customer_email
-                .as_ref()
-                .map(|e| e.peek().to_string()),
+            email: customer_info.customer_email.clone(),
             first_name: customer_info
                 .customer_name
                 .as_ref()
@@ -827,7 +828,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         Ok(Self {
             order: BillwerkSessionOrder {
                 handle,
-                amount: router_data.request.amount,
+                amount: router_data.request.amount.amount,
                 currency: router_data.request.currency,
                 customer,
             },

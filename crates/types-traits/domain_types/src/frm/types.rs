@@ -88,7 +88,7 @@ impl
 
         Ok(Self {
             merchant_id,
-            connectors,
+            connectors: connectors.into(),
             access_token,
             raw_connector_response: None,
             raw_connector_request: None,
@@ -126,7 +126,7 @@ impl
 
         Ok(Self {
             merchant_id,
-            connectors,
+            connectors: connectors.into(),
             access_token,
             raw_connector_response: None,
             raw_connector_request: None,
@@ -164,7 +164,7 @@ impl
 
         Ok(Self {
             merchant_id,
-            connectors,
+            connectors: connectors.into(),
             access_token,
             raw_connector_response: None,
             raw_connector_request: None,
@@ -519,18 +519,29 @@ impl ForeignTryFrom<grpc_api_types::frm::Customer> for CustomerInfo {
             customer_phone_number: value.phone_number,
             customer_phone_country_code: value.phone_country_code,
             salutation: value.salutation,
+            date_of_birth: None,
         })
     }
 }
 
 // ── FRM Notification ForeignTryFrom ──────────────────────────────────────────
 
-impl ForeignTryFrom<grpc_api_types::payments::FrmNotificationContent> for FrmPaymentOutcomeRequest {
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::FrmNotificationContent,
+        Option<Secret<String>>,
+    )> for FrmPaymentOutcomeRequest
+{
     type Error = IntegrationError;
 
     fn foreign_try_from(
-        value: grpc_api_types::payments::FrmNotificationContent,
+        (value, connector_feature_data): (
+            grpc_api_types::payments::FrmNotificationContent,
+            Option<Secret<String>>,
+        ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        #[allow(deprecated)] // nested field is a fallback while callers migrate to the top level
+        let connector_feature_data = connector_feature_data.or(value.connector_feature_data);
         let amount = value.amount.ok_or_else(|| {
             error_stack::report!(IntegrationError::MissingRequiredField {
                 field_name: "amount",
@@ -591,19 +602,27 @@ impl ForeignTryFrom<grpc_api_types::payments::FrmNotificationContent> for FrmPay
             merchant_transaction_id: payment_details.merchant_transaction_id,
             frm_decision,
             merchant_details: value.merchant_details.map(MerchantDetails::foreign_from),
-            connector_feature_data: value.connector_feature_data,
+            connector_feature_data,
         })
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::FrmNotificationContent>
-    for FrmRefundProcessedRequest
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::FrmNotificationContent,
+        Option<Secret<String>>,
+    )> for FrmRefundProcessedRequest
 {
     type Error = IntegrationError;
 
     fn foreign_try_from(
-        value: grpc_api_types::payments::FrmNotificationContent,
+        (value, connector_feature_data): (
+            grpc_api_types::payments::FrmNotificationContent,
+            Option<Secret<String>>,
+        ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        #[allow(deprecated)] // nested field is a fallback while callers migrate to the top level
+        let connector_feature_data = connector_feature_data.or(value.connector_feature_data);
         let amount = value.amount.ok_or_else(|| {
             error_stack::report!(IntegrationError::MissingRequiredField {
                 field_name: "amount",
@@ -665,18 +684,27 @@ impl ForeignTryFrom<grpc_api_types::payments::FrmNotificationContent>
             refund_reason: refund.refund_reason,
             frm_decision,
             merchant_details: value.merchant_details.map(MerchantDetails::foreign_from),
+            connector_feature_data,
         })
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::FrmNotificationContent>
-    for FrmChargebackReceivedRequest
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::FrmNotificationContent,
+        Option<Secret<String>>,
+    )> for FrmChargebackReceivedRequest
 {
     type Error = IntegrationError;
 
     fn foreign_try_from(
-        value: grpc_api_types::payments::FrmNotificationContent,
+        (value, connector_feature_data): (
+            grpc_api_types::payments::FrmNotificationContent,
+            Option<Secret<String>>,
+        ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        #[allow(deprecated)] // nested field is a fallback while callers migrate to the top level
+        let connector_feature_data = connector_feature_data.or(value.connector_feature_data);
         let amount = value.amount.ok_or_else(|| {
             error_stack::report!(IntegrationError::MissingRequiredField {
                 field_name: "amount",
@@ -733,8 +761,49 @@ impl ForeignTryFrom<grpc_api_types::payments::FrmNotificationContent>
             merchant_dispute_id: chargeback.merchant_dispute_id,
             chargeback_reason: chargeback.chargeback_reason,
             frm_decision,
+            connector_feature_data,
         })
     }
+}
+
+fn extract_frm_notification_content(
+    value: grpc_api_types::payments::NotifyConnectorRequest,
+) -> Result<
+    (
+        grpc_api_types::payments::FrmNotificationContent,
+        Option<Secret<String>>,
+    ),
+    error_stack::Report<IntegrationError>,
+> {
+    let connector_feature_data = value.connector_feature_data;
+    let notify_content = value.content.ok_or_else(|| {
+        error_stack::report!(IntegrationError::MissingRequiredField {
+            field_name: "content",
+            context: crate::errors::IntegrationErrorContext {
+                additional_context: Some("NotifyConnector content required".to_owned()),
+                ..Default::default()
+            },
+        })
+    })?;
+
+    let frm_content = match notify_content.content {
+        Some(grpc_api_types::payments::notify_connector_content::Content::FrmNotification(frm)) => {
+            frm
+        }
+        _ => {
+            return Err(error_stack::report!(
+                IntegrationError::MissingRequiredField {
+                    field_name: "frm_notification",
+                    context: crate::errors::IntegrationErrorContext {
+                        additional_context: Some("FRM notification content required".to_owned()),
+                        ..Default::default()
+                    },
+                }
+            ))
+        }
+    };
+
+    Ok((frm_content, connector_feature_data))
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::NotifyConnectorRequest> for FrmPaymentOutcomeRequest {
@@ -743,36 +812,8 @@ impl ForeignTryFrom<grpc_api_types::payments::NotifyConnectorRequest> for FrmPay
     fn foreign_try_from(
         value: grpc_api_types::payments::NotifyConnectorRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let notify_content = value.content.ok_or_else(|| {
-            error_stack::report!(IntegrationError::MissingRequiredField {
-                field_name: "content",
-                context: crate::errors::IntegrationErrorContext {
-                    additional_context: Some("NotifyConnector content required".to_owned()),
-                    ..Default::default()
-                },
-            })
-        })?;
-
-        let frm_content = match notify_content.content {
-            Some(grpc_api_types::payments::notify_connector_content::Content::FrmNotification(
-                frm,
-            )) => frm,
-            _ => {
-                return Err(error_stack::report!(
-                    IntegrationError::MissingRequiredField {
-                        field_name: "frm_notification",
-                        context: crate::errors::IntegrationErrorContext {
-                            additional_context: Some(
-                                "FRM notification content required".to_owned()
-                            ),
-                            ..Default::default()
-                        },
-                    }
-                ))
-            }
-        };
-
-        Self::foreign_try_from(frm_content)
+        let (frm_content, connector_feature_data) = extract_frm_notification_content(value)?;
+        Self::foreign_try_from((frm_content, connector_feature_data))
     }
 }
 
@@ -784,36 +825,8 @@ impl ForeignTryFrom<grpc_api_types::payments::NotifyConnectorRequest>
     fn foreign_try_from(
         value: grpc_api_types::payments::NotifyConnectorRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let notify_content = value.content.ok_or_else(|| {
-            error_stack::report!(IntegrationError::MissingRequiredField {
-                field_name: "content",
-                context: crate::errors::IntegrationErrorContext {
-                    additional_context: Some("NotifyConnector content required".to_owned()),
-                    ..Default::default()
-                },
-            })
-        })?;
-
-        let frm_content = match notify_content.content {
-            Some(grpc_api_types::payments::notify_connector_content::Content::FrmNotification(
-                frm,
-            )) => frm,
-            _ => {
-                return Err(error_stack::report!(
-                    IntegrationError::MissingRequiredField {
-                        field_name: "frm_notification",
-                        context: crate::errors::IntegrationErrorContext {
-                            additional_context: Some(
-                                "FRM notification content required".to_owned()
-                            ),
-                            ..Default::default()
-                        },
-                    }
-                ))
-            }
-        };
-
-        Self::foreign_try_from(frm_content)
+        let (frm_content, connector_feature_data) = extract_frm_notification_content(value)?;
+        Self::foreign_try_from((frm_content, connector_feature_data))
     }
 }
 
@@ -825,36 +838,8 @@ impl ForeignTryFrom<grpc_api_types::payments::NotifyConnectorRequest>
     fn foreign_try_from(
         value: grpc_api_types::payments::NotifyConnectorRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let notify_content = value.content.ok_or_else(|| {
-            error_stack::report!(IntegrationError::MissingRequiredField {
-                field_name: "content",
-                context: crate::errors::IntegrationErrorContext {
-                    additional_context: Some("NotifyConnector content required".to_owned()),
-                    ..Default::default()
-                },
-            })
-        })?;
-
-        let frm_content = match notify_content.content {
-            Some(grpc_api_types::payments::notify_connector_content::Content::FrmNotification(
-                frm,
-            )) => frm,
-            _ => {
-                return Err(error_stack::report!(
-                    IntegrationError::MissingRequiredField {
-                        field_name: "frm_notification",
-                        context: crate::errors::IntegrationErrorContext {
-                            additional_context: Some(
-                                "FRM notification content required".to_owned()
-                            ),
-                            ..Default::default()
-                        },
-                    }
-                ))
-            }
-        };
-
-        Self::foreign_try_from(frm_content)
+        let (frm_content, connector_feature_data) = extract_frm_notification_content(value)?;
+        Self::foreign_try_from((frm_content, connector_feature_data))
     }
 }
 

@@ -311,7 +311,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
+                item.router_data.request.amount.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -489,8 +489,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletDataPaymentMethod::PayURedirect(_)
                 | WalletDataPaymentMethod::EaseBuzzRedirect(_)
                 | WalletDataPaymentMethod::PaymayaRedirect(_)
+                | WalletDataPaymentMethod::PayhereRedirect {}
                 | WalletDataPaymentMethod::QwikcilverWalletDirect(_)
-                | WalletDataPaymentMethod::Skrill(_) => Err(IntegrationError::NotImplemented(
+                | WalletDataPaymentMethod::Skrill(_)
+                | WalletDataPaymentMethod::Neteller(_) => Err(IntegrationError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("novalnet"),
                     Default::default(),
                 )
@@ -820,6 +822,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     }),
                     ..item.router_data
                 })
@@ -923,6 +926,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     }),
                     ..item.router_data
                 })
@@ -1022,6 +1026,7 @@ impl<
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     }),
                     ..item.router_data
                 })
@@ -1106,10 +1111,14 @@ pub enum NovalnetResponsePaymentData {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct NovalnetResponseCard {
     pub card_brand: Option<Secret<String>>,
-    pub card_expiry_month: Secret<u8>,
-    pub card_expiry_year: Secret<u16>,
-    pub card_holder: Secret<String>,
-    pub card_number: Secret<String>,
+    // Wallet (apple_pay / google_pay) responses carry no full card number, so these required
+    // fields made the untagged `Card` variant fail to deserialize and silently fall through to
+    // `Paypal`, whose arm drops `scheme_tid` — losing `network_txn_id` on every wallet payment.
+    // Mirrors hyperswitch's novalnet deserialization resilience (#13214).
+    pub card_expiry_month: Option<Secret<u8>>,
+    pub card_expiry_year: Option<Secret<u16>>,
+    pub card_holder: Option<Secret<String>>,
+    pub card_number: Option<Secret<String>>,
     pub cc_3d: Option<Secret<u8>>,
     pub last_four: Option<Secret<String>>,
     pub token: Option<Secret<String>>,
@@ -1197,7 +1206,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount_to_capture,
+                item.router_data.request.amount_to_capture.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -1259,7 +1268,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_refund_amount,
+                item.router_data.request.refund_amount.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -1540,6 +1549,7 @@ impl<F> TryFrom<ResponseRouterData<NovalnetPSyncResponse, Self>>
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     }),
                     ..item.router_data
                 })
@@ -1627,6 +1637,7 @@ impl<F> TryFrom<ResponseRouterData<NovalnetCaptureResponse, Self>>
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     }),
                     ..item.router_data
                 })
@@ -1838,6 +1849,7 @@ impl<F> TryFrom<ResponseRouterData<NovalnetCancelResponse, Self>>
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     }),
                     ..item.router_data
                 })
@@ -2229,8 +2241,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletDataPaymentMethod::PayURedirect(_)
                 | WalletDataPaymentMethod::EaseBuzzRedirect(_)
                 | WalletDataPaymentMethod::PaymayaRedirect(_)
+                | WalletDataPaymentMethod::PayhereRedirect {}
                 | WalletDataPaymentMethod::QwikcilverWalletDirect(_)
-                | WalletDataPaymentMethod::Skrill(_) => Err(IntegrationError::NotImplemented(
+                | WalletDataPaymentMethod::Skrill(_)
+                | WalletDataPaymentMethod::Neteller(_) => Err(IntegrationError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("novalnet"),
                     Default::default(),
                 ))?,
@@ -2342,7 +2356,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
+                item.router_data.request.amount.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -2397,7 +2411,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     PaymentMethodData::CardDetailsForNetworkTransactionId(ref raw_card_details) => {
                         let novalnet_card =
                             NovalNetPaymentData::RawCardForNTI(NovalnetRawCardDetails {
-                                card_number: raw_card_details.card_number.clone(),
+                                card_number: raw_card_details
+                                    .card_number
+                                    .try_card_number("Novalnet")?,
                                 card_expiry_month: raw_card_details.card_exp_month.clone(),
                                 card_expiry_year: raw_card_details.card_exp_year.clone(),
                                 scheme_tid: network_transaction_id.network_transaction_id.into(),
@@ -2494,6 +2510,7 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
                         let transaction_status = response.status;
 
                         Ok(Self {
+                            connector_returned_payment_method_details: None,
                             status: common_enums::AttemptStatus::from(transaction_status),
                             resource_id: Some(
                                 transaction_id
@@ -2517,7 +2534,6 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
                             error_message: None,
                             raw_connector_response: None,
                             response_headers: None,
-                            minor_amount_captured: None,
                             amount_captured: None,
                             error_reason: None,
                             network_txn_id: response.payment_data.and_then(|payment_data| {
@@ -2533,6 +2549,7 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
                         })
                     }
                     NovalnetAPIStatus::Failure => Ok(Self {
+                        connector_returned_payment_method_details: None,
                         status: common_enums::AttemptStatus::Failure,
                         resource_id: Some(
                             transaction_id
@@ -2548,7 +2565,6 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
                         error_message: Some(notif.result.status_text),
                         raw_connector_response: None,
                         response_headers: None,
-                        minor_amount_captured: None,
                         amount_captured: None,
                         error_reason: None,
                         network_txn_id: None,
@@ -2672,7 +2688,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
+                item.router_data.request.amount.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {

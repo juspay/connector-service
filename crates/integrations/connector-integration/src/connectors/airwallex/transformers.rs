@@ -1261,7 +1261,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 // then after the challenge). Airwallex rejects a reused request_id with
                 // "duplicate_request", so use a fresh UUID like native HS (not the deterministic
                 // connector_request_reference_id).
-                let request_id = uuid::Uuid::new_v4().to_string();
+                let request_id = common_utils::fp_utils::generate_uuid_v4();
                 Ok(Self::ConfirmContinue(AirwallexCompleteRequest {
                     request_id,
                     three_ds: AirwallexThreeDsData { acs_response },
@@ -1561,6 +1561,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<AirwallexPaymentsResp
                 incremental_authorization_allowed: Some(false), // Airwallex doesn't support incremental auth
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -1638,6 +1639,7 @@ impl TryFrom<ResponseRouterData<AirwallexSyncResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -1677,16 +1679,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         // Extract capture amount from the capture data
-        let capture_amount = item.router_data.request.amount_to_capture;
+        let capture_amount = item.router_data.request.amount_to_capture.amount;
 
         // Use connector amount converter for proper amount formatting in major units (hyperswitch pattern)
         let amount = item
             .connector
             .amount_converter
-            .convert(
-                common_utils::MinorUnit::new(capture_amount),
-                item.router_data.request.currency,
-            )
+            .convert(capture_amount, item.router_data.request.currency)
             .map_err(|_| IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -1746,6 +1745,7 @@ impl TryFrom<ResponseRouterData<AirwallexCaptureResponse, Self>>
                 incremental_authorization_allowed: Some(false), // Airwallex doesn't support incremental auth
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -1815,14 +1815,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let payment_intent_id = item.router_data.request.connector_transaction_id.clone();
 
         // Extract refund amount from RefundsData and convert to major units (hyperswitch pattern)
-        let refund_amount = item.router_data.request.refund_amount;
+        let refund_amount = item.router_data.request.refund_amount.amount;
         let amount = item
             .connector
             .amount_converter
-            .convert(
-                common_utils::MinorUnit::new(refund_amount),
-                item.router_data.request.currency,
-            )
+            .convert(refund_amount, item.router_data.request.currency)
             .map_err(|_| IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -2008,6 +2005,7 @@ impl TryFrom<ResponseRouterData<AirwallexVoidResponse, Self>>
                 incremental_authorization_allowed: Some(false), // Airwallex doesn't support incremental auth
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -2203,7 +2201,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.amount,
+                item.router_data.request.amount.amount,
                 item.router_data.request.currency,
             )
             .map_err(|_| IntegrationError::RequestEncodingFailed {
@@ -2565,6 +2563,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<AirwallexSetupMandate
                 incremental_authorization_allowed: Some(false),
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -2719,6 +2718,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<AirwallexRepeatPaymen
                 incremental_authorization_allowed: Some(false),
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,

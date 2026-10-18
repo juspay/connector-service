@@ -58,7 +58,9 @@
                   "payment_data": {
                     "online_payment_cryptogram": "AAAAAA==",
                     "eci_indicator": "05"
-                  }
+                  },
+                  "merchant_token_identifier": "probe_merchant_token_id",
+                  "device_manufacturer_identifier": "040010030273"
                 }
               },
               "payment_method": {
@@ -78,7 +80,7 @@
           "webhook_url": "https://example.com/webhook"
         },
         "sample": {
-          "url": "https://sandbox.merchant.razer.com/RMS/API/Direct/1.4.0/index.php",
+          "url": "https://sandbox-payment.fiuu.com/RMS/API/Direct/1.4.0/index.php",
           "method": "Post",
           "headers": {
             "via": "HyperSwitch"
@@ -164,7 +166,7 @@
           "webhook_url": "https://example.com/webhook"
         },
         "sample": {
-          "url": "https://sandbox.merchant.razer.com/RMS/API/Direct/1.4.0/index.php",
+          "url": "https://sandbox-payment.fiuu.com/RMS/API/Direct/1.4.0/index.php",
           "method": "Post",
           "headers": {
             "via": "HyperSwitch"
@@ -189,8 +191,8 @@
         "error": "This feature is not implemented: Selected payment method through fiuu"
       },
       "Crypto": {
-        "status": "not_supported",
-        "error": "Invalid data format: payment_method. The provided payment method variant is empty or not supported by this flow"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: payment_method. The provided payment method variant is not yet supported by this flow"
       },
       "Dana": {
         "status": "not_implemented",
@@ -201,8 +203,8 @@
         "error": "This feature is not implemented: Selected payment method through fiuu"
       },
       "DuitNow": {
-        "status": "not_supported",
-        "error": "Invalid data format: payment_method. The provided payment method variant is empty or not supported by this flow"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: payment_method. The provided payment method variant is not yet supported by this flow"
       },
       "EVoucher": {
         "status": "not_implemented",
@@ -237,8 +239,8 @@
         "error": "Selected payment method through fiuu is not supported by Fiuu"
       },
       "Givex": {
-        "status": "not_supported",
-        "error": "Invalid data format: payment_method. The provided payment method variant is empty or not supported by this flow"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: payment_method. The provided payment method variant is not yet supported by this flow"
       },
       "GoPay": {
         "status": "not_implemented",
@@ -277,7 +279,7 @@
           "webhook_url": "https://example.com/webhook"
         },
         "sample": {
-          "url": "https://sandbox.merchant.razer.com/RMS/API/Direct/1.4.0/index.php",
+          "url": "https://sandbox-payment.fiuu.com/RMS/API/Direct/1.4.0/index.php",
           "method": "Post",
           "headers": {
             "via": "HyperSwitch"
@@ -362,8 +364,8 @@
         "error": "This feature is not implemented: Selected payment method through fiuu"
       },
       "MobilePayRedirect": {
-        "status": "not_supported",
-        "error": "Invalid data format: payment_method. The provided payment method variant is empty or not supported by this flow"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: payment_method. The provided payment method variant is not yet supported by this flow"
       },
       "Momo": {
         "status": "not_implemented",
@@ -407,7 +409,7 @@
           "webhook_url": "https://example.com/webhook"
         },
         "sample": {
-          "url": "https://sandbox.merchant.razer.com/RMS/API/Direct/1.4.0/index.php",
+          "url": "https://sandbox-payment.fiuu.com/RMS/API/Direct/1.4.0/index.php",
           "method": "Post",
           "headers": {
             "via": "HyperSwitch"
@@ -432,8 +434,8 @@
         "error": "Selected payment method through fiuu is not supported by Fiuu"
       },
       "OpenBankingPis": {
-        "status": "not_supported",
-        "error": "Invalid data format: payment_method. The provided payment method variant is empty or not supported by this flow"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: payment_method. The provided payment method variant is not yet supported by this flow"
       },
       "OpenBankingUk": {
         "status": "not_supported",
@@ -468,12 +470,12 @@
         "error": "This feature is not implemented: Selected payment method through fiuu"
       },
       "Paysera": {
-        "status": "not_supported",
-        "error": "Invalid data format: payment_method. The provided payment method variant is empty or not supported by this flow"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: payment_method. The provided payment method variant is not yet supported by this flow"
       },
       "Paze": {
-        "status": "not_supported",
-        "error": "Invalid data format: payment_method. The provided payment method variant is empty or not supported by this flow"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: payment_method. The provided payment method variant is not yet supported by this flow"
       },
       "PermataBankTransfer": {
         "status": "not_implemented",
@@ -579,6 +581,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through fiuu"
       },
+      "Webpay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through fiuu"
+      },
       "Wero": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through fiuu"
@@ -596,7 +602,7 @@
           }
         },
         "sample": {
-          "url": "https://sandbox.merchant.razer.com/RMS/API/capstxn/index.php",
+          "url": "https://sandbox-api.fiuu.com/RMS/API/capstxn/index.php",
           "method": "Post",
           "headers": {
             "via": "HyperSwitch"
@@ -682,7 +688,7 @@
           }
         },
         "sample": {
-          "url": "https://sandbox.merchant.razer.com/RMS/API/gate-query/index.php",
+          "url": "https://sandbox-api.fiuu.com/RMS/API/gate-query/index.php",
           "method": "Post",
           "headers": {
             "via": "HyperSwitch"
@@ -779,7 +785,7 @@
           "webhook_url": "https://example.com/webhook"
         },
         "sample": {
-          "url": "https://sandbox.merchant.razer.com/RMS/API/Direct/1.4.0/index.php",
+          "url": "https://sandbox-payment.fiuu.com/RMS/API/Direct/1.4.0/index.php",
           "method": "Post",
           "headers": {
             "via": "HyperSwitch"
@@ -817,7 +823,7 @@
           "setup_future_usage": "OFF_SESSION"
         },
         "sample": {
-          "url": "https://sandbox.merchant.razer.com/RMS/API/Direct/1.4.0/index.php",
+          "url": "https://sandbox-payment.fiuu.com/RMS/API/Direct/1.4.0/index.php",
           "method": "Post",
           "headers": {
             "via": "HyperSwitch"
@@ -858,7 +864,7 @@
           "off_session": true
         },
         "sample": {
-          "url": "https://sandbox.merchant.razer.com//RMS/API/Recurring/input_v7.php",
+          "url": "https://sandbox-payment.fiuu.com//RMS/API/Recurring/input_v7.php",
           "method": "Post",
           "headers": {
             "via": "HyperSwitch"
@@ -893,7 +899,7 @@
           "webhook_url": "https://example.com/webhook"
         },
         "sample": {
-          "url": "https://sandbox.merchant.razer.com/RMS/API/refundAPI/index.php",
+          "url": "https://sandbox-api.fiuu.com/RMS/API/refundAPI/index.php",
           "method": "Post",
           "headers": {
             "via": "HyperSwitch"
@@ -911,7 +917,7 @@
           "refund_id": "probe_refund_id_001"
         },
         "sample": {
-          "url": "https://sandbox.merchant.razer.com/RMS/API/refundAPI/q_by_txn.php",
+          "url": "https://sandbox-api.fiuu.com/RMS/API/refundAPI/q_by_txn.php",
           "method": "Post",
           "headers": {
             "via": "HyperSwitch"
@@ -959,7 +965,7 @@
           }
         },
         "sample": {
-          "url": "https://sandbox.merchant.razer.com/RMS/API/Direct/1.4.0/index.php",
+          "url": "https://sandbox-payment.fiuu.com/RMS/API/Direct/1.4.0/index.php",
           "method": "Post",
           "headers": {
             "via": "HyperSwitch"
@@ -980,12 +986,6 @@
         "error": "This feature is not implemented: Selected payment method through fiuu"
       }
     },
-    "tokenize": {
-      "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: payment_method_token flow for fiuu"
-      }
-    },
     "verify_redirect": {
       "default": {
         "status": "not_implemented"
@@ -999,7 +999,7 @@
           "connector_transaction_id": "probe_connector_txn_001"
         },
         "sample": {
-          "url": "https://sandbox.merchant.razer.com/RMS/API/refundAPI/refund.php",
+          "url": "https://sandbox-api.fiuu.com/RMS/API/refundAPI/refund.php",
           "method": "Post",
           "headers": {
             "via": "HyperSwitch"

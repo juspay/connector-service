@@ -226,8 +226,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | WalletData::PayURedirect(_)
             | WalletData::EaseBuzzRedirect(_)
             | WalletData::PaymayaRedirect(_)
+            | WalletData::PayhereRedirect {}
             | WalletData::QwikcilverWalletDirect(_)
-            | WalletData::Skrill(_) => Err(IntegrationError::NotImplemented(
+            | WalletData::Skrill(_)
+            | WalletData::Neteller(_) => Err(IntegrationError::NotImplemented(
                 "Payment method".to_string(),
                 Default::default(),
             ))?,
@@ -1063,7 +1065,7 @@ fn get_transaction_details<
         .connector
         .amount_converter
         .convert(
-            item.router_data.request.minor_amount,
+            item.router_data.request.amount.amount,
             item.router_data.request.currency,
         )
         .change_context(IntegrationError::AmountConversionFailed {
@@ -1421,6 +1423,7 @@ where
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             })
         };
 
@@ -1462,7 +1465,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount_to_capture,
+                item.router_data.request.amount_to_capture.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -1585,6 +1588,7 @@ impl<F, T> TryFrom<ResponseRouterData<AciCaptureResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             })
         };
         Ok(Self {
@@ -1650,6 +1654,7 @@ impl<F, T> TryFrom<ResponseRouterData<AciVoidResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             })
         };
         Ok(Self {
@@ -1688,7 +1693,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_refund_amount,
+                item.router_data.request.refund_amount.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -1843,6 +1848,7 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             })
         };
 
@@ -1990,7 +1996,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
+                item.router_data.request.amount.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {

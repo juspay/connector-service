@@ -547,7 +547,8 @@ impl CompiledLogFields {
         let rules = raw
             .iter()
             .filter_map(|(target_path, field_entry)| {
-                let segments: Vec<String> = target_path.split('.').map(String::from).collect();
+                let decoded_target = crate::consts::decode_dot(target_path);
+                let segments: Vec<String> = decoded_target.split('.').map(String::from).collect();
                 let root_key = segments.first()?.clone();
                 let entry = match field_entry {
                     LogFieldEntry::Source { source } => {
@@ -600,6 +601,17 @@ impl CompiledLogFieldsConfig {
     }
 }
 
+#[cfg(feature = "log-transformations")]
+const MASKED_BODY_KEY: &str = "response.masked_body";
+
+#[cfg(feature = "log-transformations")]
+pub struct ConnectorResponseForLogging<'a> {
+    pub body: &'a [u8],
+    pub content_type: Option<&'a str>,
+    pub connector_name: &'a str,
+    pub masking_keys: &'a crate::connector_response_masking::CompiledMaskingKeys,
+}
+
 /// Apply compiled log field rules to the current span's storage.
 ///
 /// For each rule:
@@ -609,17 +621,42 @@ impl CompiledLogFieldsConfig {
 /// Dotted target paths build nested JSON objects. When writing a nested object,
 /// it is deep-merged with any existing value for the same root key in the span.
 #[cfg(feature = "log-transformations")]
-pub fn apply_log_fields(compiled: &CompiledLogFields) {
-    if compiled.is_empty() {
+pub fn apply_log_fields(
+    compiled: &CompiledLogFields,
+    connector_response: Option<ConnectorResponseForLogging<'_>>,
+) {
+    if compiled.is_empty() && connector_response.is_none() {
         return;
     }
 
-    // Snapshot span storage (needed for Source entries to read current values).
-    let snapshot: Option<HashMap<Cow<'static, str>, serde_json::Value>> =
-        log_utils::Storage::with_current_span(|storage| storage.values().clone());
-
     // Build writes: for each rule, resolve the value and group by root key.
     let mut writes: HashMap<String, serde_json::Value> = HashMap::new();
+
+    if let Some(masked) = connector_response.and_then(|response| {
+        let masked = crate::connector_response_masking::mask_connector_response(
+            response.body,
+            response.content_type,
+            response.connector_name,
+            response.masking_keys,
+        )?;
+        tracing::debug!(
+            connector = response.connector_name,
+            content_type = response.content_type.unwrap_or("<none>"),
+            response_bytes = response.body.len(),
+            "built masked connector response"
+        );
+        Some(masked)
+    }) {
+        writes.insert(MASKED_BODY_KEY.to_string(), masked);
+    }
+
+    let snapshot: Option<HashMap<Cow<'static, str>, serde_json::Value>> = compiled
+        .rules
+        .iter()
+        .any(|rule| matches!(rule.entry, CompiledFieldEntry::Source(_)))
+        .then(|| log_utils::Storage::with_current_span(|storage| storage.values().clone()))
+        .flatten();
+
     for rule in &compiled.rules {
         let resolved_value = match &rule.entry {
             CompiledFieldEntry::Value(v) => v.clone(),
@@ -654,13 +691,14 @@ pub fn apply_log_fields(compiled: &CompiledLogFields) {
     // the subscriber and deadlocks when called inside `with_current_span_mut`.
     let writes: Vec<_> = writes
         .into_iter()
-        .filter(|(key, _)| {
+        .filter(|(key, value)| {
             if log_utils::Storage::is_reserved(key) {
                 tracing::warn!(
                     "Log field target key `{key}` is reserved by the logging infrastructure, skipping"
                 );
                 false
             } else {
+                tracing::info!(%value, "{key}");
                 true
             }
         })
@@ -741,6 +779,99 @@ pub fn record_json_fields_on_span(fields: Vec<(&'static str, serde_json::Value)>
     log_utils::Storage::with_current_span_mut(|storage| {
         for (key, value) in fields {
             storage.record_value(key, value);
+        }
+    });
+}
+
+/// Record `value` under `key` on the nearest span, starting from the current one and
+/// walking up to the root, that **declares** `key` as a field.
+///
+/// `tracing::Span::current().record(key, ..)` silently no-ops when the current span
+/// does not declare `key`. That bites whenever a function that records golden-log
+/// fields gets wrapped in a new child span (for example a déjà skeleton span): the
+/// writes land on the child, which never declared them, and the parent's golden line
+/// loses the fields. Span storage only flows parent -> child, never back up, so the
+/// only reliable way to reach the declaring span from inside a child is to address it
+/// by id. This helper does that, and with no child span present it degrades to the
+/// plain `record` on the current span.
+///
+/// The value goes through the subscriber's normal `record` path, so every layer
+/// (log storage, déjà execution graph, ...) sees it exactly as a direct
+/// `Span::record` on the declaring span would.
+#[cfg(feature = "logging")]
+pub fn record_on_declaring_span(key: &'static str, value: &dyn tracing::Value) {
+    use tracing_subscriber::{registry::LookupSpan, Registry};
+
+    tracing::Span::current().with_subscriber(|(id, dispatch)| {
+        let Some(registry) = dispatch.downcast_ref::<Registry>() else {
+            return;
+        };
+        // Resolve the target id first and drop the span refs before dispatching, so
+        // the layers' own `ctx.span(..)` lookups never contend with a held guard.
+        let target = registry.span(id).and_then(|current| {
+            current
+                .scope()
+                .find(|span| span.metadata().fields().field(key).is_some())
+                .map(|span| (span.id(), span.metadata()))
+        });
+        let Some((target_id, metadata)) = target else {
+            return;
+        };
+        let Some(field) = metadata.fields().field(key) else {
+            return;
+        };
+        let values = [(&field, Some(value))];
+        let value_set = metadata.fields().value_set(&values);
+        dispatch.record(&target_id, &tracing::span::Record::new(&value_set));
+    });
+}
+
+/// JSON-valued counterpart of [`record_on_declaring_span`]: like
+/// [`record_json_fields_on_span`], but each field is written into the storage of the
+/// nearest span (current or ancestor) that declares it, instead of the current span.
+///
+/// Reserved-key filtering and the per-field info event happen **before** any span
+/// lock is taken, for the same deadlock reason as [`record_json_fields_on_span`].
+#[cfg(feature = "logging")]
+pub fn record_json_fields_on_declaring_span(fields: Vec<(&'static str, serde_json::Value)>) {
+    use tracing_subscriber::{registry::LookupSpan, Registry};
+
+    let fields: Vec<_> = fields
+        .into_iter()
+        .filter(|(key, value)| {
+            if log_utils::Storage::is_reserved(key) {
+                tracing::warn!(
+                    "Span field `{key}` is reserved by the logging infrastructure, skipping"
+                );
+                false
+            } else {
+                tracing::info!(%value, "{key}");
+                true
+            }
+        })
+        .collect();
+    if fields.is_empty() {
+        return;
+    }
+
+    tracing::Span::current().with_subscriber(|(id, dispatch)| {
+        let Some(registry) = dispatch.downcast_ref::<Registry>() else {
+            return;
+        };
+        let Some(current) = registry.span(id) else {
+            return;
+        };
+        for (key, value) in fields {
+            let Some(target) = current
+                .scope()
+                .find(|span| span.metadata().fields().field(key).is_some())
+            else {
+                continue;
+            };
+            let mut extensions = target.extensions_mut();
+            if let Some(storage) = extensions.get_mut::<log_utils::Storage>() {
+                storage.record_value(key, value);
+            }
         }
     });
 }

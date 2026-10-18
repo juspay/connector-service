@@ -229,7 +229,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             },
             items: vec![FlywireItem {
                 id: CHECKOUT_SESSION_ITEM_ID,
-                amount: router_data.request.amount,
+                amount: router_data.request.amount.amount,
             }],
             payor_id,
             external_reference: payment_ref,
@@ -521,6 +521,7 @@ impl TryFrom<ResponseRouterData<FlywirePayment, Self>>
                 status_code: item.http_code,
                 network_txn_link_id: None,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -611,7 +612,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         // to enable round-trip integrity (catches prism/UCS-side tampering,
         // NOT Flywire-side settlement drift — that is caught by PSync).
         let response_integrity_object = Some(AuthoriseIntegrityObject {
-            amount: item.router_data.request.amount,
+            amount: item.router_data.request.amount.amount,
             currency: item.router_data.request.currency,
         });
 
@@ -632,6 +633,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 status_code: item.http_code,
                 network_txn_link_id: None,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 // HTTP 200 from /confirm only means Flywire accepted the form.
@@ -735,7 +737,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
         Ok(Self {
-            amount: router_data.request.minor_refund_amount,
+            amount: router_data.request.refund_amount.amount,
             external_reference: router_data
                 .resource_common_data
                 .connector_request_reference_id
@@ -1032,6 +1034,7 @@ impl TryFrom<&FlywireWebhookBody> for WebhookDetailsResponse {
     fn try_from(body: &FlywireWebhookBody) -> Result<Self, Self::Error> {
         let data = body.parse_payment_data()?;
         Ok(Self {
+            connector_returned_payment_method_details: None,
             resource_id: Some(ResponseId::ConnectorTransactionId(data.payment_id)),
             status: data.status.to_attempt_status(),
             error_code: None,
@@ -1043,7 +1046,6 @@ impl TryFrom<&FlywireWebhookBody> for WebhookDetailsResponse {
             mandate_reference: None,
             raw_connector_response: None,
             response_headers: None,
-            minor_amount_captured: None,
             amount_captured: None,
             network_txn_id: None,
             payment_method_update: None,

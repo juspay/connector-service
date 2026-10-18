@@ -1,5 +1,8 @@
 use common_enums::{AttemptStatus, RefundStatus};
-use common_utils::types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector};
+use common_utils::{
+    pii::EmailStrategy,
+    types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector},
+};
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateOrder, PSync, RSync, Refund},
     connector_types::{
@@ -131,7 +134,7 @@ pub struct EasebuzzInitiateLinkRequest {
     pub productinfo: String,
     pub firstname: String,
     pub phone: String,
-    pub email: String,
+    pub email: Secret<String, EmailStrategy>,
     pub surl: String,
     pub furl: String,
     pub hash: String,
@@ -185,7 +188,10 @@ impl
         )?;
 
         let amount_str = StringMajorUnitForConnector
-            .convert(router_data.request.amount, router_data.request.currency)
+            .convert(
+                router_data.request.amount.amount,
+                router_data.request.currency,
+            )
             .change_context(IntegrationError::AmountConversionFailed {
                 context: errors::IntegrationErrorContext {
                     suggested_action: Some(
@@ -250,7 +256,7 @@ impl
             productinfo,
             firstname,
             phone,
-            email,
+            email: Secret::new(email),
             surl: return_url.clone(),
             furl: return_url,
             hash,
@@ -514,6 +520,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     }),
                     resource_common_data: PaymentFlowData {
                         status: AttemptStatus::Pending,
@@ -603,6 +610,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -698,7 +706,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                router_data.request.minor_amount_to_capture,
+                router_data.request.amount_to_capture.amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -844,6 +852,7 @@ impl TryFrom<ResponseRouterData<EasebuzzCaptureResponse, Self>>
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     }),
                     ..router_data
                 })
@@ -964,7 +973,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                router_data.request.minor_refund_amount,
+                router_data.request.refund_amount.amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -1099,7 +1108,7 @@ pub struct EasebuzzSyncRequest {
     /// Transaction amount in major units (rupees as float string, e.g. "100.00")
     pub amount: String,
     /// Customer email (defaults to "mail@gmail.com" if empty)
-    pub email: String,
+    pub email: Secret<String, EmailStrategy>,
     /// Customer phone (defaults to "9999999999" if empty)
     pub phone: String,
     /// Merchant API key
@@ -1202,7 +1211,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(router_data.request.amount, router_data.request.currency)
+            .convert(
+                router_data.request.amount.amount,
+                router_data.request.currency,
+            )
             .change_context(IntegrationError::AmountConversionFailed {
                 context: errors::IntegrationErrorContext {
                     suggested_action: Some(
@@ -1246,7 +1258,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         Ok(Self {
             txnid,
             amount: amount_str,
-            email,
+            email: Secret::new(email),
             phone,
             key: auth.api_key,
             hash,
@@ -1302,6 +1314,7 @@ impl TryFrom<ResponseRouterData<EasebuzzSyncResponse, Self>>
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     }),
                     ..router_data
                 })

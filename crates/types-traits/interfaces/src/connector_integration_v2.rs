@@ -69,6 +69,13 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
     ) -> CustomResult<String, IntegrationError>;
 
+    /// Returns the url to record in logs. Defaults to the real url — this base
+    /// implementation deliberately masks nothing. Override it in connectors whose url
+    /// carries a secret (e.g. a token in the query string) that must not be logged.
+    fn sanitize_url_for_logs<'a>(&self, url: &'a str) -> std::borrow::Cow<'a, str> {
+        std::borrow::Cow::Borrowed(url)
+    }
+
     /// returns request body
     fn get_request_body(
         &self,
@@ -124,6 +131,13 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     }
 
     /// builds the request and returns it
+    // Déjà call-graph skeleton span: covers get_url/get_headers/get_request_body
+    // from above, so even a connector that hand-overrides those is one visible
+    // hop on the graph. Inert unless the `deja` feature is on.
+    #[cfg_attr(
+        feature = "deja",
+        tracing::instrument(name = "ucs::build_request", skip_all)
+    )]
     fn build_request_v2(
         &self,
         req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,

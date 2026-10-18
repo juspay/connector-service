@@ -327,7 +327,7 @@ impl<T: PaymentMethodDataTypes>
             } else {
                 TransactionType::Authorize
             },
-            amount: item.request.minor_amount,
+            amount: item.request.amount.amount,
             currency: item.request.currency,
             order_id: reference_id.clone(),
             payment_method,
@@ -452,6 +452,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<CeleroPaymentsRespons
                                     incremental_authorization_allowed: None,
                                     status_code: item.http_code,
                                     splits: None,
+                                    payment_account_reference: None,
                                 }),
                                 resource_common_data: PaymentFlowData {
                                     status: final_status,
@@ -666,8 +667,7 @@ impl TryFrom<ResponseRouterData<CeleroSyncResponse, Self>>
                         connector_transaction_id: Some(transaction_data.id.clone()),
                         network_decline_code: card_response
                             .and_then(|c| c.processor_response_code.clone()),
-                        network_advice_code: card_response
-                            .and_then(|c| c.avs_response_code.clone()),
+                        network_advice_code: None,
                         network_error_message: None,
                         ..Default::default()
                     }),
@@ -689,6 +689,7 @@ impl TryFrom<ResponseRouterData<CeleroSyncResponse, Self>>
             incremental_authorization_allowed: None,
             status_code: item.http_code,
             splits: None,
+            payment_account_reference: None,
         };
 
         Ok(Self {
@@ -763,7 +764,7 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
         item: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            amount: Some(item.request.minor_amount_to_capture),
+            amount: Some(item.request.amount_to_capture.amount),
             tax_amount: None,      // Not available in PaymentsCaptureData
             shipping_amount: None, // Not available in PaymentsCaptureData
             tax_exempt: None,      // Not available in PaymentsCaptureData
@@ -839,6 +840,7 @@ impl TryFrom<ResponseRouterData<CeleroCaptureResponse, Self>>
             incremental_authorization_allowed: None,
             status_code: item.http_code,
             splits: None,
+            payment_account_reference: None,
         };
 
         Ok(Self {
@@ -898,7 +900,7 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
         item: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            amount: Some(item.request.minor_refund_amount),
+            amount: Some(item.request.refund_amount.amount),
             surcharge: None, // Not available in RefundsData - could be added if needed
         })
     }
@@ -1156,6 +1158,7 @@ impl TryFrom<ResponseRouterData<CeleroVoidResponse, Self>>
             incremental_authorization_allowed: None,
             status_code: item.http_code,
             splits: None,
+            payment_account_reference: None,
         };
 
         Ok(Self {

@@ -354,7 +354,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
+                item.router_data.request.amount.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -517,6 +517,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<HipayAuthorizeRespons
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             })
         };
 
@@ -714,6 +715,7 @@ impl TryFrom<ResponseRouterData<HipayPSyncResponse, Self>>
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     }),
                     resource_common_data: PaymentFlowData {
                         status: attempt_status,
@@ -784,7 +786,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount_to_capture,
+                item.router_data.request.amount_to_capture.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -842,6 +844,7 @@ impl TryFrom<ResponseRouterData<HipayCaptureResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             })
         };
 
@@ -884,7 +887,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_refund_amount,
+                item.router_data.request.refund_amount.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -1031,6 +1034,7 @@ impl TryFrom<ResponseRouterData<HipayVoidResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             })
         };
 

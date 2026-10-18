@@ -474,7 +474,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
-            amount: router_data.request.minor_amount,
+            amount: router_data.request.amount.amount,
             trn_type,
             card_number: Secret::new(card_number_str),
             exp_month: card_data.card_exp_month.clone(),
@@ -577,6 +577,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             incremental_authorization_allowed: None,
             status_code: item.http_code,
             splits: None,
+            payment_account_reference: None,
         };
 
         Ok(Self {
@@ -625,7 +626,7 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
 
         Ok(Self {
             receipt,
-            amount: router_data.request.minor_amount_to_capture,
+            amount: router_data.request.amount_to_capture.amount,
             username: auth.username,
             password: auth.password,
         })
@@ -710,6 +711,7 @@ impl TryFrom<ResponseRouterData<BamboraapacCaptureResponse, Self>>
             incremental_authorization_allowed: None,
             status_code: item.http_code,
             splits: None,
+            payment_account_reference: None,
         };
 
         Ok(Self {
@@ -871,6 +873,7 @@ impl TryFrom<ResponseRouterData<BamboraapacSyncResponse, Self>>
             incremental_authorization_allowed: None,
             status_code: item.http_code,
             splits: None,
+            payment_account_reference: None,
         };
 
         Ok(Self {
@@ -920,7 +923,7 @@ impl
                 .connector_request_reference_id
                 .clone(),
             receipt,
-            amount: router_data.request.minor_refund_amount,
+            amount: router_data.request.refund_amount.amount,
             username: auth.username,
             password: auth.password,
         })
@@ -1387,6 +1390,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             incremental_authorization_allowed: None,
             status_code: item.http_code,
             splits: None,
+            payment_account_reference: None,
         };
 
         Ok(Self {
@@ -1470,7 +1474,7 @@ impl<
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
-            amount: router_data.request.minor_amount,
+            amount: router_data.request.amount.amount,
             trn_type,
             card_token: token,
             username: auth.username,
@@ -1564,6 +1568,7 @@ impl<
             incremental_authorization_allowed: None,
             status_code: item.http_code,
             splits: None,
+            payment_account_reference: None,
         };
 
         Ok(Self {

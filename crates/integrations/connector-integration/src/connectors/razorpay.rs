@@ -10,7 +10,6 @@ use common_utils::{
     errors::CustomResult,
     events,
     ext_traits::ByteSliceExt,
-    pii::SecretSerdeValue,
     request::{Method, RequestContent},
     types::{AmountConvertor, MinorUnit},
 };
@@ -74,6 +73,20 @@ pub struct Razorpay<T> {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Razorpay<T>
 {
+    fn validate_psync_reference_id(
+        &self,
+        data: &PaymentsSyncData,
+        _payment_flow_data: &PaymentFlowData,
+    ) -> CustomResult<(), IntegrationError> {
+        if data.encoded_data.is_some() {
+            return Ok(());
+        }
+        Err(IntegrationError::MissingRequiredField {
+            field_name: "encoded_data",
+            context: Default::default(),
+        }
+        .into())
+    }
     fn should_do_order_create(&self) -> bool {
         true
     }
@@ -302,7 +315,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> CustomResult<Option<common_utils::request::ConnectorRequestData>, IntegrationError> {
         let converted_amount = self
             .amount_converter
-            .convert(req.request.minor_amount, req.request.currency)
+            .convert(req.request.amount.amount, req.request.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -643,7 +656,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> CustomResult<Option<common_utils::request::ConnectorRequestData>, IntegrationError> {
         let converted_amount = self
             .amount_converter
-            .convert(req.request.amount, req.request.currency)
+            .convert(req.request.amount.amount, req.request.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -772,7 +785,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> CustomResult<Option<common_utils::request::ConnectorRequestData>, IntegrationError> {
         let converted_amount = self
             .amount_converter
-            .convert(req.request.amount, req.request.currency)
+            .convert(req.request.amount.amount, req.request.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -954,6 +967,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .ok_or_else(|| error_stack::report!(WebhookError::WebhookReferenceIdNotFound))?;
 
         Ok(WebhookDetailsResponse {
+            connector_returned_payment_method_details: None,
             resource_id: Some(ResponseId::ConnectorTransactionId(notif.entity.order_id)),
             status: transformers::get_razorpay_payment_webhook_status(
                 notif.entity.entity,
@@ -967,7 +981,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             status_code: 200,
             response_headers: None,
-            minor_amount_captured: None,
             amount_captured: None,
             error_reason: None,
             network_txn_id: None,
@@ -1047,7 +1060,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> CustomResult<Option<common_utils::request::ConnectorRequestData>, IntegrationError> {
         let converted_amount = self
             .amount_converter
-            .convert(req.request.minor_refund_amount, req.request.currency)
+            .convert(req.request.refund_amount.amount, req.request.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -1157,7 +1170,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> CustomResult<Option<common_utils::request::ConnectorRequestData>, IntegrationError> {
         let converted_amount = self
             .amount_converter
-            .convert(req.request.minor_amount_to_capture, req.request.currency)
+            .convert(req.request.amount_to_capture.amount, req.request.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -1227,22 +1240,6 @@ impl connector_types::ConnectorValidation for Razorpay<DefaultPCIHolder> {
         is_mandate_supported(pm_data, pm_type, mandate_supported_pmd, self.id())
     }
 
-    fn validate_psync_reference_id(
-        &self,
-        data: &PaymentsSyncData,
-        _is_three_ds: bool,
-        _status: AttemptStatus,
-        _connector_meta_data: Option<SecretSerdeValue>,
-    ) -> CustomResult<(), IntegrationError> {
-        if data.encoded_data.is_some() {
-            return Ok(());
-        }
-        Err(IntegrationError::MissingRequiredField {
-            field_name: "encoded_data",
-            context: Default::default(),
-        }
-        .into())
-    }
     fn is_webhook_source_verification_mandatory(&self) -> bool {
         false
     }

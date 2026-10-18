@@ -263,7 +263,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                router_data.request.minor_amount,
+                router_data.request.amount.amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -502,7 +502,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                router_data.request.minor_amount,
+                router_data.request.amount.amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -766,6 +766,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             incremental_authorization_allowed: None,
                             status_code: item.http_code,
                             splits: None,
+                            payment_account_reference: None,
                         }),
                         resource_common_data: PaymentFlowData {
                             status: common_enums::AttemptStatus::AuthenticationPending,
@@ -792,6 +793,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             incremental_authorization_allowed: None,
                             status_code: item.http_code,
                             splits: None,
+                            payment_account_reference: None,
                         }),
                         resource_common_data: PaymentFlowData {
                             ..item.router_data.resource_common_data
@@ -1101,6 +1103,7 @@ impl TryFrom<ResponseRouterData<PhonepeSyncResponse, Self>>
                             incremental_authorization_allowed: None,
                             status_code: item.http_code,
                             splits: None,
+                            payment_account_reference: None,
                         }),
                         resource_common_data: PaymentFlowData {
                             status,
@@ -1468,7 +1471,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                router_data.request.minor_amount_to_capture,
+                router_data.request.amount_to_capture.amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -1553,7 +1556,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                router_data.request.minor_amount_to_capture,
+                router_data.request.amount_to_capture.amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -1651,6 +1654,7 @@ impl TryFrom<ResponseRouterData<PhonepeCaptureResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             });
             Ok(router_data)
         } else {
@@ -1770,7 +1774,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                router_data.request.minor_refund_amount,
+                router_data.request.refund_amount.amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -1841,7 +1845,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                router_data.request.minor_refund_amount,
+                router_data.request.refund_amount.amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -2413,6 +2417,7 @@ impl TryFrom<ResponseRouterData<PhonepeVoidResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             });
             Ok(router_data)
         } else {

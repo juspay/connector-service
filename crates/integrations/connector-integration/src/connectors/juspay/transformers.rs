@@ -270,7 +270,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = wrapper.router_data;
 
         let amount = JuspayAmountConvertor::convert(
-            router_data.request.amount,
+            router_data.request.amount.amount,
             router_data.request.currency,
         )?;
 
@@ -687,7 +687,9 @@ fn wallet_to_juspay(
         | WalletData::Paze(_)
         | WalletData::QwikcilverWalletDirect(_)
         | WalletData::Skrill(_)
-        | WalletData::PaymayaRedirect(_) => Err(error_stack::report!(
+        | WalletData::Neteller(_)
+        | WalletData::PaymayaRedirect(_)
+        | WalletData::PayhereRedirect {} => Err(error_stack::report!(
             errors::IntegrationError::NotImplemented(
                 format!("Juspay wallet variant not supported: {wallet:?}"),
                 Default::default(),
@@ -878,6 +880,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -997,6 +1000,7 @@ impl TryFrom<ResponseRouterData<JuspayOrderStatusResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -1042,7 +1046,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let router_data = wrapper.router_data;
 
-        let amount_to_capture = router_data.request.minor_amount_to_capture;
+        let amount_to_capture = router_data.request.amount_to_capture.amount;
         let original_amount = router_data
             .resource_common_data
             .amount
@@ -1089,6 +1093,7 @@ impl TryFrom<ResponseRouterData<JuspayCaptureResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -1160,7 +1165,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = wrapper.router_data;
 
         let amount = JuspayAmountConvertor::convert(
-            router_data.request.minor_refund_amount,
+            router_data.request.refund_amount.amount,
             router_data.request.currency,
         )?;
 
@@ -1339,6 +1344,7 @@ impl TryFrom<ResponseRouterData<JuspayVoidResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,

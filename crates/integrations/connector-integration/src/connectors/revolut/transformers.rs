@@ -596,7 +596,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         });
 
         Ok(Self {
-            amount: router_data.request.amount,
+            amount: router_data.request.amount.amount,
             currency: router_data.request.currency,
             settlement_currency: None,
             description: router_data.resource_common_data.description.clone(),
@@ -666,6 +666,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 incremental_authorization_allowed: None,
                 status_code: 200,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -730,6 +731,7 @@ impl TryFrom<ResponseRouterData<RevolutOrderCreateResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: 200,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -818,7 +820,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
         Ok(Self {
-            amount: router_data.request.minor_refund_amount,
+            amount: router_data.request.refund_amount.amount,
             currency: router_data.request.currency,
             merchant_order_data: Some(RevolutMerchantOrderData {
                 reference: Some(
@@ -910,7 +912,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> Result<Self, Self::Error> {
         // Amount is optional - if not provided, Revolut captures full authorized amount
-        let amount = Some(item.router_data.request.minor_amount_to_capture);
+        let amount = Some(item.router_data.request.amount_to_capture.amount);
 
         Ok(Self { amount })
     }
@@ -961,6 +963,7 @@ impl<F> TryFrom<ResponseRouterData<RevolutOrderCreateResponse, Self>>
                 mandate_reference: None,
                 status_code: http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -1022,6 +1025,7 @@ impl TryFrom<RevolutWebhookBody> for WebhookDetailsResponse {
         let status = map_webhook_event_to_attempt_status(webhook_body.event)?;
 
         Ok(Self {
+            connector_returned_payment_method_details: None,
             resource_id: Some(ResponseId::ConnectorTransactionId(
                 webhook_body.order_id.clone(),
             )),
@@ -1035,7 +1039,6 @@ impl TryFrom<RevolutWebhookBody> for WebhookDetailsResponse {
             mandate_reference: None,
             raw_connector_response: None,
             response_headers: None,
-            minor_amount_captured: None,
             amount_captured: None,
             network_txn_id: None,
             payment_method_update: None,
@@ -1084,7 +1087,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let router_data = item.router_data;
 
         Ok(Self {
-            amount: router_data.request.amount,
+            amount: router_data.request.amount.amount,
             currency: router_data.request.currency,
         })
     }

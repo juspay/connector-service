@@ -130,11 +130,14 @@ impl TryFrom<&ConnectorSpecificConfig> for PayloadAuthType {
 
 impl PayloadAuthType {
     // The api_key / processing_account_id pair is the same across currencies in
-    // the Payload sandbox, so any currency-keyed entry yields the same id.
+    // the Payload sandbox — an unenforced invariant, so scan in currency order
+    // rather than HashMap iteration's per-process arbitrary one.
     fn primary_processing_id(&self) -> Option<Secret<String>> {
-        self.auths
-            .values()
-            .find_map(|a| a.processing_account_id.clone())
+        let mut entries: Vec<_> = self.auths.iter().collect();
+        entries.sort_by_key(|(currency, _)| currency.to_string());
+        entries
+            .into_iter()
+            .find_map(|(_, auth)| auth.processing_account_id.clone())
     }
 }
 
@@ -421,13 +424,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
         let metadata = router_data.request.metadata.clone().expose_option();
 
-        match router_data.request.amount {
-            Some(amount) if amount > 0 => Err(IntegrationError::FlowNotSupported {
-                flow: "Setup mandate with non zero amount".to_string(),
-                connector: "Payload".to_string(),
-                context: Default::default(),
+        match router_data
+            .request
+            .amount
+            .as_ref()
+            .map(|money| money.amount)
+        {
+            Some(amount) if amount > common_utils::types::MinorUnit::zero() => {
+                Err(IntegrationError::FlowNotSupported {
+                    flow: "Setup mandate with non zero amount".to_string(),
+                    connector: "Payload".to_string(),
+                    context: Default::default(),
+                }
+                .into())
             }
-            .into()),
             // NOTE: prism's SetupMandate is card-only today. If an ACH (bank
             // account) setup-mandate flow is ever added, its /payment_methods
             // request must NOT carry description/descriptor/attrs (HS PR #12710).
@@ -478,7 +488,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Convert amount using PayloadAmountConvertor
         let amount = PayloadAmountConvertor::convert(
-            router_data.request.minor_amount,
+            router_data.request.amount.amount,
             router_data.request.currency,
         )?;
 
@@ -640,7 +650,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Convert amount using PayloadAmountConvertor
         let amount = PayloadAmountConvertor::convert(
-            router_data.request.minor_amount,
+            router_data.request.amount.amount,
             router_data.request.currency,
         )?;
 
@@ -712,7 +722,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Convert amount using PayloadAmountConvertor
         let amount = PayloadAmountConvertor::convert(
-            router_data.request.minor_refund_amount,
+            router_data.request.refund_amount.amount,
             router_data.request.currency,
         )?;
 
@@ -817,6 +827,7 @@ fn handle_payment_response<F, T>(
                     incremental_authorization_allowed: None,
                     status_code: http_code,
                     splits: None,
+                    payment_account_reference: None,
                 })
             };
 
@@ -1136,7 +1147,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = item.router_data;
 
         let amount = PayloadAmountConvertor::convert(
-            router_data.request.amount,
+            router_data.request.amount.amount,
             router_data.request.currency,
         )?;
 

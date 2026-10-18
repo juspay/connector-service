@@ -77,7 +77,7 @@ pub struct CalidaWebhookResponse {
     pub payment_method_type: Option<String>,
     pub shop_name: Option<String>,
     pub sender_name: Option<String>,
-    pub sender_email: Option<String>,
+    pub sender_email: Option<Secret<String, pii::EmailStrategy>>,
     pub description: Option<String>,
     pub amount: FloatMajorUnit,
     pub currency: enums::Currency,
@@ -159,7 +159,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .connector
                     .amount_converter
                     .convert(
-                        item.router_data.request.minor_amount,
+                        item.router_data.request.amount.amount,
                         item.router_data.request.currency,
                     )
                     .change_context(IntegrationError::RequestEncodingFailed {
@@ -313,6 +313,7 @@ where
             incremental_authorization_allowed: None,
             status_code: item.http_code,
             splits: None,
+            payment_account_reference: None,
         });
 
         Ok(Self {
@@ -365,6 +366,7 @@ impl<F> TryFrom<ResponseRouterData<CalidaSyncResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: http_code,
                 splits: None,
+                payment_account_reference: None,
             })
         };
         Ok(Self {

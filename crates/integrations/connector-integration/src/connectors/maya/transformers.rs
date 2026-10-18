@@ -433,7 +433,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                router_data.request.minor_amount,
+                router_data.request.amount.amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -527,6 +527,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<MayaPaymentsResponse,
                 network_txn_link_id: None,
                 splits: None,
                 status_code: item.http_code,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -603,6 +604,7 @@ impl TryFrom<ResponseRouterData<MayaWebhookBody, Self>>
                 network_txn_link_id: None,
                 splits: None,
                 status_code: item.http_code,
+                payment_account_reference: None,
             }),
             request: PaymentsSyncData {
                 integrity_object,
@@ -644,6 +646,7 @@ impl TryFrom<ResponseRouterData<MayaVoidResponse, Self>>
                 network_txn_link_id: None,
                 splits: None,
                 status_code: item.http_code,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -744,7 +747,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
             .connector
             .amount_converter
             .convert(
-                router_data.request.minor_refund_amount,
+                router_data.request.refund_amount.amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {

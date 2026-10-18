@@ -26,7 +26,7 @@ use crate::{connectors::powertranz::PowertranzRouterData, types::ResponseRouterD
 fn powertranz_transaction_identifier(reference_id: &str) -> String {
     match uuid::Uuid::parse_str(reference_id) {
         Ok(u) => u.to_string(),
-        Err(_) => uuid::Uuid::new_v4().to_string(),
+        Err(_) => common_utils::fp_utils::generate_uuid_v4(),
     }
 }
 
@@ -357,7 +357,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(request_data.amount, request_data.currency)
+            .convert(request_data.amount.amount, request_data.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -373,7 +373,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 )?;
 
                 Ok(Self {
-                    transaction_identifier: uuid::Uuid::new_v4().to_string(),
+                    transaction_identifier: common_utils::fp_utils::generate_uuid_v4(),
                     total_amount: amount,
                     currency_code,
                     three_d_secure: Some(false),
@@ -436,10 +436,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(
-                common_utils::types::MinorUnit::new(request_data.amount_to_capture),
-                request_data.currency,
-            )
+            .convert(request_data.amount_to_capture.amount, request_data.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -525,10 +522,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(
-                common_utils::types::MinorUnit::new(request_data.refund_amount),
-                request_data.currency,
-            )
+            .convert(request_data.refund_amount.amount, request_data.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -580,6 +574,7 @@ impl<T: PaymentMethodDataTypes, F> TryFrom<ResponseRouterData<PowertranzPayments
                 incremental_authorization_allowed: None,
                 status_code: http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -623,6 +618,7 @@ impl<F> TryFrom<ResponseRouterData<PowertranzPaymentsSyncResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -666,6 +662,7 @@ impl<F> TryFrom<ResponseRouterData<PowertranzCaptureResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -709,6 +706,7 @@ impl<F> TryFrom<ResponseRouterData<PowertranzVoidResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -841,7 +839,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .amount_converter
             .convert(
                 request_data
-                    .minor_amount
+                    .amount
+                    .as_ref()
+                    .map(|money| money.amount)
                     .unwrap_or(common_utils::types::MinorUnit::new(0)),
                 request_data.currency,
             )
@@ -975,6 +975,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<PowertranzSetupMandat
                 incremental_authorization_allowed: None,
                 status_code: http_code,
                 splits: None,
+                payment_account_reference: None,
             })
         };
 
@@ -1037,7 +1038,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(request_data.minor_amount, request_data.currency)
+            .convert(request_data.amount.amount, request_data.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -1159,6 +1160,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<PowertranzRepeatPayme
                 incremental_authorization_allowed: None,
                 status_code: http_code,
                 splits: None,
+                payment_account_reference: None,
             })
         };
 

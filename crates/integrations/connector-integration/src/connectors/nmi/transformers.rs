@@ -416,7 +416,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             let converter = FloatMajorUnitForConnector;
             let amount = converter
                 .convert(
-                    router_data.request.minor_amount,
+                    router_data.request.amount.amount,
                     router_data.request.currency,
                 )
                 .change_context(IntegrationError::RequestEncodingFailed {
@@ -519,7 +519,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             let converter = FloatMajorUnitForConnector;
             let amount = converter
                 .convert(
-                    router_data.request.minor_amount,
+                    router_data.request.amount.amount,
                     router_data.request.currency,
                 )
                 .change_context(IntegrationError::RequestEncodingFailed {
@@ -759,6 +759,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<StandardResponse, Sel
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     }),
                 )
             }
@@ -916,6 +917,7 @@ impl TryFrom<ResponseRouterData<SyncResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -971,7 +973,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let converter = FloatMajorUnitForConnector;
         let amount = converter
             .convert(
-                router_data.request.minor_amount_to_capture,
+                router_data.request.amount_to_capture.amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -1014,6 +1016,7 @@ impl TryFrom<ResponseRouterData<StandardResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -1086,7 +1089,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let converter = FloatMajorUnitForConnector;
         let amount = converter
             .convert(
-                router_data.request.minor_refund_amount,
+                router_data.request.refund_amount.amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -1314,6 +1317,7 @@ impl TryFrom<ResponseRouterData<StandardResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -1501,7 +1505,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NmiVaultResponse, Sel
                     .change_context(ConnectorError::ResponseHandlingFailed {
                         context: Default::default(),
                     })?;
-                let amount_data = item.router_data.request.amount;
+                let amount_data = item.router_data.request.amount.amount;
                 let currency_data = item.router_data.request.currency.ok_or(
                     ConnectorError::ResponseHandlingFailed {
                         context: Default::default(),
@@ -1700,7 +1704,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         // Hyperswitch parity: NMI SetupMandate (Validate) only supports zero amount.
-        if router_data.request.amount.unwrap_or(0) > 0 {
+        if router_data
+            .request
+            .amount
+            .as_ref()
+            .map(|money| money.amount)
+            .is_some_and(|amount| amount > common_utils::types::MinorUnit::zero())
+        {
             return Err(IntegrationError::NotSupported {
                 message: "Setup Mandate with non zero amount".to_string(),
                 connector: "NMI",
@@ -1834,6 +1844,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     }),
                 )
             }
@@ -1958,7 +1969,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let amount = FloatMajorUnitForConnector
             .convert(
-                router_data.request.minor_amount,
+                router_data.request.amount.amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -1991,12 +2002,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             zip: common_data.get_optional_billing_zip(),
             country: common_data.get_optional_billing_country(),
             phone: common_data.get_optional_billing_phone_number(),
-            // Prefer the billing-address email (mirrors the hyperswitch reference
-            // NMI MIT path), falling back to the top-level `RepeatPaymentData.email`
-            // so the customer email is still sent when no billing email is present.
-            email: common_data
-                .get_optional_billing_email()
-                .or_else(|| router_data.request.email.clone()),
+            // hyperswitch sends only the address emails on every NMI flow, MIT included
+            // (`NmiRouterData::get_billing_details` / `get_shipping_details`). A
+            // customer-email fallback here makes UCS emit fields the direct path omits.
+            email: common_data.get_optional_billing_email(),
             shipping_details: Some(NmiShippingDetails {
                 shipping_firstname: common_data.get_optional_shipping_first_name(),
                 shipping_lastname: common_data.get_optional_shipping_last_name(),
@@ -2006,11 +2015,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 shipping_state: common_data.get_optional_shipping_state(),
                 shipping_zip: common_data.get_optional_shipping_zip(),
                 shipping_country: common_data.get_optional_shipping_country(),
-                // Same precedence for the shipping email: shipping-address email
-                // first, then the top-level `RepeatPaymentData.email` fallback.
-                shipping_email: common_data
-                    .get_optional_shipping_email()
-                    .or_else(|| router_data.request.email.clone()),
+                shipping_email: common_data.get_optional_shipping_email(),
             }),
         })
     }
@@ -2051,6 +2056,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     incremental_authorization_allowed: None,
                     status_code: item.http_code,
                     splits: None,
+                    payment_account_reference: None,
                 }),
             ),
             Response::Declined | Response::Error => (

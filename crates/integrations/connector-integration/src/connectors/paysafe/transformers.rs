@@ -259,7 +259,7 @@ fn build_gpay_decrypted_tokenization_data(
     // message_id (losing Paysafe's replay-detection guarantee) and a far-future
     // placeholder for message_expiration.
     let decrypted_token = PaysafeGooglePayDecryptedToken {
-        message_id: uuid::Uuid::new_v4().to_string(),
+        message_id: common_utils::fp_utils::generate_uuid_v4(),
         message_expiration: GOOGLE_PAY_MESSAGE_EXPIRATION_MS.to_string(),
         payment_method_details,
     };
@@ -411,7 +411,7 @@ pub(crate) fn is_paysafe_redirect_apm<T: PaymentMethodDataTypes>(
     payment_method_data: &PaymentMethodData<T>,
 ) -> bool {
     match payment_method_data {
-        PaymentMethodData::Wallet(WalletData::Skrill(_))
+        PaymentMethodData::Wallet(WalletData::Skrill(_) | WalletData::Neteller(_))
         | PaymentMethodData::BankRedirect(BankRedirectData::Interac { .. }) => true,
         PaymentMethodData::GiftCard(gift_card_data) => {
             matches!(gift_card_data.as_ref(), GiftCardData::PaySafeCard {})
@@ -515,7 +515,7 @@ where
             config: "account_id",
             context: IntegrationErrorContext {
                 additional_context: Some(
-                    "Paysafe redirect APMs need the account_id map in the connector config (skrill/interac slots) to resolve the processing account."
+                    "Paysafe redirect APMs need the account_id map in the connector config (skrill/neteller/interac slots) to resolve the processing account."
                         .to_string(),
                 ),
                 ..Default::default()
@@ -523,7 +523,7 @@ where
         })?;
 
         let currency = router_data.request.currency;
-        let amount = router_data.request.minor_amount;
+        let amount = router_data.request.amount.amount;
 
         // Resolved before the match: both the returnLinks and `threeDs.merchantUrl` need it.
         let redirect_url = router_data.resource_common_data.get_return_url().ok_or(
@@ -554,7 +554,7 @@ where
         // Cards never create a payment handle in the Authorize leg, so no card
         // account-kind (3DS vs no-3DS) is ever chosen here. This builder's sole
         // caller is gated by `is_paysafe_handle_creation_leg`, whose
-        // `is_paysafe_redirect_apm` check admits only Skrill / Interac / paysafecard.
+        // `is_paysafe_redirect_apm` check admits only Skrill / Neteller / Interac / paysafecard.
         // A card + 3DS mints its `threeDs` handle in the PreAuthenticate flow; a
         // no-3DS card mints via the PaymentMethodToken flow and settles through
         // `PaysafePaymentsRequest`, which resolves the account by `is_three_ds()`.
@@ -597,6 +597,33 @@ where
                 },
                 PaysafePaymentType::Skrill,
                 Some(skrill_account_id),
+                None,
+                None,
+                None,
+            )
+        }
+        PaymentMethodData::Wallet(WalletData::Neteller(_)) => {
+            let consumer_id = router_data
+                .resource_common_data
+                .get_optional_billing_email()
+                .ok_or(IntegrationError::MissingRequiredField {
+                    field_name: "email",
+                    context: IntegrationErrorContext {
+                        additional_context: Some(
+                            "Neteller payment handles require the billing email as the Neteller consumerId."
+                                .to_string(),
+                        ),
+                        ..Default::default()
+                    },
+                })?;
+            let neteller_account_id =
+                account_id.get_account_id(PaysafeAccountKind::Neteller, currency)?;
+            (
+                PaysafePaymentMethod::Neteller {
+                    neteller: PaysafeNeteller { consumer_id },
+                },
+                PaysafePaymentType::Neteller,
+                Some(neteller_account_id),
                 None,
                 None,
                 None,
@@ -690,7 +717,7 @@ where
         }
         _ => {
             return Err(IntegrationError::NotImplemented(
-                "Only card + 3DS, Skrill, Interac e-Transfer, and paysafecard create a payment handle in the Paysafe Authorize flow".to_string(),
+                "Only card + 3DS, Skrill, Neteller, Interac e-Transfer, and paysafecard create a payment handle in the Paysafe Authorize flow".to_string(),
                 Default::default(),
             )
             .into())
@@ -802,7 +829,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     field_name: "currency",
                     context: Default::default(),
                 })?;
-        let amount = router_data.request.amount;
+        let amount = router_data.request.amount.amount;
 
         // The ACS return must land on continue_redirection_url (…/redirect/complete/) so HS runs
         // CompleteAuthorize and settles; router_return_url only PSyncs. Falls back to return_url.
@@ -1221,7 +1248,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             })?;
 
         let currency = router_data.request.currency;
-        let amount = router_data.request.amount;
+        let amount = router_data.request.amount.amount;
 
         let (payment_method, payment_type, account_id) =
             match &router_data.request.payment_method_data {
@@ -1556,6 +1583,30 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         Some(skrill_account_id),
                     )
                 }
+                PaymentMethodData::Wallet(WalletData::Neteller(_)) => {
+                    let consumer_id = router_data
+                        .resource_common_data
+                        .get_optional_billing_email()
+                        .ok_or(IntegrationError::MissingRequiredField {
+                            field_name: "email",
+                            context: IntegrationErrorContext {
+                                additional_context: Some(
+                                    "Neteller payment handles require the billing email as the Neteller consumerId."
+                                        .to_string(),
+                                ),
+                                ..Default::default()
+                            },
+                        })?;
+                    let neteller_account_id =
+                        account_id.get_account_id(PaysafeAccountKind::Neteller, currency)?;
+                    (
+                        PaysafePaymentMethod::Neteller {
+                            neteller: PaysafeNeteller { consumer_id },
+                        },
+                        PaysafePaymentType::Neteller,
+                        Some(neteller_account_id),
+                    )
+                }
                 PaymentMethodData::BankRedirect(BankRedirectData::Interac { email, .. }) => {
                     // Interac e-Transfer consumer id: prefer the variant email, else billing
                     // email. Mandatory.
@@ -1611,7 +1662,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     }
                 },
                 _ => {
-                    return Err(IntegrationError::NotImplemented("Only card, ACH, GooglePay, ApplePay, Skrill, Interac, and Paysafecard payment methods are supported for PaymentMethodToken"
+                    return Err(IntegrationError::NotImplemented("Only card, ACH, GooglePay, ApplePay, Skrill, Neteller, Interac, and Paysafecard payment methods are supported for PaymentMethodToken"
                             .to_string() , Default::default())
                     .into())
                 }
@@ -1627,6 +1678,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 Some(enums::CaptureMethod::Automatic) | None
             )),
             PaysafePaymentType::Skrill => None,
+            PaysafePaymentType::Neteller => None,
             PaysafePaymentType::InteracEtransfer => None,
             PaysafePaymentType::Paysafecard => None,
         };
@@ -1756,7 +1808,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let amount = router_data.request.minor_amount;
+        let amount = router_data.request.amount.amount;
 
         let auth = PaysafeAuthType::try_from(&item.router_data.connector_config)?;
         let account_id = auth
@@ -2043,6 +2095,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<PaysafeAuthorizeRespo
                     incremental_authorization_allowed: None,
                     status_code: http_code,
                     splits: None,
+                    payment_account_reference: None,
                 }
             }
             // Redirect APM (v1/paymenthandles): Skrill, Interac e-Transfer, paysafecard.
@@ -2087,6 +2140,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<PaysafeAuthorizeRespo
                     incremental_authorization_allowed: None,
                     status_code: http_code,
                     splits: None,
+                    payment_account_reference: None,
                 }
             }
         };
@@ -2343,7 +2397,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let amount = router_data.request.minor_amount;
+        let amount = router_data.request.amount.amount;
 
         // Get mandate reference (carries the connector_mandate_id we issued at CIT time)
         let mandate_data = match &router_data.request.mandate_reference {
@@ -2547,6 +2601,7 @@ impl<
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             ..router_data
         })
@@ -2623,6 +2678,7 @@ impl TryFrom<ResponseRouterData<PaysafeSyncResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             ..router_data
         })
@@ -2653,7 +2709,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
-            amount: item.router_data.request.minor_amount_to_capture,
+            amount: item.router_data.request.amount_to_capture.amount,
         })
     }
 }
@@ -2685,6 +2741,7 @@ impl TryFrom<ResponseRouterData<PaysafeCaptureResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             ..router_data
         })
@@ -2729,7 +2786,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
-            amount,
+            amount: amount.amount,
         })
     }
 }
@@ -2759,6 +2816,7 @@ impl TryFrom<ResponseRouterData<PaysafeVoidResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             ..router_data
         })
@@ -2785,7 +2843,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             merchant_ref_num: item.router_data.request.refund_id.clone(),
-            amount: item.router_data.request.minor_refund_amount,
+            amount: item.router_data.request.refund_amount.amount,
         })
     }
 }

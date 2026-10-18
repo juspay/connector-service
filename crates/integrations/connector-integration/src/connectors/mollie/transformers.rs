@@ -228,7 +228,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Convert amount to string major unit format (e.g., "10.00" for $10.00)
         let converter = StringMajorUnitForConnector;
         let amount_value = converter
-            .convert(item.request.amount, item.request.currency)
+            .convert(item.request.amount.amount, item.request.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })
@@ -604,6 +604,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<MolliePaymentsRespons
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -648,6 +649,7 @@ impl TryFrom<ResponseRouterData<MolliePaymentsResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -739,7 +741,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Convert amount to string major unit format (e.g., "10.00" for $10.00)
         let converter = StringMajorUnitForConnector;
         let amount_value = converter
-            .convert(item.request.minor_refund_amount, item.request.currency)
+            .convert(item.request.refund_amount.amount, item.request.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -823,6 +825,7 @@ impl TryFrom<ResponseRouterData<MolliePaymentsResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -1027,7 +1030,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Convert amount to string major unit format (e.g., "10.00" for $10.00)
         let converter = StringMajorUnitForConnector;
         let amount_value = converter
-            .convert(item.request.minor_amount_to_capture, item.request.currency)
+            .convert(item.request.amount_to_capture.amount, item.request.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -1071,6 +1074,7 @@ impl TryFrom<ResponseRouterData<MolliePaymentsResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -1154,7 +1158,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Convert amount to string major unit format (e.g., "10.00" for $10.00)
         let converter = StringMajorUnitForConnector;
         let amount_value = converter
-            .convert(router_data.request.amount, router_data.request.currency)
+            .convert(
+                router_data.request.amount.amount,
+                router_data.request.currency,
+            )
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })

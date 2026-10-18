@@ -18,7 +18,7 @@ Use this config for all flows in this connector. Replace `YOUR_API_KEY` with you
 <details><summary>Python</summary>
 
 ```python
-from payments.generated import sdk_config_pb2, payment_pb2, payment_methods_pb2
+from payments.generated import sdk_config_pb2, payment_pb2, events_pb2, payment_methods_pb2
 
 config = sdk_config_pb2.ConnectorConfig(
     options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
@@ -27,6 +27,7 @@ config = sdk_config_pb2.ConnectorConfig(
             api_key=payment_methods_pb2.SecretString(value="YOUR_API_KEY"),
             merchant_id=payment_methods_pb2.SecretString(value="YOUR_MERCHANT_ID"),
             base_url="YOUR_BASE_URL",
+            webhook_secret=payment_methods_pb2.SecretString(value="YOUR_WEBHOOK_SECRET"),
         ),
     ),
 )
@@ -52,6 +53,7 @@ const config = ConnectorConfig.create({
             apiKey: { value: 'YOUR_API_KEY' },
             merchantId: { value: 'YOUR_MERCHANT_ID' },
             baseUrl: 'YOUR_BASE_URL',
+            webhookSecret: { value: 'YOUR_WEBHOOK_SECRET' },
         }
     },
 });
@@ -73,6 +75,7 @@ val config = ConnectorConfig.newBuilder()
                 .setApiKey(SecretString.newBuilder().setValue("YOUR_API_KEY").build())
                 .setMerchantId(SecretString.newBuilder().setValue("YOUR_MERCHANT_ID").build())
                 .setBaseUrl("YOUR_BASE_URL")
+                .setWebhookSecret(SecretString.newBuilder().setValue("YOUR_WEBHOOK_SECRET").build())
                 .build())
             .build()
     )
@@ -96,6 +99,7 @@ let config = ConnectorConfig {
                 api_key: Some(hyperswitch_masking::Secret::new("YOUR_API_KEY".to_string())),  // Authentication credential
                 merchant_id: Some(hyperswitch_masking::Secret::new("YOUR_MERCHANT_ID".to_string())),  // Authentication credential
                 base_url: Some("https://sandbox.example.com".to_string()),  // Base URL for API calls
+                webhook_secret: Some(hyperswitch_masking::Secret::new("YOUR_WEBHOOK_SECRET".to_string())),  // Authentication credential
                 ..Default::default()
             })),
         }),
@@ -124,7 +128,6 @@ let config = ConnectorConfig {
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
 | [RefundService.Get](#refundserviceget) | Refunds | `RefundServiceGetRequest` |
 | [PaymentService.VerifyRedirectResponse](#paymentserviceverifyredirectresponse) | Payments | `PaymentServiceVerifyRedirectResponseRequest` |
-| [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
 
 ### Payments
 
@@ -158,7 +161,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Revolut Pay | x |
 | MiFinity | x |
 | Bluecode | x |
-| Paze | x |
+| Paze | ⚠ |
 | Samsung Pay | x |
 | MB Way | ✓ |
 | Satispay | ✓ |
@@ -185,8 +188,9 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Poland | x |
 | Slovakia | x |
 | UK | x |
-| PIS | x |
+| PIS | ⚠ |
 | Generic | x |
+| WebPay | x |
 | Local | x |
 | iDEAL | ✓ |
 | Sofort | x |
@@ -199,7 +203,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Interac | x |
 | Bizum | x |
 | EFT | x |
-| DuitNow | x |
+| DuitNow | ⚠ |
 | ACH | x |
 | SEPA | x |
 | BACS | x |
@@ -222,9 +226,9 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | BACS | x |
 | BECS | x |
 | SEPA Guaranteed | x |
-| Crypto | x |
+| Crypto | ⚠ |
 | Reward | x |
-| Givex | x |
+| Givex | ⚠ |
 | PaySafeCard | x |
 | E-Voucher | x |
 | Boleto | x |
@@ -270,7 +274,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/ppro/ppro.py) · [TypeScript](../../examples/ppro/ppro.ts#L155) · [Kotlin](../../examples/ppro/ppro.kt#L114) · [Rust](../../examples/ppro/ppro.rs)
+**Examples:** [Python](../../examples/ppro/ppro.py) · [TypeScript](../../examples/ppro/ppro.ts#L145) · [Kotlin](../../examples/ppro/ppro.kt#L105) · [Rust](../../examples/ppro/ppro.rs)
 
 #### PaymentService.Capture
 
@@ -281,7 +285,7 @@ Finalize an authorized payment by transferring funds. Captures the authorized am
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/ppro/ppro.py) · [TypeScript](../../examples/ppro/ppro.ts#L164) · [Kotlin](../../examples/ppro/ppro.kt#L126) · [Rust](../../examples/ppro/ppro.rs)
+**Examples:** [Python](../../examples/ppro/ppro.py) · [TypeScript](../../examples/ppro/ppro.ts#L154) · [Kotlin](../../examples/ppro/ppro.kt#L117) · [Rust](../../examples/ppro/ppro.rs)
 
 #### PaymentService.Get
 
@@ -292,7 +296,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/ppro/ppro.py) · [TypeScript](../../examples/ppro/ppro.ts#L173) · [Kotlin](../../examples/ppro/ppro.kt#L136) · [Rust](../../examples/ppro/ppro.rs)
+**Examples:** [Python](../../examples/ppro/ppro.py) · [TypeScript](../../examples/ppro/ppro.ts#L163) · [Kotlin](../../examples/ppro/ppro.kt#L127) · [Rust](../../examples/ppro/ppro.rs)
 
 #### PaymentService.Refund
 
@@ -303,7 +307,7 @@ Process a partial or full refund for a captured payment. Returns funds to the cu
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/ppro/ppro.py) · [TypeScript](../../examples/ppro/ppro.ts#L209) · [Kotlin](../../examples/ppro/ppro.kt#L206) · [Rust](../../examples/ppro/ppro.rs)
+**Examples:** [Python](../../examples/ppro/ppro.py) · [TypeScript](../../examples/ppro/ppro.ts#L199) · [Kotlin](../../examples/ppro/ppro.kt#L197) · [Rust](../../examples/ppro/ppro.rs)
 
 #### PaymentService.VerifyRedirectResponse
 
@@ -314,18 +318,7 @@ Verify and process redirect responses from 3D Secure or other external flows. Va
 | **Request** | `PaymentServiceVerifyRedirectResponseRequest` |
 | **Response** | `PaymentServiceVerifyRedirectResponseResponse` |
 
-**Examples:** [Python](../../examples/ppro/ppro.py) · [TypeScript](../../examples/ppro/ppro.ts#L227) · [Kotlin](../../examples/ppro/ppro.kt#L228) · [Rust](../../examples/ppro/ppro.rs)
-
-#### PaymentService.Void
-
-Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceVoidRequest` |
-| **Response** | `PaymentServiceVoidResponse` |
-
-**Examples:** [Python](../../examples/ppro/ppro.py) · [TypeScript](../../examples/ppro/ppro.ts) · [Kotlin](../../examples/ppro/ppro.kt#L238) · [Rust](../../examples/ppro/ppro.rs)
+**Examples:** [Python](../../examples/ppro/ppro.py) · [TypeScript](../../examples/ppro/ppro.ts#L217) · [Kotlin](../../examples/ppro/ppro.kt#L219) · [Rust](../../examples/ppro/ppro.rs)
 
 ### Refunds
 
@@ -338,7 +331,7 @@ Retrieve refund status from the payment processor. Tracks refund progress throug
 | **Request** | `RefundServiceGetRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/ppro/ppro.py) · [TypeScript](../../examples/ppro/ppro.ts#L218) · [Kotlin](../../examples/ppro/ppro.kt#L216) · [Rust](../../examples/ppro/ppro.rs)
+**Examples:** [Python](../../examples/ppro/ppro.py) · [TypeScript](../../examples/ppro/ppro.ts#L208) · [Kotlin](../../examples/ppro/ppro.kt#L207) · [Rust](../../examples/ppro/ppro.rs)
 
 ### Mandates
 
@@ -351,4 +344,4 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 | **Request** | `RecurringPaymentServiceChargeRequest` |
 | **Response** | `RecurringPaymentServiceChargeResponse` |
 
-**Examples:** [Python](../../examples/ppro/ppro.py) · [TypeScript](../../examples/ppro/ppro.ts#L200) · [Kotlin](../../examples/ppro/ppro.kt#L175) · [Rust](../../examples/ppro/ppro.rs)
+**Examples:** [Python](../../examples/ppro/ppro.py) · [TypeScript](../../examples/ppro/ppro.ts#L190) · [Kotlin](../../examples/ppro/ppro.kt#L166) · [Rust](../../examples/ppro/ppro.rs)

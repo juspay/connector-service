@@ -20,7 +20,6 @@ pub const SUPPORTED_FLOWS: &[&str] = &[
     "recurring_charge",
     "refund",
     "refund_get",
-    "void",
 ];
 
 #[allow(dead_code)]
@@ -34,6 +33,9 @@ fn build_client() -> ConnectorClient {
                     "YOUR_MERCHANT_ID".to_string(),
                 )), // Authentication credential
                 base_url: Some("https://sandbox.example.com".to_string()), // Base URL for API calls
+                webhook_secret: Some(hyperswitch_masking::Secret::new(
+                    "YOUR_WEBHOOK_SECRET".to_string(),
+                )), // Authentication credential
                 ..Default::default()
             })),
         }),
@@ -107,7 +109,7 @@ pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetReq
 #[allow(dead_code)]
 pub fn build_handle_event_request() -> EventServiceHandleRequest {
     EventServiceHandleRequest {
-        merchant_event_id: Some("probe_event_001".to_string()),  // Caller-supplied correlation key, echoed in the response. Not used by UCS for processing.
+        merchant_event_id: Some("probe_event_001".to_string()),
         request_details: Some(RequestDetails {
             method: HttpMethod::Post.into(),  // HTTP method of the request (e.g., GET, POST).
             uri: Some("https://example.com/webhook".to_string()),  // URI of the request.
@@ -148,6 +150,7 @@ pub fn build_recurring_charge_request() -> RecurringPaymentServiceChargeRequest 
             payment_method: Some(payment_method::PaymentMethod::Token(
                 TokenPaymentMethodType {
                     token: Some(Secret::new("probe_pm_token".to_string())), // The token string representing a payment method.
+                    ..Default::default()
                 },
             )),
             ..Default::default()
@@ -186,19 +189,6 @@ pub fn build_refund_get_request() -> RefundServiceGetRequest {
 #[allow(dead_code)]
 pub fn build_verify_redirect_request() -> PaymentServiceVerifyRedirectResponseRequest {
     PaymentServiceVerifyRedirectResponseRequest {
-        ..Default::default()
-    }
-}
-
-pub fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidRequest {
-    PaymentServiceVoidRequest {
-        merchant_void_id: Some("probe_void_001".to_string()), // Identification.
-        connector_transaction_id: connector_transaction_id.to_string(),
-        amount: Some(Money {
-            // Amount Information.
-            minor_amount: 1000, // Amount in minor units (e.g., 1000 = $10.00).
-            currency: Currency::Usd.into(), // ISO 4217 currency code (e.g., "USD", "EUR").
-        }),
         ..Default::default()
     }
 }
@@ -306,22 +296,6 @@ pub async fn process_refund_get(
     Ok(format!("status: {:?}", response.status()))
 }
 
-// Flow: PaymentService.Void
-#[allow(dead_code)]
-pub async fn process_void(
-    client: &ConnectorClient,
-    _merchant_transaction_id: &str,
-) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client
-        .void(
-            build_void_request("probe_connector_txn_001"),
-            &HashMap::new(),
-            None,
-        )
-        .await?;
-    Ok(format!("status: {:?}", response.status()))
-}
-
 #[allow(dead_code)]
 #[tokio::main]
 async fn main() {
@@ -337,9 +311,8 @@ async fn main() {
         "process_recurring_charge" => process_recurring_charge(&client, "txn_001").await,
         "process_refund" => process_refund(&client, "txn_001").await,
         "process_refund_get" => process_refund_get(&client, "txn_001").await,
-        "process_void" => process_void(&client, "txn_001").await,
         _ => {
-            eprintln!("Unknown flow: {}. Available: process_authorize, process_capture, process_get, process_parse_event, process_recurring_charge, process_refund, process_refund_get, process_void", flow);
+            eprintln!("Unknown flow: {}. Available: process_authorize, process_capture, process_get, process_parse_event, process_recurring_charge, process_refund, process_refund_get", flow);
             return;
         }
     };

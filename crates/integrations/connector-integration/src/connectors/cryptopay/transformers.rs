@@ -72,7 +72,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentMethodData::Crypto(ref cryptodata) => {
                 let pay_currency = cryptodata.get_pay_currency()?;
                 let amount = CryptopayAmountConvertor::convert(
-                    item.router_data.request.minor_amount,
+                    item.router_data.request.amount.amount,
                     item.router_data.request.currency,
                 )?;
 
@@ -235,9 +235,10 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 incremental_authorization_allowed: None,
                 status_code: http_code,
                 splits: None,
+                payment_account_reference: None,
             })
         };
-        let amount_captured_in_minor_units = match cryptopay_response.data.price_amount {
+        let amount_captured = match cryptopay_response.data.price_amount {
             Some(ref amount) => Some(
                 CryptopayAmountConvertor::convert_back(
                     amount.clone(),
@@ -248,21 +249,21 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 )?,
             ),
             None => None,
-        };
-        match (amount_captured_in_minor_units, status) {
-            (Some(minor_amount), common_enums::AttemptStatus::Charged) => {
-                let amount_captured = Some(minor_amount.get_amount_as_i64());
-                Ok(Self {
-                    resource_common_data: PaymentFlowData {
-                        status,
-                        amount_captured,
-                        minor_amount_captured: amount_captured_in_minor_units,
-                        ..router_data.resource_common_data
-                    },
-                    response,
-                    ..router_data
-                })
-            }
+        }
+        .map(|amount| common_utils::types::Money {
+            amount,
+            currency: router_data.request.currency,
+        });
+        match (amount_captured.is_some(), status) {
+            (true, common_enums::AttemptStatus::Charged) => Ok(Self {
+                resource_common_data: PaymentFlowData {
+                    status,
+                    amount_captured,
+                    ..router_data.resource_common_data
+                },
+                response,
+                ..router_data
+            }),
             _ => Ok(Self {
                 resource_common_data: PaymentFlowData {
                     status,
@@ -384,9 +385,10 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: http_code,
                 splits: None,
+                payment_account_reference: None,
             })
         };
-        let amount_captured_in_minor_units = match cryptopay_response.data.price_amount {
+        let amount_captured = match cryptopay_response.data.price_amount {
             Some(ref amount) => Some(
                 CryptopayAmountConvertor::convert_back(
                     amount.clone(),
@@ -397,21 +399,21 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
                 )?,
             ),
             None => None,
-        };
-        match (amount_captured_in_minor_units, status) {
-            (Some(minor_amount), common_enums::AttemptStatus::Charged) => {
-                let amount_captured = Some(minor_amount.get_amount_as_i64());
-                Ok(Self {
-                    resource_common_data: PaymentFlowData {
-                        status,
-                        amount_captured,
-                        minor_amount_captured: amount_captured_in_minor_units,
-                        ..router_data.resource_common_data
-                    },
-                    response,
-                    ..router_data
-                })
-            }
+        }
+        .map(|amount| common_utils::types::Money {
+            amount,
+            currency: router_data.request.currency,
+        });
+        match (amount_captured.is_some(), status) {
+            (true, common_enums::AttemptStatus::Charged) => Ok(Self {
+                resource_common_data: PaymentFlowData {
+                    status,
+                    amount_captured,
+                    ..router_data.resource_common_data
+                },
+                response,
+                ..router_data
+            }),
             _ => Ok(Self {
                 resource_common_data: PaymentFlowData {
                     status,
@@ -431,6 +433,7 @@ impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
         let status = common_enums::AttemptStatus::from(notif.data.status.clone());
         if is_payment_failure(status) {
             Ok(Self {
+                connector_returned_payment_method_details: None,
                 error_code: Some(
                     notif
                         .data
@@ -454,56 +457,47 @@ impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
                 mandate_reference: None,
                 raw_connector_response: None,
                 response_headers: None,
-                minor_amount_captured: None,
                 amount_captured: None,
                 network_txn_id: None,
                 payment_method_update: None,
                 sender_payment_instrument_id: None,
             })
         } else {
-            let amount_captured_in_minor_units =
-                match (notif.data.price_amount, notif.data.price_currency) {
-                    (Some(amount), Some(currency)) => Some(
-                        CryptopayAmountConvertor::convert_back(amount, currency).change_context(
-                            IntegrationError::AmountConversionFailed {
-                                context: Default::default(),
-                            },
-                        )?,
-                    ),
-                    _ => None,
-                };
-            match (amount_captured_in_minor_units, status) {
-                (Some(minor_amount), common_enums::AttemptStatus::Charged) => {
-                    let amount_captured = Some(minor_amount.get_amount_as_i64());
-                    Ok(Self {
-                        amount_captured,
-                        minor_amount_captured: amount_captured_in_minor_units,
-                        status,
-                        resource_id: Some(ResponseId::ConnectorTransactionId(
-                            notif.data.id.clone(),
-                        )),
-                        error_reason: None,
-                        mandate_reference: None,
-                        status_code: 200,
-                        connector_response_reference_id: notif
-                            .data
-                            .custom_id
-                            .clone()
-                            .or_else(|| Some(notif.data.id.clone())),
-                        connector_request_reference_id: notif
-                            .data
-                            .custom_id
-                            .or(Some(notif.data.id)),
-                        error_code: None,
-                        error_message: None,
-                        raw_connector_response: None,
-                        response_headers: None,
-                        network_txn_id: None,
-                        payment_method_update: None,
-                        sender_payment_instrument_id: None,
-                    })
-                }
+            let amount_captured = match (notif.data.price_amount, notif.data.price_currency) {
+                (Some(amount), Some(currency)) => Some(common_utils::types::Money {
+                    amount: CryptopayAmountConvertor::convert_back(amount, currency)
+                        .change_context(IntegrationError::AmountConversionFailed {
+                            context: Default::default(),
+                        })?,
+                    currency,
+                }),
+                _ => None,
+            };
+            match (amount_captured.is_some(), status) {
+                (true, common_enums::AttemptStatus::Charged) => Ok(Self {
+                    connector_returned_payment_method_details: None,
+                    amount_captured,
+                    status,
+                    resource_id: Some(ResponseId::ConnectorTransactionId(notif.data.id.clone())),
+                    error_reason: None,
+                    mandate_reference: None,
+                    status_code: 200,
+                    connector_response_reference_id: notif
+                        .data
+                        .custom_id
+                        .clone()
+                        .or_else(|| Some(notif.data.id.clone())),
+                    connector_request_reference_id: notif.data.custom_id.or(Some(notif.data.id)),
+                    error_code: None,
+                    error_message: None,
+                    raw_connector_response: None,
+                    response_headers: None,
+                    network_txn_id: None,
+                    payment_method_update: None,
+                    sender_payment_instrument_id: None,
+                }),
                 _ => Ok(Self {
+                    connector_returned_payment_method_details: None,
                     status,
                     resource_id: Some(ResponseId::ConnectorTransactionId(notif.data.id.clone())),
                     mandate_reference: None,
@@ -518,7 +512,6 @@ impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
                     error_message: None,
                     raw_connector_response: None,
                     response_headers: None,
-                    minor_amount_captured: None,
                     amount_captured: None,
                     error_reason: None,
                     network_txn_id: None,

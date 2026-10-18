@@ -645,7 +645,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         let amount = TesouroAmountConvertor::convert(
-            router_data.request.minor_amount,
+            router_data.request.amount.amount,
             router_data.request.currency,
         )?;
 
@@ -935,7 +935,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         );
 
         let amount = TesouroAmountConvertor::convert(
-            router_data.request.minor_amount,
+            router_data.request.amount.amount,
             router_data.request.currency,
         )?;
 
@@ -1313,6 +1313,7 @@ fn success_transaction_response(
         incremental_authorization_allowed: None,
         status_code: http_code,
         splits: None,
+        payment_account_reference: None,
     }
 }
 

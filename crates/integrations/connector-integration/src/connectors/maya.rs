@@ -17,7 +17,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Maskable, Secret};
+use hyperswitch_masking::{ExposeInterface, Mask, Maskable, Secret};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     decode::BodyDecoding,
@@ -157,7 +157,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
-            format!("Basic {encoded}").into(),
+            format!("Basic {encoded}").into_masked(),
         )])
     }
 
@@ -324,6 +324,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let connector_request_reference_id = body.request_reference_number.clone();
 
         Ok(WebhookDetailsResponse {
+            connector_returned_payment_method_details: None,
             resource_id: Some(ResponseId::ConnectorTransactionId(body.id)),
             status,
             connector_response_reference_id: None,
@@ -336,7 +337,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             status_code: 200,
             response_headers: None,
             amount_captured: None,
-            minor_amount_captured: None,
             network_txn_id: None,
             payment_method_update: None,
             sender_payment_instrument_id: None,

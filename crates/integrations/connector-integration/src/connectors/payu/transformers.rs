@@ -326,7 +326,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                router_data.request.minor_amount,
+                router_data.request.amount.amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -497,7 +497,11 @@ pub struct PayuSyncRequest {
 pub struct PayuSyncResponse {
     pub status: Option<i32>, // 0 = error, non-zero = success
     pub msg: Option<String>, // Status message
-    pub transaction_details: Option<std::collections::HashMap<String, PayuTransactionDetail>>, // Map of txnId -> details
+    // BTreeMap, not HashMap: sync responses can carry several transactions for one
+    // txnid, and downstream code picks the FIRST — with a HashMap that pick is
+    // per-process random, so the reported transaction id and status change from
+    // run to run over identical response bytes.
+    pub transaction_details: Option<std::collections::BTreeMap<String, PayuTransactionDetail>>, // Map of txnId -> details
     pub result: Option<serde_json::Value>, // Optional result field
     #[serde(alias = "field3")]
     pub field3: Option<String>, // Additional field
@@ -984,9 +988,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response_amount = if let Some(_amount_str) = response.amount {
             // For now, we'll use the request amount since convert_back has complex requirements
             // This will be improved in the full implementation
-            item.router_data.request.minor_amount
+            item.router_data.request.amount.amount
         } else {
-            item.router_data.request.minor_amount // Use request amount if response doesn't have it
+            item.router_data.request.amount.amount // Use request amount if response doesn't have it
         };
 
         // Create integrity object for response validation
@@ -1054,6 +1058,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             incremental_authorization_allowed: None,
             status_code: item.http_code,
             splits: None,
+            payment_account_reference: None,
         };
 
         Ok(Self {
@@ -1105,6 +1110,7 @@ impl TryFrom<ResponseRouterData<PayuSyncResponse, Self>>
                             incremental_authorization_allowed: None,
                             status_code: item.http_code,
                             splits: None,
+                            payment_account_reference: None,
                         };
 
                         Ok(Self {
@@ -1300,7 +1306,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                router_data.request.minor_amount_to_capture,
+                router_data.request.amount_to_capture.amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -1416,6 +1422,7 @@ impl TryFrom<ResponseRouterData<PayuCaptureResponse, Self>>
             incremental_authorization_allowed: None,
             status_code: item.http_code,
             splits: None,
+            payment_account_reference: None,
         };
 
         Ok(Self {
@@ -1605,6 +1612,7 @@ impl TryFrom<ResponseRouterData<PayuVoidResponse, Self>>
             incremental_authorization_allowed: None,
             status_code: item.http_code,
             splits: None,
+            payment_account_reference: None,
         };
 
         Ok(Self {
@@ -1694,7 +1702,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                router_data.request.minor_refund_amount,
+                router_data.request.refund_amount.amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
