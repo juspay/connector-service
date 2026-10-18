@@ -1,3 +1,3 @@
-import { otpSuite } from "../../../support/otp.js";
+import { otpSuite } from "../../../support/otp-scenarios.js";
 
 otpSuite("checkout");

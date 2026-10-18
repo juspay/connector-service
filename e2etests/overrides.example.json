@@ -1,25 +1,14 @@
 {
   "connectors": {
-    "cybersource": {
-      "credential": "connector_1"
+    "cybersource": { "credential": "connector_1" },
+    "adyen": {
+      "connectorMetadata": { "account_name": "YOUR_OWN_SANDBOX_ACCOUNT" },
+      "profile": { "use_billing_as_payment_method_billing": true }
     }
   },
-  "merchants": {
-    "fixture_org/adyen_profile_01/adyen": {
-      "connector": {
-        "metadata": {
-          "account_name": "YOUR_SANDBOX_MERCHANT_ACCOUNT"
-        }
-      },
-      "profile": {
-        "use_billing_as_payment_method_billing": true
-      },
-      "payment": {
-        "currency": "GBP",
-        "metadata": {
-          "fixture_case": "example"
-        }
-      }
+  "variants": {
+    "adyen/gbp-metadata": {
+      "payment": { "metadata": { "fixture_case": "synthetic-order" } }
     }
   }
 }

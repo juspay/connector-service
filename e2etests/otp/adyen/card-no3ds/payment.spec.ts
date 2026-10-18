@@ -1,3 +1,4 @@
-import { otpSuite } from "../../../support/otp.js";
+import { otpSuite } from "../../../support/otp-scenarios.js";
+import { variants } from "./variants.js";
 
-otpSuite("adyen");
+otpSuite("adyen", variants);
