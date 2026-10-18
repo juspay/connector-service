@@ -19,6 +19,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.10.16.2
+
+### Bug Fixes
+
+- **connector:** [Revolv3] Update error details population logic ([#2544](https://github.com/juspay/connector-service/pull/2544)) ([`3232383`](https://github.com/juspay/connector-service/commit/323238355078fea28a241ef338bd2c24f421ac0a))
+- **framework:** Log connector HTTP transport error causes ([#2537](https://github.com/juspay/connector-service/pull/2537)) ([`014960c`](https://github.com/juspay/connector-service/commit/014960c979e18e522c2653498a2efb73bc79a318))
+
+**Full Changelog:** [`2026.10.16.1...2026.10.16.2`](https://github.com/juspay/connector-service/compare/2026.10.16.1...2026.10.16.2)
+
+- - -
+
+## 2026.10.16.1
+
+### Features
+
+- **connector:** [PayHere] add Refund and RSync flows ([#2525](https://github.com/juspay/connector-service/pull/2525)) ([`0c2ca20`](https://github.com/juspay/connector-service/commit/0c2ca20a2d4dc8965017f02260e207e249d920ea))
+
+### Bug Fixes
+
+- **connector:**
+  - Close six UCS shadow-diff parity gaps ([#2506](https://github.com/juspay/connector-service/pull/2506)) ([`1cf6e07`](https://github.com/juspay/connector-service/commit/1cf6e07f146d0ab9b4442527cecd1b276bc10466))
+  - [Nexixpay] use payment_id for the order id, matching Direct ([#2520](https://github.com/juspay/connector-service/pull/2520)) ([`19a6821`](https://github.com/juspay/connector-service/commit/19a682170e7f33479ad04d605c61f413c043ad00))
+  - [tsys_transit] remove raw request and response XML logging ([#2542](https://github.com/juspay/connector-service/pull/2542)) ([`e94e352`](https://github.com/juspay/connector-service/commit/e94e3527a5f0c4e735a57bd0be2f1a82a7c31dc9))
+
+### Build System / Dependencies
+
+- **docker:** Install sccache from its lockfile ([#2543](https://github.com/juspay/connector-service/pull/2543)) ([`e7626f5`](https://github.com/juspay/connector-service/commit/e7626f5c46fac4d146b93726b5a18c044de84935))
+
+**Full Changelog:** [`2026.10.16.0...2026.10.16.1`](https://github.com/juspay/connector-service/compare/2026.10.16.0...2026.10.16.1)
+
+- - -
+
 ## 2026.10.16.0
 
 ### Features
