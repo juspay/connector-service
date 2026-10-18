@@ -259,6 +259,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 PaymentWebhookReference {
                     connector_transaction_id: Some(body.object_reference_id()?),
                     merchant_transaction_id: merchant_reference_id,
+                    connector_preprocessing_id: None,
                 },
             )))
         } else if body.event_type.refund_status().is_some() {
