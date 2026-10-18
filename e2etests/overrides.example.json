@@ -1,0 +1,25 @@
+{
+  "connectors": {
+    "cybersource": {
+      "credential": "connector_1"
+    }
+  },
+  "merchants": {
+    "fixture_org/adyen_profile_01/adyen": {
+      "connector": {
+        "metadata": {
+          "account_name": "YOUR_SANDBOX_MERCHANT_ACCOUNT"
+        }
+      },
+      "profile": {
+        "use_billing_as_payment_method_billing": true
+      },
+      "payment": {
+        "currency": "GBP",
+        "metadata": {
+          "fixture_case": "example"
+        }
+      }
+    }
+  }
+}
