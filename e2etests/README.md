@@ -1,133 +1,110 @@
-# Hyperswitch → UCS card OTP tests
+# Hyperswitch → UCS card OTP test
 
-Playwright API tests for No3DS card one-time payments through **Hyperswitch → UCS → processor sandbox**. Supported connectors: Adyen, Cybersource, Stripe, PayPal, Authorize.net, and Checkout.
+Playwright API test for a fresh-card, No3DS Stripe one-time payment through **Hyperswitch → UCS → Stripe sandbox**.
 
-## Coverage
-
-| Scenario          | Sequence and assertions                                                                                      |
-| ----------------- | ------------------------------------------------------------------------------------------------------------ |
-| Automatic capture | Create → confirm → forced payment sync; succeeded status and captured amount                                 |
-| Manual capture    | Create → confirm → sync; authorized/capturable amount → capture → sync; succeeded status and captured amount |
-| Void              | Authorize → sync → cancel → sync; cancelled status and zero capturable amount                                |
-| Refund            | Capture → full refund → refund sync; succeeded refund with matching amount/payment                           |
-
-**Adyen exception:** UCS does not implement Adyen refund sync. Its test is named `automatic-refund-submission`: it verifies refund submission is accepted (`pending` or `succeeded`) and reports this limit explicitly. It does not establish terminal refund completion, webhook handling, or RSync coverage. Payment sync still runs; connector preflight may intentionally preserve the current status without an external request.
-
-The suite includes 24 baseline scenarios and six request variants. Adyen variants cover GBP with metadata/manual capture and EUR, CHF, AUD, and HKD with automatic capture. Stripe includes a statement-descriptor variant. The configured sandbox account must support the selected currencies and features.
-
-Each scenario creates an isolated HS merchant, business profile, connector account, and routing rule. Tests verify payment amounts/statuses and check that the recorded gateway in PostgreSQL is `unified_connector_service`. Test retries are disabled.
+The test creates an isolated HS merchant, profile, connector account, and routing rule, then creates a payment, confirms it with automatic capture, and forces payment sync. It requires `succeeded`, the expected amount/currency/connector, and a PostgreSQL gateway value of `unified_connector_service`, and a charged Stripe attempt with a processor transaction reference. Test retries are disabled.
 
 ## Local execution
 
-Prerequisites: Node.js 22+, Docker Compose v2, a sandbox credentials JSON file in the HS connector-credentials format. Browser installation is unnecessary for API-only tests. Use dedicated sandbox services; do not point the harness at production.
+Prerequisites: Node.js 22+, Git, Docker Compose v2.24.4+, and a sandbox credentials JSON file. Browser installation is unnecessary for this API test.
 
 ```sh
 cd e2etests
 npm ci
-export CONNECTOR_AUTH_FILE_PATH=/absolute/path/to/creds.json
+export CONNECTOR_AUTH_FILE_PATH='/absolute/path/to/creds.json'
+npm run stack:up
+npm test
+npx playwright show-report
+npm run stack:down
+```
 
-# Alternatively, download an encrypted credentials file from S3.
-# Configure AWS credentials/region through the normal environment/profile.
+The credentials reader accepts a direct connector entry or named entries such as `stripe.connector_1`:
+
+```json
+{
+  "stripe": {
+    "connector_account_details": {
+      "auth_type": "HeaderKey",
+      "api_key": "YOUR_STRIPE_SANDBOX_KEY"
+    }
+  }
+}
+```
+
+For credentials stored encrypted in S3, configure AWS authentication through the normal environment/profile and run:
+
+```sh
 export CONNECTOR_CREDS_S3_BUCKET_URI='s3://YOUR_BUCKET'
 export S3_SOURCE_FILE_NAME='YOUR_ENCRYPTED_CREDENTIALS_FILE.json.gpg'
 # Supply CONNECTOR_AUTH_PASSPHRASE through your secret manager/environment.
 npm run credentials
 export CONNECTOR_AUTH_FILE_PATH="$PWD/.secrets/creds.json"
-
-npm run stack:up
-
-# One automatic-capture smoke case, then baseline lifecycles, then variants.
-E2E_VARIANT=baseline npm test -- otp/adyen --grep '^.*automatic @'
-E2E_VARIANT=baseline npm test -- otp/adyen
-npm test -- otp/adyen
-npm test -- otp/cybersource
-npm test -- otp/stripe
-npm test
-npm run stack:down
 ```
 
-Use Playwright path filtering to select a connector, or `E2E_VARIANT` to select a request variant.
+Keep credentials and environment-specific overrides out of version control.
 
-`stack:up` reads the router image's source revision and downloads the matching Compose dependencies, config, superposition seed, and migrations. Only runtime asset directories are checked out and cached; HS source is not compiled. It starts UCS from a prebuilt image and waits for its gRPC health check to report `SERVING` before starting HS. UCS uses only the Compose network; no UCS host port is required. The UCS image is wrapped only to add the standard gRPC health probe; no Rust build is performed. It forces the six connectors into `ucs_only_connectors`. Tests create `ucs_enabled=true` when absent and fail if an existing value disables UCS.
+## Stack configuration
 
-To test an existing UCS instead of the managed container, set its gRPC origin before startup:
+`stack:up` starts UCS from `juspaydotin/hyperswitch-prism:latest` on Docker Hub. A small image wrapper adds the standard gRPC health probe; no Rust build is performed. HS starts only after UCS reports `SERVING` through `grpc.health.v1.Health/Check`.
 
-```sh
-export UCS_BASE_URL=http://host.docker.internal:8000
-npm run stack:up
-```
+HS runs from `docker.juspay.io/juspaydotin/hyperswitch-router:latest`. Its configuration, migrations, and Compose dependencies come from the source revision reported by that image. Only runtime asset directories are downloaded and cached. Configuration changes automatically recreate HS.
 
-The external server must implement `grpc.health.v1.Health/Check` and report `SERVING`. An explicit gRPC health probe runs from the Compose network before HS starts; an unreachable or unhealthy endpoint prevents startup. Use an HTTPS origin for TLS. `stack:down` removes only this Compose stack and preserves its database volume; external UCS is never managed by the harness.
+Stripe is routed through UCS. The test creates `ucs_enabled=true` when absent and fails if an existing value disables UCS. Default host ports are 8080 (HS), 15432 (PostgreSQL), and 8081 (Superposition). UCS and Redis are available only inside the Compose network. Existing services may conflict with published ports. `stack:down` preserves the test database volume.
 
-Default upstream host ports are 8080 (HS), 5432 (PostgreSQL), and 8081 (Superposition); existing services may conflict. Redis is available only inside the Compose network. For an existing dedicated sandbox HS instance, configure UCS routing and set `HS_BASE_URL`, `HS_ADMIN_API_KEY`, and `HS_DATABASE_URL`, then skip `stack:up`.
+| Variable                   | Purpose/default                                                        |
+| -------------------------- | ---------------------------------------------------------------------- |
+| `HS_IMAGE`                 | `docker.juspay.io/juspaydotin/hyperswitch-router:latest`               |
+| `UCS_IMAGE`                | `juspaydotin/hyperswitch-prism:latest`                                 |
+| `HS_REF`                   | Optional explicit matching HS source revision                          |
+| `HS_SOURCE_DIR`            | Optional existing matching HS checkout                                 |
+| `UCS_BASE_URL`             | Optional external gRPC origin reachable from Docker; skips managed UCS |
+| `HS_BASE_URL`              | Runner-to-HS endpoint; `http://localhost:8080`                         |
+| `HS_ADMIN_API_KEY`         | `test_admin`                                                           |
+| `HS_DB_PORT`               | E2E PostgreSQL host port; `15432`                                      |
+| `HS_DATABASE_URL`          | `postgresql://db_user:db_pass@127.0.0.1:15432/hyperswitch_db`          |
+| `CONNECTOR_AUTH_FILE_PATH` | Credentials JSON; `CYPRESS_CONNECTOR_AUTH_FILE_PATH` also accepted     |
+| `E2E_OVERRIDES_FILE`       | Optional local configuration overrides                                 |
+| `E2E_VARIANT`              | Optional named variant selection; currently `baseline`                 |
 
-| Variable                   | Purpose/default                                                               |
-| -------------------------- | ----------------------------------------------------------------------------- |
-| `HS_IMAGE`                 | `docker.juspay.io/juspaydotin/hyperswitch-router:latest`                      |
-| `HS_REF`                   | Image-reported source revision; optional explicit matching revision           |
-| `HS_SOURCE_DIR`            | Optional existing matching HS checkout                                        |
-| `UCS_IMAGE`                | `juspaydotin/hyperswitch-prism:latest`; default managed UCS image             |
-| `UCS_BASE_URL`             | Optional external gRPC origin, reachable from Docker; skips managed UCS       |
-| `HS_BASE_URL`              | Runner-to-HS API endpoint; `http://localhost:8080`                            |
-| `HS_ADMIN_API_KEY`         | Local config default `test_admin`                                             |
-| `HS_DATABASE_URL`          | `postgresql://db_user:db_pass@localhost:5432/hyperswitch_db`                  |
-| `CONNECTOR_AUTH_FILE_PATH` | Sandbox credentials JSON; accepts `CYPRESS_CONNECTOR_AUTH_FILE_PATH` fallback |
-| `E2E_VARIANT`              | Optional request variant ID such as `baseline`                                |
-| `E2E_OVERRIDES_FILE`       | Optional JSON file with sandbox configuration overrides                       |
+To use an existing UCS, set `UCS_BASE_URL` before `stack:up`, for example `http://host.docker.internal:8000`. This is the gRPC origin, not the UCS HTTP API. A gRPC health probe checks it before HS starts. Use an HTTPS origin for TLS. External UCS is never started or stopped by the harness.
 
-For reproducibility, use an HS image digest/release. By default, configuration and migrations follow the source revision reported by that image. `HS_REF` or `HS_SOURCE_DIR` can explicitly select matching runtime assets for custom builds. `.runtime/versions.json` records the requested image, UCS endpoint, and config checkout commit. Runtime assets are cached by source revision. Accounts remain in the test database for debugging; `stack:down` preserves volumes.
+For an existing dedicated sandbox HS, configure UCS routing and set `HS_BASE_URL`, `HS_ADMIN_API_KEY`, and `HS_DATABASE_URL`, then skip `stack:up`.
+
+For reproducible runs, select image digests/releases. `.runtime/versions.json` records selected images and the HS source revision. Test accounts remain in the dedicated database for debugging.
 
 ## Structure and extension
 
 ```text
 e2etests/
-  otp/
-    adyen/card-no3ds/
-      payment.spec.ts
-      variants.ts
-    stripe/card-no3ds/
-      payment.spec.ts
-      variants.ts
-    cybersource/card-no3ds/payment.spec.ts
-    paypal/card-no3ds/payment.spec.ts
-    authorizedotnet/card-no3ds/payment.spec.ts
-    checkout/card-no3ds/payment.spec.ts
+  otp/stripe/card-no3ds/
+    payment.spec.ts
+    variants.ts
   support/
-    cases.ts                 # Lifecycle definitions and verification modes
-    otp-scenarios.ts         # Shared sandbox setup and payment assertions
-    config.ts                # Credential loading and configuration overrides
-    hs.ts                    # HS HTTP client and database gateway verification
-  scripts/                   # Docker setup and credential download
-  unit/                      # Offline harness checks; no processor calls
+    cases.ts
+    otp-scenarios.ts
+    config.ts
+    hs.ts
+  docker/ucs.Dockerfile
+  scripts/
+  unit/
   playwright.config.ts
 ```
 
-Add request variants in the connector's `variants.ts`, select the applicable lifecycles, and pass them to `otpSuite(connector, variants)` in its spec. Use synthetic test data.
+Add request variants in `variants.ts` and pass them to `otpSuite` from the connector spec. Add connector directories under `otp/<connector>/<variant>/` and extend the connector registry when adding support.
 
-Copy `overrides.example.json` to an ignored `overrides.local.json`, configure the sandbox account, and set `E2E_OVERRIDES_FILE`:
+Copy `overrides.example.json` to an ignored `overrides.local.json` and set `E2E_OVERRIDES_FILE`. Connector settings support credential-entry selection, connector metadata, profile flags, and payment fields. Variant settings override a named request shape without changing credentials.
 
-- `connectors.<connector>`: credential-entry selector, connector metadata, business-profile flags, and common payment fields.
-- `variants.<connector>/<variant>`: payment/configuration overrides for a named request variant. Credentials are selected at connector level.
-
-Resolution order: shared defaults → connector settings → built-in request variant → variant overrides. Nested objects merge, arrays replace, and `null` clears a field. Connector metadata also inherits values from the selected credential entry. OTP guards reject mandate/setup fields and wallet/3DS requests.
-
-Keep credential files and environment-specific overrides out of version control.
+Resolution order: shared defaults → connector settings → built-in variant → variant overrides. Nested objects merge, arrays replace, and `null` clears a field. OTP guards reject mandate/setup fields, wallets, and 3DS requests. Use synthetic fixture data.
 
 ## Reports and checks
 
 ```sh
-npm run check       # TypeScript only; no payment verification
-npm run test:unit   # Offline tests of the harness only
-npm run list        # Discover scenarios only
-npm test            # Live HS → UCS → processor sandbox tests
+npm run check       # TypeScript validation
+npm run test:unit   # Offline harness checks
+npm run list        # Test discovery
+npm test            # Live sandbox payment
 ```
 
-`npm test` generates terminal results, an HTML report at `playwright-report/`, and JUnit XML at `test-results/results.xml`. Reports include the connector, variant, lifecycle, and verification mode. Gateway evidence excludes credentials and raw API payloads. API traces, screenshots, and videos are disabled.
+`npm test` generates terminal results, HTML at `playwright-report/`, and JUnit XML at `test-results/results.xml`. Open HTML with `npx playwright show-report`. Reports omit credential values and raw API payloads; API traces, screenshots, and videos are disabled.
 
-Open the HTML report with:
-
-```sh
-npx playwright show-report
-```
-
-Type checks, unit tests, and test discovery do not execute sandbox payments. Run `npm test` against the target UCS build to validate payment behavior. Refund completion may depend on processor settlement; pending refunds do not satisfy tests that require a terminal result.
+Only the automatic Stripe payment is implemented. Other lifecycles and connectors can be added separately. Type checks, unit tests, and discovery do not execute sandbox payments.

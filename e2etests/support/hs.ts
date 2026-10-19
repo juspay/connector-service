@@ -78,22 +78,37 @@ export class Hyperswitch {
 }
 
 // Checking the recorded gateway prevents a green run through HS's native connectors.
-export async function assertUcsGateway(merchantId: string, paymentId: string) {
+export async function assertUcsGateway(
+  merchantId: string,
+  paymentId: string,
+  connector: string,
+) {
   const client = new pg.Client({
     connectionString:
       process.env.HS_DATABASE_URL ??
-      "postgresql://db_user:db_pass@localhost:5432/hyperswitch_db",
+      `postgresql://db_user:db_pass@127.0.0.1:${process.env.HS_DB_PORT ?? "15432"}/hyperswitch_db`,
     connectionTimeoutMillis: 10_000,
   });
   await client.connect();
   try {
     const result = await client.query(
-      "SELECT feature_metadata->>'gateway_system' AS gateway FROM payment_intent WHERE merchant_id = $1 AND payment_id = $2",
-      [merchantId, paymentId],
+      `SELECT p.feature_metadata->>'gateway_system' AS gateway,
+        EXISTS (SELECT 1 FROM payment_attempt a
+          WHERE a.merchant_id=p.merchant_id AND a.payment_id=p.payment_id
+            AND a.connector=$3 AND a.status='charged'
+            AND a.connector_transaction_id IS NOT NULL
+            AND a.connector_transaction_id <> '') AS processor_payment_completed
+       FROM payment_intent p WHERE p.merchant_id=$1 AND p.payment_id=$2`,
+      [merchantId, paymentId, connector],
     );
     if (result.rows[0]?.gateway !== "unified_connector_service") {
       throw new Error(
         `Payment ${paymentId} did not record unified_connector_service as its gateway`,
+      );
+    }
+    if (!result.rows[0]?.processor_payment_completed) {
+      throw new Error(
+        "Payment did not record a charged connector attempt with a processor reference",
       );
     }
   } finally {

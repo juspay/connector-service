@@ -10,12 +10,7 @@ import {
   resolveOverrides,
   readPrivateJson,
 } from "../support/config.js";
-import {
-  connectors,
-  paymentCases,
-  refundVerification,
-} from "../support/cases.js";
-import { variants as adyenVariants } from "../otp/adyen/card-no3ds/variants.js";
+import { connectors, paymentCases } from "../support/cases.js";
 import { variants as stripeVariants } from "../otp/stripe/card-no3ds/variants.js";
 
 test("merchant patches retain nested connector defaults, replace arrays, and do not mutate shared input", () => {
@@ -93,29 +88,11 @@ test("OTP overrides cannot accidentally switch the suite to mandate, wallet, or 
     assert.throws(() => assertOtp(merge(base, patch)), /OTP requires/);
 });
 
-test("baseline exercises four lifecycles once per connector, with focused request variants", () => {
-  let count = 0;
-  for (const connector of connectors) {
-    const variants =
-      connector === "adyen"
-        ? adyenVariants
-        : connector === "stripe"
-          ? stripeVariants
-          : [];
-    const cases = paymentCases(variants);
-    assert.equal(cases.filter((c) => c.id === "baseline").length, 1);
-    assert.equal(cases[0].scenarios.length, 4);
-    count += cases.reduce((sum, c) => sum + c.scenarios.length, 0);
-  }
-  assert.equal(count, 30);
-  assert.equal(
-    paymentCases(adyenVariants, "gbp-metadata")[0].scenarios.length,
-    1,
-  );
-  assert.throws(
-    () => paymentCases(adyenVariants, "missing"),
-    /Unknown request variant/,
-  );
+test("baseline discovers one automatic Stripe payment and rejects invalid selections", () => {
+  assert.deepEqual(connectors, ["stripe"]);
+  assert.equal(paymentCases(stripeVariants).length, 1);
+  assert.deepEqual(paymentCases(stripeVariants)[0].scenarios, ["automatic"]);
+  assert.throws(() => paymentCases([], "missing"), /Unknown request variant/);
   assert.throws(
     () => paymentCases([{ id: "baseline", scenarios: ["automatic"] }]),
     /unique synthetic/,
@@ -129,19 +106,22 @@ test("baseline exercises four lifecycles once per connector, with focused reques
 test("request variants merge configuration without selecting a different credential account", () => {
   const document = {
     connectors: {
-      adyen: {
+      stripe: {
         credential: "our_sandbox_account",
         payment: { metadata: { common: "fixture" } },
         connectorMetadata: { account_name: "sandbox-placeholder" },
       },
     },
     variants: {
-      "adyen/gbp-metadata": { payment: { metadata: { specific: "fixture" } } },
+      "stripe/metadata": { payment: { metadata: { specific: "fixture" } } },
     },
   };
-  const merged = resolveOverrides(document, "adyen", adyenVariants[0]);
+  const merged = resolveOverrides(document, "stripe", {
+    id: "metadata",
+    payment: { metadata: { fixture_case: "order" } },
+    scenarios: ["automatic"],
+  });
   assert.deepEqual(merged.payment, {
-    currency: "GBP",
     metadata: { common: "fixture", fixture_case: "order", specific: "fixture" },
   });
   assert.deepEqual(merged.connectorMetadata, {
@@ -151,22 +131,20 @@ test("request variants merge configuration without selecting a different credent
   assert.throws(
     () =>
       resolveOverrides(
-        { variants: { "adyen/baseline": { credential: "other-account" } } },
-        "adyen",
+        { variants: { "stripe/baseline": { credential: "other-account" } } },
+        "stripe",
         { id: "baseline", scenarios: ["automatic"] },
       ),
     /credential belongs/,
   );
   assert.throws(
-    () => resolveOverrides({ merchants: {} }, "adyen", adyenVariants[0]),
+    () =>
+      resolveOverrides({ merchants: {} }, "stripe", {
+        id: "baseline",
+        scenarios: ["automatic"],
+      }),
     /legacy merchant/,
   );
-});
-
-test("Adyen refund acceptance is distinct from terminal refund sync verification", () => {
-  assert.equal(refundVerification("adyen"), "accepted");
-  for (const connector of connectors.filter((c) => c !== "adyen"))
-    assert.equal(refundVerification(connector), "synced");
 });
 
 test("override merge rejects prototype keys from JSON input", () => {

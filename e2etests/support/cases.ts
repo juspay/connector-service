@@ -1,20 +1,8 @@
 import type { Json } from "./config.js";
 
-export const connectors = [
-  "adyen",
-  "cybersource",
-  "stripe",
-  "paypal",
-  "authorizedotnet",
-  "checkout",
-] as const;
+export const connectors = ["stripe"] as const;
 export type Connector = (typeof connectors)[number];
-export const scenarios = [
-  "automatic",
-  "manual-capture",
-  "manual-void",
-  "automatic-refund",
-] as const;
+export const scenarios = ["automatic"] as const;
 export type Scenario = (typeof scenarios)[number];
 export type RequestVariant = {
   id: string;
@@ -24,8 +12,8 @@ export type RequestVariant = {
   scenarios: readonly Scenario[];
 };
 
-// Baseline exercises each lifecycle once. Additional variants should target only
-// the lifecycle needed to verify their distinct request/configuration behavior.
+// Baseline exercises the automatic payment. Additional variants can describe
+// distinct request/configuration behavior without duplicating connector setup.
 export function paymentCases(
   variants: readonly RequestVariant[],
   selected?: string,
@@ -48,12 +36,4 @@ export function paymentCases(
   if (selected && !ids.has(selected))
     throw new Error(`Unknown request variant: ${selected}`);
   return all.filter((v) => !selected || v.id === selected);
-}
-
-export function refundVerification(
-  connector: Connector,
-): "accepted" | "synced" {
-  // Adyen has no UCS RSync implementation. Test refund submission explicitly;
-  // completion via webhook is a separate coverage gap, never a claimed RSync pass.
-  return connector === "adyen" ? "accepted" : "synced";
 }

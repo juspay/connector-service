@@ -1,14 +1,12 @@
 {
   "connectors": {
-    "cybersource": { "credential": "connector_1" },
-    "adyen": {
-      "connectorMetadata": { "account_name": "YOUR_OWN_SANDBOX_ACCOUNT" },
-      "profile": { "use_billing_as_payment_method_billing": true }
+    "stripe": {
+      "credential": "connector_1"
     }
   },
   "variants": {
-    "adyen/gbp-metadata": {
-      "payment": { "metadata": { "fixture_case": "synthetic-order" } }
+    "stripe/baseline": {
+      "payment": { "metadata": { "fixture_case": "automatic" } }
     }
   }
 }

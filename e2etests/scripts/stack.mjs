@@ -18,6 +18,9 @@ let checkout = process.env.HS_SOURCE_DIR
   : resolve(runtime, "hyperswitch");
 const override = resolve(runtime, "compose.e2e.yaml");
 const versionsFile = resolve(runtime, "versions.json");
+const databasePort = Number(process.env.HS_DB_PORT ?? 15432);
+if (!Number.isInteger(databasePort) || databasePort < 1 || databasePort > 65535)
+  throw new Error("HS_DB_PORT must be a valid TCP port");
 const image =
   process.env.HS_IMAGE ??
   "docker.juspay.io/juspaydotin/hyperswitch-router:latest";
@@ -147,7 +150,7 @@ if (action !== "down") {
     "\n[grpc_client.unified_connector_service]\n" +
     `base_url = ${JSON.stringify(ucsUrl.origin)}\n` +
     "connection_timeout = 10\nrequest_timeout = 60\n" +
-    'ucs_only_connectors = "adyen,stripe,paypal,authorizedotnet,cybersource,checkout"\n';
+    'ucs_only_connectors = "stripe"\n';
   writeFileSync(config, contents);
   // Runtime migrations must not regenerate or patch the source checkout's schema.
   const dieselConfig = resolve(runtime, "diesel.toml");
@@ -168,6 +171,7 @@ if (action !== "down") {
     // Redis is accessed by its Compose service name; no host port is needed.
     // YAML's reset tag removes the port inherited from upstream Compose.
     "services:\n" +
+      `  pg:\n    ports: !override ["127.0.0.1:${databasePort}:5432"]\n` +
       "  redis-standalone:\n    ports: !reset []\n" +
       (externalUcs
         ? "  ucs-ready: " +
