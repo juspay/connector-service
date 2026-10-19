@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   mkdirSync,
+  readdirSync,
   existsSync,
   readFileSync,
   writeFileSync,
@@ -86,15 +87,38 @@ if (action !== "down") {
           "HS image does not report a source revision; set HS_REF or HS_SOURCE_DIR to its matching source",
         );
     }
-    const response = await fetch(
-      `https://api.github.com/repos/juspay/hyperswitch/commits/${encodeURIComponent(sourceRef)}`,
-      { signal: AbortSignal.timeout(30_000) },
-    );
-    if (!response.ok)
-      throw new Error(
-        `Cannot resolve HS source revision (GitHub HTTP ${response.status}); retry or set HS_SOURCE_DIR`,
+    // Reuse a verified checkout for this exact image revision without an API call.
+    // This also keeps repeated runs independent of GitHub API rate limits.
+    const cachedCommits = readdirSync(runtime)
+      .map((name) => name.match(/^hyperswitch-([0-9a-f]{40})$/)?.[1])
+      .filter((sha) => sha?.startsWith(sourceRef));
+    let sourceCommit = /^[0-9a-f]{40}$/.test(sourceRef) ? sourceRef : undefined;
+    if (!sourceCommit && cachedCommits.length === 1) {
+      const candidate = cachedCommits[0];
+      const head = spawnSync(
+        "git",
+        [
+          "-C",
+          resolve(runtime, `hyperswitch-${candidate}`),
+          "rev-parse",
+          "HEAD",
+        ],
+        { encoding: "utf8" },
       );
-    const sourceCommit = (await response.json()).sha;
+      if (head.status === 0 && head.stdout.trim() === candidate)
+        sourceCommit = candidate;
+    }
+    if (!sourceCommit) {
+      const response = await fetch(
+        `https://api.github.com/repos/juspay/hyperswitch/commits/${encodeURIComponent(sourceRef)}`,
+        { signal: AbortSignal.timeout(30_000) },
+      );
+      if (!response.ok)
+        throw new Error(
+          `Cannot resolve HS source revision (GitHub HTTP ${response.status}); retry or set HS_SOURCE_DIR`,
+        );
+      sourceCommit = (await response.json()).sha;
+    }
     if (!/^[0-9a-f]{40}$/.test(sourceCommit))
       throw new Error("Invalid HS source revision");
     checkout = resolve(runtime, `hyperswitch-${sourceCommit}`);
