@@ -70,3 +70,27 @@ export async function stripePaymentIntent(
     account,
   );
 }
+
+export async function stripeCharge(
+  auth: Json,
+  reference: string,
+  account?: string,
+) {
+  if (!/^ch_[A-Za-z0-9]+$/.test(reference))
+    throw new Error("Stripe payment has no charge reference");
+  return stripeRead(auth, `charges/${encodeURIComponent(reference)}`, account);
+}
+
+export async function stripePaymentMethod(
+  auth: Json,
+  reference: string,
+  account?: string,
+) {
+  if (!/^pm_[A-Za-z0-9]+$/.test(reference))
+    throw new Error("Stripe payment has no PaymentMethod reference");
+  return stripeRead(
+    auth,
+    `payment_methods/${encodeURIComponent(reference)}`,
+    account,
+  );
+}

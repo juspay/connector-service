@@ -1,12 +1,28 @@
 import type { Json } from "./config.js";
 
-export const connectors = ["stripe"] as const;
+export const connectors = [
+  "stripe",
+  "adyen",
+  "paypal",
+  "authorizedotnet",
+  "cybersource",
+  "checkout",
+] as const;
 export type Connector = (typeof connectors)[number];
-export const scenarios = ["automatic"] as const;
+export const scenarios = [
+  "automatic",
+  "manual-capture",
+  "manual-void",
+  "refund-full",
+  "refund-partial",
+  "capture-submission",
+  "void-submission",
+  "refund-submission",
+] as const;
 export type Scenario = (typeof scenarios)[number];
 export type RequestVariant = {
   id: string;
-  fixture?: "stripe-connect";
+  fixture?: "stripe-connect" | "merchant-reference";
   clientConfirmation?: boolean;
   payment?: Json;
   connectorMetadata?: Json;
@@ -20,7 +36,10 @@ export function paymentCases(
   variants: readonly RequestVariant[],
   selected?: string,
 ) {
-  const all: RequestVariant[] = [{ id: "baseline", scenarios }, ...variants];
+  const all: RequestVariant[] = [
+    { id: "baseline", scenarios: ["automatic"] },
+    ...variants,
+  ];
   const ids = new Set<string>();
   for (const variant of all) {
     if (!/^[a-z][a-z0-9-]{0,47}$/.test(variant.id) || ids.has(variant.id)) {

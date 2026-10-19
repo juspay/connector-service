@@ -82,6 +82,7 @@ export async function assertUcsGateway(
   merchantId: string,
   paymentId: string,
   connector: string,
+  attemptStatus = "charged",
 ) {
   const client = new pg.Client({
     connectionString:
@@ -95,14 +96,14 @@ export async function assertUcsGateway(
       `SELECT p.feature_metadata->>'gateway_system' AS gateway,
         (SELECT a.connector_transaction_id FROM payment_attempt a
           WHERE a.merchant_id=p.merchant_id AND a.payment_id=p.payment_id
-            AND a.connector=$3 AND a.status='charged' ORDER BY a.created_at DESC LIMIT 1) AS processor_reference,
+            AND a.connector=$3 AND a.status::text=$4 ORDER BY a.created_at DESC LIMIT 1) AS processor_reference,
         EXISTS (SELECT 1 FROM payment_attempt a
           WHERE a.merchant_id=p.merchant_id AND a.payment_id=p.payment_id
-            AND a.connector=$3 AND a.status='charged'
+            AND a.connector=$3 AND a.status::text=$4
             AND a.connector_transaction_id IS NOT NULL
             AND a.connector_transaction_id <> '') AS processor_payment_completed
        FROM payment_intent p WHERE p.merchant_id=$1 AND p.payment_id=$2`,
-      [merchantId, paymentId, connector],
+      [merchantId, paymentId, connector, attemptStatus],
     );
     if (result.rows[0]?.gateway !== "unified_connector_service") {
       throw new Error(
@@ -111,10 +112,34 @@ export async function assertUcsGateway(
     }
     if (!result.rows[0]?.processor_payment_completed) {
       throw new Error(
-        "Payment did not record a charged connector attempt with a processor reference",
+        "Payment did not record the expected connector outcome with a processor reference",
       );
     }
     return result.rows[0].processor_reference as string;
+  } finally {
+    await client.end();
+  }
+}
+
+export async function assertConnectorRefund(
+  merchantId: string,
+  refundId: string,
+  connector: string,
+) {
+  const client = new pg.Client({
+    connectionString:
+      process.env.HS_DATABASE_URL ??
+      `postgresql://db_user:db_pass@127.0.0.1:${process.env.HS_DB_PORT ?? "15432"}/hyperswitch_db`,
+    connectionTimeoutMillis: 10_000,
+  });
+  await client.connect();
+  try {
+    const result = await client.query(
+      "SELECT connector_refund_id IS NOT NULL AND connector_refund_id <> '' AS processor_reference FROM refund WHERE merchant_id=$1 AND refund_id=$2 AND connector=$3",
+      [merchantId, refundId, connector],
+    );
+    if (!result.rows[0]?.processor_reference)
+      throw new Error("Refund did not record a processor reference");
   } finally {
     await client.end();
   }

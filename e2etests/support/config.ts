@@ -133,7 +133,6 @@ export function assertOtp(body: Json): void {
     body.payment_method !== "card" ||
     body.off_session === true ||
     body.setup_future_usage != null ||
-    body.customer_acceptance != null ||
     body.mandate_data != null ||
     body.mandate_id != null ||
     body.recurring_details != null ||

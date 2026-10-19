@@ -150,7 +150,7 @@ if (action !== "down") {
     "\n[grpc_client.unified_connector_service]\n" +
     `base_url = ${JSON.stringify(ucsUrl.origin)}\n` +
     "connection_timeout = 10\nrequest_timeout = 60\n" +
-    'ucs_only_connectors = "stripe"\n';
+    'ucs_only_connectors = "stripe,adyen,paypal,authorizedotnet,cybersource,checkout"\n';
   writeFileSync(config, contents);
   // Runtime migrations must not regenerate or patch the source checkout's schema.
   const dieselConfig = resolve(runtime, "diesel.toml");

@@ -31,6 +31,22 @@ const checkoutDetails = {
 };
 
 export const variants: readonly RequestVariant[] = [
+  {
+    id: "billing-profile",
+    profile: { use_billing_as_payment_method_billing: true },
+    payment: {
+      ...checkoutDetails,
+      billing: {
+        ...checkoutDetails.billing,
+        address: { line1: "2 Billing Example Street" },
+      },
+    },
+    scenarios: ["automatic"],
+  },
+  { id: "refund-full", scenarios: ["refund-full"] },
+  { id: "refund-partial", scenarios: ["refund-partial"] },
+  { id: "manual-capture", scenarios: ["manual-capture"] },
+  { id: "manual-void", scenarios: ["manual-void"] },
   { id: "client-confirm", clientConfirmation: true, scenarios: ["automatic"] },
   {
     id: "inline-confirm",

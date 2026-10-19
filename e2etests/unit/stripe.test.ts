@@ -27,6 +27,7 @@ test("Connect fixture lookup refuses non-sandbox keys before contacting Stripe",
 });
 
 test("Connect fixture lookup selects an existing charge-enabled card account", async (t) => {
+  clearAccountEnv(t);
   t.mock.method(
     globalThis,
     "fetch",
@@ -53,6 +54,7 @@ test("Connect fixture lookup selects an existing charge-enabled card account", a
 });
 
 test("Connect fixture response failures cannot expose raw response data", async (t) => {
+  clearAccountEnv(t);
   t.mock.method(
     globalThis,
     "fetch",

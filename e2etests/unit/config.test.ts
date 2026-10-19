@@ -72,6 +72,15 @@ test("OTP overrides cannot accidentally switch the suite to mandate, wallet, or 
     payment_method_data: { card: {} },
   };
   assert.doesNotThrow(() => assertOtp(base));
+  assert.doesNotThrow(() =>
+    assertOtp({
+      ...base,
+      customer_acceptance: {
+        acceptance_type: "online",
+        online: { ip_address: "192.0.2.1", user_agent: "Synthetic test" },
+      },
+    }),
+  );
   for (const patch of [
     { authentication_type: "three_ds" },
     { payment_method: "wallet" },
@@ -82,14 +91,13 @@ test("OTP overrides cannot accidentally switch the suite to mandate, wallet, or 
     { setup_future_usage: "off_session" },
     { mandate_data: {} },
     { mandate_id: "saved" },
-    { customer_acceptance: {} },
     { recurring_details: {} },
   ])
     assert.throws(() => assertOtp(merge(base, patch)), /OTP requires/);
 });
 
 test("baseline stays unique when request variants are added", () => {
-  assert.deepEqual(connectors, ["stripe"]);
+  assert.equal(connectors.includes("stripe"), true);
   assert.equal(
     paymentCases(stripeVariants).filter((v) => v.id === "baseline").length,
     1,
