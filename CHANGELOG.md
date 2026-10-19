@@ -19,6 +19,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.10.19.0
+
+### Features
+
+- **connector:**
+  - [Stripe] harden payment flows, 3DS and webhooks ([#2526](https://github.com/juspay/connector-service/pull/2526)) ([`66a63df`](https://github.com/juspay/connector-service/commit/66a63df330e22d5b60e01c4f66bec8fb9f9c9a9f))
+  - [Nuvei] add 10 flows (Authorize, PSync, Capture, Void, Refund, RSync, ...) ([#2330](https://github.com/juspay/connector-service/pull/2330)) ([`526be1f`](https://github.com/juspay/connector-service/commit/526be1f19ad70bbe535556eba44087788d92c815))
+
+### Bug Fixes
+
+- **elavon_pg:** Include total in hosted sale ([#2541](https://github.com/juspay/connector-service/pull/2541)) ([`675e267`](https://github.com/juspay/connector-service/commit/675e26743d18aea954c72f2eece4be7677bd3493))
+- **ucs:** Convert response amounts through connector amount types ([#2494](https://github.com/juspay/connector-service/pull/2494)) ([`d298463`](https://github.com/juspay/connector-service/commit/d298463e17181df244bd0067c28359cf7bd3e02a))
+- **webhooks:** Expose preprocessing id in payment references ([#2432](https://github.com/juspay/connector-service/pull/2432)) ([`95f16a0`](https://github.com/juspay/connector-service/commit/95f16a06769fb66851e2d04188484f130d7f3c4f))
+
+**Full Changelog:** [`2026.10.16.2...2026.10.19.0`](https://github.com/juspay/connector-service/compare/2026.10.16.2...2026.10.19.0)
+
+- - -
+
 ## 2026.10.16.2
 
 ### Bug Fixes
