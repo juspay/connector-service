@@ -19,7 +19,7 @@ Each scenario creates an isolated HS merchant, business profile, connector accou
 
 ## Local execution
 
-Prerequisites: Node.js 22+, Docker Compose v2, a reachable UCS gRPC server, and a sandbox credentials JSON file in the HS connector-credentials format. Browser installation is unnecessary for API-only tests. Use dedicated sandbox services; do not point the harness at production.
+Prerequisites: Node.js 22+, Docker Compose v2, a sandbox credentials JSON file in the HS connector-credentials format. Browser installation is unnecessary for API-only tests. Use dedicated sandbox services; do not point the harness at production.
 
 ```sh
 cd e2etests
@@ -34,7 +34,6 @@ export S3_SOURCE_FILE_NAME='YOUR_ENCRYPTED_CREDENTIALS_FILE.json.gpg'
 npm run credentials
 export CONNECTOR_AUTH_FILE_PATH="$PWD/.secrets/creds.json"
 
-export UCS_BASE_URL=http://host.docker.internal:8000
 npm run stack:up
 
 # One automatic-capture smoke case, then baseline lifecycles, then variants.
@@ -49,16 +48,26 @@ npm run stack:down
 
 Use Playwright path filtering to select a connector, or `E2E_VARIANT` to select a request variant.
 
-`stack:up` reads the router image's source revision and downloads the matching Compose dependencies, config, superposition seed, and migrations. Only runtime asset directories are checked out and cached; HS source is not compiled. It starts the router image and its dependencies. It forces the six connectors into `ucs_only_connectors`. Tests create `ucs_enabled=true` when absent and fail if an existing value disables UCS.
+`stack:up` reads the router image's source revision and downloads the matching Compose dependencies, config, superposition seed, and migrations. Only runtime asset directories are checked out and cached; HS source is not compiled. It starts UCS from a prebuilt image and waits for its gRPC health check to report `SERVING` before starting HS. UCS uses only the Compose network; no UCS host port is required. The UCS image is wrapped only to add the standard gRPC health probe; no Rust build is performed. It forces the six connectors into `ucs_only_connectors`. Tests create `ucs_enabled=true` when absent and fail if an existing value disables UCS.
+
+To test an existing UCS instead of the managed container, set its gRPC origin before startup:
+
+```sh
+export UCS_BASE_URL=http://host.docker.internal:8000
+npm run stack:up
+```
+
+The external server must implement `grpc.health.v1.Health/Check` and report `SERVING`. An explicit gRPC health probe runs from the Compose network before HS starts; an unreachable or unhealthy endpoint prevents startup. Use an HTTPS origin for TLS. `stack:down` removes only this Compose stack and preserves its database volume; external UCS is never managed by the harness.
 
 Default upstream host ports are 8080 (HS), 5432 (PostgreSQL), and 8081 (Superposition); existing services may conflict. Redis is available only inside the Compose network. For an existing dedicated sandbox HS instance, configure UCS routing and set `HS_BASE_URL`, `HS_ADMIN_API_KEY`, and `HS_DATABASE_URL`, then skip `stack:up`.
 
 | Variable                   | Purpose/default                                                               |
 | -------------------------- | ----------------------------------------------------------------------------- |
 | `HS_IMAGE`                 | `docker.juspay.io/juspaydotin/hyperswitch-router:latest`                      |
-| `HS_REF`                   | Image-reported source revision; optional explicit matching revision                                    |
-| `HS_SOURCE_DIR`            | Optional existing matching HS checkout                                                 |
-| `UCS_BASE_URL`             | Container-to-UCS gRPC endpoint; `http://host.docker.internal:8000`            |
+| `HS_REF`                   | Image-reported source revision; optional explicit matching revision           |
+| `HS_SOURCE_DIR`            | Optional existing matching HS checkout                                        |
+| `UCS_IMAGE`                | `juspaydotin/hyperswitch-prism:latest`; default managed UCS image             |
+| `UCS_BASE_URL`             | Optional external gRPC origin, reachable from Docker; skips managed UCS       |
 | `HS_BASE_URL`              | Runner-to-HS API endpoint; `http://localhost:8080`                            |
 | `HS_ADMIN_API_KEY`         | Local config default `test_admin`                                             |
 | `HS_DATABASE_URL`          | `postgresql://db_user:db_pass@localhost:5432/hyperswitch_db`                  |

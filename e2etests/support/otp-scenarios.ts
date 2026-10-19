@@ -36,6 +36,20 @@ export function paymentDefaults(connector: Connector): Json {
     customer_acceptance: null,
     email: "ucs-e2e@example.com",
     return_url: "https://example.com",
+    browser_info: {
+      accept_header:
+        "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      language: "en-US",
+      screen_height: 1080,
+      screen_width: 1920,
+      color_depth: 24,
+      user_agent:
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36",
+      time_zone: 0,
+      java_enabled: false,
+      java_script_enabled: true,
+      ip_address: "192.0.2.1",
+    },
     payment_method_data: {
       card: {
         card_number: cards[connector],
