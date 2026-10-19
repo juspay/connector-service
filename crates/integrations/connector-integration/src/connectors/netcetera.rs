@@ -1,14 +1,13 @@
 // Netcetera 3DS authentication connector.
 //
-// SCAFFOLD: This is an authentication-only (EMVCo 3DS) connector. It wires up
-// the three authentication flows (PreAuthenticate / Authenticate /
-// PostAuthenticate) and a stub Authorize flow (required by the
-// `ConnectorServiceTrait` bound) that returns a `NotImplemented` error. The
-// transformer request/response bodies are minimal stubs; the real EMVCo 3DS
-// request/response porting is a separate, later step.
+// Implements PreAuthenticate, Authenticate and PostAuthenticate. Authorize is
+// unsupported: authentication results are consumed by the payment connector.
 
 pub mod netcetera_types;
 pub mod transformers;
+
+#[cfg(test)]
+mod test;
 
 use std::fmt::Debug;
 
@@ -480,14 +479,14 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
         ) -> CustomResult<Option<Secret<String>>, IntegrationError> {
-            // PostAuthenticate carries no card, so it never goes through the vault injector.
-            Ok(self.mtls_identity(req, false)?.certificate)
+            // Card-proxy requests use the same injector route as the other authentication flows.
+            Ok(self.mtls_identity(req, T::IS_VAULT_TOKEN)?.certificate)
         }
         fn get_certificate_key(
             &self,
             req: &RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
         ) -> CustomResult<Option<Secret<String>>, IntegrationError> {
-            Ok(self.mtls_identity(req, false)?.private_key)
+            Ok(self.mtls_identity(req, T::IS_VAULT_TOKEN)?.private_key)
         }
         fn get_url(
             &self,

@@ -4,17 +4,9 @@
 // Authenticate / PostAuthenticate). Ported (pragmatically) from the router's
 // `crates/hyperswitch_connectors/src/connectors/netcetera/transformers.rs`.
 //
-// Notable UCS-specific differences vs. the router port:
-//   * The PAN uses `RawCardNumber<T>` (no Luhn) so VGS aliases pass through
-//     (see `netcetera_types::CardholderAccount::acct_number`).
-//   * The UCS `Payments{PreAuthenticate,Authenticate,PostAuthenticate}Data`
-//     types are leaner than the router's authentication request data — they do
-//     NOT carry the 3DS-state fields the router threaded between flows
-//     (`threeds_server_transaction_id`, `device_channel`, `acquirer_bin`,
-//     `connector_meta_data`, `webhook_url`, `message_version`, ...). Fields that
-//     have no UCS source are defaulted with `// TODO(emvco)` markers.
-//   * Auth (mTLS certificate) is handled by `ConnectorCommon`/the framework, not
-//     here.
+// Requests use typed 3DS fields and connector configuration. Vault-aliased card
+// data uses RawCardNumber<T> so aliases can be substituted by the injector.
+// Transport authentication is handled by ConnectorCommon and the framework.
 
 use common_utils::types::SemanticVersion;
 use domain_types::{
@@ -23,7 +15,7 @@ use domain_types::{
         PaymentFlowData, PaymentsAuthenticateData, PaymentsAuthorizeData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
     },
-    errors::{ConnectorError, IntegrationError},
+    errors::{ConnectorError, IntegrationError, IntegrationErrorContext},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data_v2::RouterDataV2,
     router_request_types::AuthenticationData,
@@ -276,8 +268,8 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     ),
                     message_version: Some(maximum_supported_3ds_version),
                     // `ds_trans_id` also carries the card-range directory server id for
-                    // callers that predate `directory_server_id`. Safe to keep; drop only
-                    // once no caller reads it here.
+                    // callers that predate `directory_server_id`. Retain this response alias
+                    // for compatibility; new readers use `directory_server_id`.
                     ds_trans_id: card_range
                         .as_ref()
                         .and_then(|range| range.directory_server_id.clone()),
@@ -382,6 +374,46 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let common_data = &item.router_data.resource_common_data;
         let request = &item.router_data.request;
+
+        match request.device_channel {
+            Some(domain_types::connector_types::DeviceChannel::ThreeRi) => {
+                return Err(IntegrationError::NotSupported {
+                    message: "3DS Requestor Initiated authentication".to_string(),
+                    connector: "netcetera",
+                    context: IntegrationErrorContext {
+                        suggested_action: Some(
+                            "Use the browser or APP device channel for Netcetera authentication."
+                                .to_string(),
+                        ),
+                        doc_url: None,
+                        additional_context: Some(
+                            "The Netcetera integration does not support the 3RI device channel."
+                                .to_string(),
+                        ),
+                    },
+                }
+                .into());
+            }
+            Some(domain_types::connector_types::DeviceChannel::App)
+                if request.sdk_information.is_none() =>
+            {
+                return Err(IntegrationError::MissingRequiredField {
+                    field_name: "sdk_information",
+                    context: IntegrationErrorContext {
+                        suggested_action: Some(
+                            "Provide sdk_information from the 3DS SDK when using the APP device channel."
+                                .to_string(),
+                        ),
+                        doc_url: None,
+                        additional_context: Some(
+                            "Netcetera APP authentication requires SDK information.".to_string(),
+                        ),
+                    },
+                }
+                .into());
+            }
+            _ => {}
+        }
 
         // 3DS state threaded from the PreAuthenticate step (if present).
         let prior_auth_data = request.authentication_data.as_ref();

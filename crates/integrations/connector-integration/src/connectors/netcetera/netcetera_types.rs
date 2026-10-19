@@ -437,6 +437,7 @@ pub struct MerchantData {
     pub three_ds_requestor_name: Option<String>,
     /// Dynamic RRes (Results Response) notification URL — where Netcetera pushes the final challenge
     /// result when the pull mechanism is disabled. Serializes as `resultsResponseNotificationUrl`.
+    /// Dynamic URLs require the merchant's Netcetera license to allow this override.
     pub results_response_notification_url: Option<url::Url>,
 }
 

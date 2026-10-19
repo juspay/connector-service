@@ -147,8 +147,8 @@ pub struct Card<T: PaymentMethodDataTypes> {
 pub trait PaymentMethodDataTypes: Clone {
     type Inner: Default + Debug + Send + Eq + PartialEq + Serialize + DeserializeOwned + Clone;
 
-    /// Whether the card is a vault alias. Such requests reach the connector through the
-    /// external vault's injector, which owns the outbound TLS connection.
+    /// Whether the card is a vault alias. The gRPC card-proxy dispatcher selects this
+    /// holder together with the injector route; VGS proxy routes terminate outbound TLS.
     const IS_VAULT_TOKEN: bool;
 
     fn peek_inner(inner: &Self::Inner) -> &str;

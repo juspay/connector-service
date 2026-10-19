@@ -2496,7 +2496,7 @@ pub enum ThreeDsRequestorChallengeIndicator {
     ChallengeWhitelistPrompt,
 }
 
-/// EMVCo `threeDSRequestorAuthenticationInd` (codes 01-06).
+/// EMVCo `threeDSRequestorAuthenticationInd` (codes 01-07).
 #[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq)]
 pub enum ThreeDsRequestorAuthenticationIndicator {
     #[serde(rename = "01")]

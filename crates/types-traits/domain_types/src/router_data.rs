@@ -370,8 +370,7 @@ pub enum ConnectorSpecificConfig {
     },
     /// Netcetera 3DS Server. Transport auth is mTLS; the certificate pair is optional
     /// because an external vault (e.g. VGS) may terminate TLS on the outbound route.
-    /// `endpoint_prefix` is substituted into the `{{merchant_endpoint_prefix}}` template of
-    /// the configured base_url (same mechanism as Adyen).
+    /// The base URL is the shared 3DS Server host, with an optional per-request override.
     Netcetera {
         certificate: Option<Secret<String>>,
         private_key: Option<Secret<String>>,
@@ -4360,12 +4359,8 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorVariant)>
                 // is not used for Qwikcilver — configure via the proto
                 // QwikcilverConfig path instead.
                 ConnectorEnum::Qwikcilver => Err(err().into()),
-                // Netcetera is an authentication-only (3DS) no-key connector (mTLS is
-                // handled on the VGS outbound route, merchant fields ride
-                // `connector_feature_data`). Its `connector_config` is set to
-                // `ConnectorSpecificConfig::NoKey` via the `X_AUTH = "NoKey"` shortcut in
-                // `request.rs`, so it never flows through this deprecated auth-credentials
-                // -> config conversion (same opt-out as Qwikcilver above).
+                // Netcetera uses typed NetceteraConfig for mTLS credentials and requestor
+                // identity. Legacy credential headers cannot represent this configuration.
                 ConnectorEnum::Netcetera => Err(err().into()),
                 // Flywire requires `recipient_id` (drives currency, payout target
                 // and required institutional fields), which the legacy BodyKey
