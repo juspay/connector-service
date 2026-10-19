@@ -700,10 +700,10 @@ fn get_paypal_supplementary_data(
                         description: detail.description.clone(),
                         sku: detail.sku.clone().or_else(|| detail.product_id.clone()),
                         unit_amount: to_amount(detail.amount)?,
-                        tax: detail.total_tax_amount.map(&to_amount).transpose()?,
+                        tax: detail.total_tax_amount.map(to_amount).transpose()?,
                         commodity_code: detail.commodity_code.clone(),
-                        discount_amount: detail.unit_discount_amount.map(&to_amount).transpose()?,
-                        total_amount: detail.total_amount.map(&to_amount).transpose()?,
+                        discount_amount: detail.unit_discount_amount.map(to_amount).transpose()?,
+                        total_amount: detail.total_amount.map(to_amount).transpose()?,
                         unit_of_measure: detail.unit_of_measure.clone(),
                     })
                 })
