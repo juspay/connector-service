@@ -150,12 +150,16 @@ pub fn context_deferred_paths_for_connector(connector: &str) -> Vec<String> {
 /// Loads `webhook_payload.json` for the connector/scenario, merges the
 /// `grpc_req` patch, then runs post-merge transforms:
 ///
-/// 1. If `request_details.body` is a JSON object (readable form), serialize
+/// 1. If the webhook config has `signature_location: "body"`, the signature
+///    lives inside the body at `signature_path`; when the fixture leaves it
+///    empty or absent, compute it from the creds webhook secret and write it
+///    there (a literal value, e.g. for `invalid_signature`, is kept).
+/// 2. If `request_details.body` is a JSON object (readable form), serialize
 ///    it to a compact JSON string and base64-encode it (proto `bytes` field).
-/// 2. If the webhook config has a `signature_header` and no explicit signature
+/// 3. If the webhook config has a `signature_header` and no explicit signature
 ///    already exists in the merged headers, attempt to compute an HMAC signature
 ///    from `webhook_secrets` in the connector's creds.json.
-/// 3. Inject `webhook_secrets` at the top level if the credential exists.
+/// 4. Inject `webhook_secrets` at the top level if the credential exists.
 fn apply_webhook_payload_overrides(
     connector: &str,
     scenario: &str,
@@ -172,10 +176,6 @@ fn apply_webhook_payload_overrides(
         json_merge::json_merge_patch(grpc_req, req_patch);
     }
 
-    // Post-merge transform: base64-encode `request_details.body` if it's a JSON
-    // object (the readable form from webhook_payload.json).
-    base64_encode_body_if_object(grpc_req);
-
     // Resolve webhook secret from creds.json.
     let secret_key = webhook_config
         .as_ref()
@@ -184,6 +184,22 @@ fn apply_webhook_payload_overrides(
         .unwrap_or("webhook_secret");
 
     let webhook_secret = load_webhook_secret(connector, secret_key);
+
+    // Body-located signature: computed while the body is still a JSON object,
+    // before it is serialized and base64-encoded below.
+    let body_signature_path = webhook_config
+        .as_ref()
+        .filter(|c| c.get("signature_location").and_then(Value::as_str) == Some("body"))
+        .and_then(|c| c.get("signature_path"))
+        .and_then(Value::as_str);
+
+    if let (Some(signature_path), Some(secret)) = (body_signature_path, webhook_secret.as_deref()) {
+        sign_body_in_place(connector, grpc_req, signature_path, secret);
+    }
+
+    // Post-merge transform: base64-encode `request_details.body` if it's a JSON
+    // object (the readable form from webhook_payload.json).
+    base64_encode_body_if_object(grpc_req);
 
     // Compute HMAC signature if:
     //   - The webhook config specifies a signature_header
@@ -260,6 +276,48 @@ fn signature_payload_bytes(connector: &str, grpc_req: &Value) -> Option<Vec<u8>>
     };
 
     match connector {
+        // Adyen signs fields of the (single) NotificationRequestItem, not the
+        // body bytes: pspReference:originalReference:merchantAccountCode:
+        // merchantReference:value:currency:eventCode:success, empty string for
+        // an absent field. Matches the connector's
+        // get_webhook_source_verification_message.
+        "adyen" => {
+            let body = webhook_body_json(grpc_req)?;
+            let item = match body.get("notificationItems")?.as_array()?.as_slice() {
+                [only] => only.get("NotificationRequestItem")?.clone(),
+                _ => return None,
+            };
+            let text = |key: &str| {
+                item.get(key)
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string()
+            };
+            let amount_value = item
+                .pointer("/amount/value")
+                .map(|value| match value {
+                    Value::String(text) => text.clone(),
+                    other => other.to_string(),
+                })
+                .unwrap_or_default();
+            let currency = item
+                .pointer("/amount/currency")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string();
+            let preimage = [
+                text("pspReference"),
+                text("originalReference"),
+                text("merchantAccountCode"),
+                text("merchantReference"),
+                amount_value,
+                currency,
+                text("eventCode"),
+                text("success"),
+            ]
+            .join(":");
+            Some(preimage.into_bytes())
+        }
         "phonepe" => {
             let outer_bytes = outer_body_bytes()?;
             let outer_json: Value = serde_json::from_slice(&outer_bytes).ok()?;
@@ -285,6 +343,72 @@ fn signature_context<'a>(
             ..Default::default()
         },
         _ => crate::webhook_signatures::SignatureContext::default(),
+    }
+}
+
+/// The webhook body as JSON, whether still in readable object form or already
+/// base64-encoded.
+fn webhook_body_json(grpc_req: &Value) -> Option<Value> {
+    match grpc_req.pointer("/request_details/body")? {
+        body @ Value::Object(_) => Some(body.clone()),
+        Value::String(body_b64) => {
+            let bytes = STANDARD.decode(body_b64).ok()?;
+            serde_json::from_slice(&bytes).ok()
+        }
+        _ => None,
+    }
+}
+
+/// Converts a dotted signature path with array indices
+/// (`a[0].b.c`) into a JSON pointer relative to the body (`/a/0/b/c`).
+fn signature_path_to_pointer(signature_path: &str) -> String {
+    signature_path
+        .split('.')
+        .flat_map(|segment| segment.split(['[', ']']))
+        .filter(|part| !part.is_empty())
+        .fold(String::new(), |mut pointer, part| {
+            pointer.push('/');
+            pointer.push_str(&part.replace('~', "~0").replace('/', "~1"));
+            pointer
+        })
+}
+
+/// Writes a run-time computed signature into the readable (object) body at
+/// `signature_path`, only when the fixture leaves that value empty or absent.
+fn sign_body_in_place(connector: &str, grpc_req: &mut Value, signature_path: &str, secret: &str) {
+    let pointer = signature_path_to_pointer(signature_path);
+    let Some((parent_pointer, field)) = pointer.rsplit_once('/') else {
+        return;
+    };
+
+    let existing_is_empty_or_absent = grpc_req
+        .pointer("/request_details/body")
+        .filter(|body| body.is_object())
+        .map(|body| {
+            body.pointer(&pointer)
+                .and_then(Value::as_str)
+                .map(str::is_empty)
+                .unwrap_or(true)
+        })
+        .unwrap_or(false);
+
+    if !existing_is_empty_or_absent {
+        return;
+    }
+
+    let computed_sig = signature_payload_bytes(connector, grpc_req).and_then(|payload_bytes| {
+        let ctx = signature_context(connector, grpc_req);
+        crate::webhook_signatures::generate_signature(connector, &payload_bytes, secret, &ctx).ok()
+    });
+
+    if let Some(sig) = computed_sig {
+        if let Some(parent) = grpc_req
+            .pointer_mut("/request_details/body")
+            .and_then(|body| body.pointer_mut(parent_pointer))
+            .and_then(Value::as_object_mut)
+        {
+            parent.insert(field.to_string(), Value::String(sig));
+        }
     }
 }
 
