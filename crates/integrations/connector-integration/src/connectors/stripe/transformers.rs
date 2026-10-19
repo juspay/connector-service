@@ -17,19 +17,18 @@ use domain_types::{
     },
     connector_types::{
         BillingDescriptor, ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
-        DisputeFlowData, DisputeResponseData, SubmitEvidenceData,
         ConnectorCustomerData, ConnectorCustomerResponse,
-        ConnectorSpecificClientAuthenticationResponse, DisputeAdditionalDetails,
-        DisputeNetworkDetails, DisputeWebhookDetailsResponse, DisputeWebhookReference, EventType,
-        L2L3Data, MandateReference, MandateReferenceId, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentWebhookReference, PaymentsAuthorizeData, PaymentsCaptureData,
+        ConnectorSpecificClientAuthenticationResponse, DisputeAdditionalDetails, DisputeFlowData,
+        DisputeNetworkDetails, DisputeResponseData, DisputeWebhookDetailsResponse,
+        DisputeWebhookReference, EventType, L2L3Data, MandateReference, MandateReferenceId,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentVoidData, PaymentWebhookReference, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData,
         RapidDisputeResolution, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
         RefundWebhookReference, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
         SetupMandateRequestData, SplitPaymentsDetails,
         StripeClientAuthenticationResponse as StripeClientAuthenticationResponseDomain,
-        WebhookDetailsResponse, WebhookResourceReference,
+        SubmitEvidenceData, WebhookDetailsResponse, WebhookResourceReference,
     },
     errors::{ConnectorError, IntegrationError, IntegrationErrorContext, WebhookError},
     mandates::AcceptanceType,
@@ -7642,8 +7641,7 @@ mod dispute_network_details_tests {
 #[allow(clippy::expect_used)]
 mod dispute_evidence_tests {
     use super::{
-        dispute_status_to_dispute_status, Evidence, SubmitEvidenceData,
-        WebhookEventStatus,
+        dispute_status_to_dispute_status, Evidence, SubmitEvidenceData, WebhookEventStatus,
     };
 
     /// The wire body Stripe would receive. Asserting the encoded form rather than the
@@ -7669,7 +7667,10 @@ mod dispute_evidence_tests {
             ..Default::default()
         });
 
-        assert!(body.contains("evidence%5Breceipt%5D=file_1Mr2bcHfXbQ8wWVU"), "{body}");
+        assert!(
+            body.contains("evidence%5Breceipt%5D=file_1Mr2bcHfXbQ8wWVU"),
+            "{body}"
+        );
         assert!(
             body.contains("evidence%5Bshipping_documentation%5D=file_1Mr2bdHfXbQ8wWVU"),
             "{body}"
@@ -7766,7 +7767,10 @@ mod dispute_evidence_tests {
     #[test]
     fn absent_evidence_is_omitted_entirely() {
         let body = encoded(SubmitEvidenceData::default());
-        assert!(!body.contains("evidence%5B"), "nothing should be sent: {body}");
+        assert!(
+            !body.contains("evidence%5B"),
+            "nothing should be sent: {body}"
+        );
     }
 
     /// The dispute API returns the same `status` values the webhook carries, so both legs
@@ -7798,4 +7802,3 @@ mod dispute_evidence_tests {
         assert!(dispute_status_to_dispute_status(&WebhookEventStatus::Unknown).is_err());
     }
 }
-

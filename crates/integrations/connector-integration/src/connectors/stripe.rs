@@ -21,13 +21,13 @@ use domain_types::{
     connector_types::{
         AcceptDisputeData, ClientAuthenticationTokenRequestData, ConnectorCustomerData,
         ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeFlowData, DisputeResponseData,
-        DisputeWebhookDetailsResponse, EventContext, EventType,
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
-        RefundsResponseData, RepeatPaymentData, RequestDetails, SetupMandateRequestData,
-        SubmitEvidenceData, WebhookDetailsResponse, WebhookResourceReference,
+        DisputeWebhookDetailsResponse, EventContext, EventType, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
+        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
+        RequestDetails, SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
+        WebhookResourceReference,
     },
     errors::{ConnectorError, IntegrationError, WebhookError},
     merchant_authentication_flow_data::MerchantAuthenticationFlowData,
@@ -47,14 +47,14 @@ use interfaces::{
 use serde::Serialize;
 use transformers::{
     self as stripe, CancelRequest, CaptureRequest, CreateConnectorCustomerRequest,
-    CreateConnectorCustomerResponse, PaymentIncrementalAuthRequest, PaymentIntentRequest,
+    CreateConnectorCustomerResponse, DisputeObj, DisputeObj as AcceptDisputeObj, Evidence,
+    PaymentIncrementalAuthRequest, PaymentIntentRequest,
     PaymentIntentRequest as RepeatPaymentRequest,
     PaymentIntentResponse as PaymentIncrementalAuthResponse, PaymentSyncResponse,
     PaymentsAuthorizeResponse, PaymentsAuthorizeResponse as RepeatPaymentResponse,
     PaymentsCaptureResponse, PaymentsVoidResponse, RefundResponse,
     RefundResponse as RefundSyncResponse, SetupMandateRequest, SetupMandateResponse,
-    DisputeObj, DisputeObj as AcceptDisputeObj, Evidence, StripeClientAuthRequest,
-    StripeClientAuthResponse, StripeRefundRequest, StripeTokenResponse,
+    StripeClientAuthRequest, StripeClientAuthResponse, StripeRefundRequest, StripeTokenResponse,
     TokenRequest,
 };
 
