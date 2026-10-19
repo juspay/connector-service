@@ -29,14 +29,11 @@ env:
 jobs:
   pr_title_conventional_commit_check:
     name: Verify PR title follows conventional commit standards
-    # Keep public-fork code off the shared ARC fleet; reserve the merge pool
-    # for merge-group and main-push jobs, and use the regular pool for PRs.
+    # Use GitHub-hosted runners while shared-runner certificate trust is repaired.
     runs-on: >-
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
-          'ubuntu-latest' ||
-          (github.event_name == 'merge_group' || github.event_name == 'push') &&
-          'hyperswitch-runners-merge' || 'hyperswitch-runners' }}
+          'ubuntu-latest' || 'ubuntu-24.04' }}
 
     steps:
       - name: Install Rust
@@ -73,14 +70,11 @@ jobs:
   # The job name is what the main-branch ruleset requires; rename them together.
   deja_art_label_check:
     name: Verify PR carries the deja-art label
-    # Keep public-fork code off the shared ARC fleet; reserve the merge pool
-    # for merge-group and main-push jobs, and use the regular pool for PRs.
+    # Use GitHub-hosted runners while shared-runner certificate trust is repaired.
     runs-on: >-
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
-          'ubuntu-latest' ||
-          (github.event_name == 'merge_group' || github.event_name == 'push') &&
-          'hyperswitch-runners-merge' || 'hyperswitch-runners' }}
+          'ubuntu-latest' || 'ubuntu-24.04' }}
     timeout-minutes: 60
     concurrency:
       group: deja-art-gate-${{ github.event.pull_request.number || github.run_id }}

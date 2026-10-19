@@ -14,14 +14,11 @@ concurrency:
 jobs:
   typos:
     name: Spell check PR title
-    # Keep public-fork code off the shared ARC fleet; reserve the merge pool
-    # for merge-group and main-push jobs, and use the regular pool for PRs.
+    # Use GitHub-hosted runners while shared-runner certificate trust is repaired.
     runs-on: >-
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
-          'ubuntu-latest' ||
-          (github.event_name == 'merge_group' || github.event_name == 'push') &&
-          'hyperswitch-runners-merge' || 'hyperswitch-runners' }}
+          'ubuntu-latest' || 'ubuntu-24.04' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
