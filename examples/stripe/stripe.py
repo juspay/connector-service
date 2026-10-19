@@ -10,12 +10,13 @@ import sys
 from payments import PaymentClient
 from payments import MerchantAuthenticationClient
 from payments import CustomerClient
+from payments import DisputeClient
 from payments import EventClient
 from payments import RecurringPaymentClient
 from payments import RefundClient
 from payments.generated import sdk_config_pb2, payment_pb2, events_pb2, payment_methods_pb2
 
-SUPPORTED_FLOWS = ["authorize", "capture", "create_client_authentication_token", "customer_create", "get", "incremental_authorization", "parse_event", "proxy_authorize", "proxy_setup_recurring", "recurring_charge", "refund", "refund_get", "setup_recurring", "token_authorize", "token_setup_recurring", "void"]
+SUPPORTED_FLOWS = ["authorize", "capture", "create_client_authentication_token", "customer_create", "dispute_accept", "dispute_submit_evidence", "get", "incremental_authorization", "parse_event", "proxy_authorize", "proxy_setup_recurring", "recurring_charge", "refund", "refund_get", "setup_recurring", "token_authorize", "token_setup_recurring", "void"]
 
 _default_config = sdk_config_pb2.ConnectorConfig(
     options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
@@ -81,6 +82,21 @@ def _build_customer_create_request():
         customer_name="John Doe",  # Name of the customer.
         email=payment_methods_pb2.SecretString(value="test@example.com"),  # Email address of the customer.
         phone_number=payment_methods_pb2.SecretString(value="4155552671"),  # Phone number of the customer.
+    )
+
+def _build_dispute_accept_request():
+    return payment_pb2.DisputeServiceAcceptRequest(
+        merchant_dispute_id="probe_dispute_001",  # Identification.
+        connector_transaction_id="probe_txn_001",
+        dispute_id="probe_dispute_id_001",
+    )
+
+def _build_dispute_submit_evidence_request():
+    return payment_pb2.DisputeServiceSubmitEvidenceRequest(
+        merchant_dispute_id="probe_dispute_001",  # Identification.
+        connector_transaction_id="probe_txn_001",
+        dispute_id="probe_dispute_id_001",
+        # evidence_documents: [{"evidence_type": "SERVICE_DOCUMENTATION", "file_content": "probe evidence content", "file_mime_type": "application/pdf"}]  # Collection of evidence documents.
     )
 
 def _build_get_request(connector_transaction_id: str):
@@ -436,6 +452,24 @@ async def process_customer_create(merchant_transaction_id: str, config: sdk_conf
     customer_response = await customer_client.customer_create(_build_customer_create_request())
 
     return {"customer_id": customer_response.connector_customer_id}
+
+
+async def process_dispute_accept(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: DisputeService.Accept"""
+    dispute_client = DisputeClient(config)
+
+    dispute_response = await dispute_client.accept(_build_dispute_accept_request())
+
+    return {"status": dispute_response.status}
+
+
+async def process_dispute_submit_evidence(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: DisputeService.SubmitEvidence"""
+    dispute_client = DisputeClient(config)
+
+    dispute_response = await dispute_client.submit_evidence(_build_dispute_submit_evidence_request())
+
+    return {"status": dispute_response.status}
 
 
 async def process_get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):

@@ -13,6 +13,7 @@ import types.PaymentMethods.*
 import payments.PaymentClient
 import payments.MerchantAuthenticationClient
 import payments.CustomerClient
+import payments.DisputeClient
 import payments.EventClient
 import payments.RecurringPaymentClient
 import payments.RefundClient
@@ -31,7 +32,7 @@ import payments.ConnectorSpecificConfig
 import types.Payment.StripeConfig
 import payments.SecretString
 
-val SUPPORTED_FLOWS = listOf<String>("authorize", "capture", "create_client_authentication_token", "customer_create", "get", "incremental_authorization", "parse_event", "proxy_authorize", "proxy_setup_recurring", "recurring_charge", "refund", "refund_get", "setup_recurring", "token_authorize", "token_setup_recurring", "void")
+val SUPPORTED_FLOWS = listOf<String>("authorize", "capture", "create_client_authentication_token", "customer_create", "dispute_accept", "dispute_submit_evidence", "get", "incremental_authorization", "parse_event", "proxy_authorize", "proxy_setup_recurring", "recurring_charge", "refund", "refund_get", "setup_recurring", "token_authorize", "token_setup_recurring", "void")
 
 val _defaultConfig: ConnectorConfig = ConnectorConfig.newBuilder()
     .setOptions(SdkOptions.newBuilder().setEnvironment(Environment.SANDBOX).build())
@@ -263,6 +264,31 @@ fun customerCreate(txnId: String, config: ConnectorConfig = _defaultConfig) {
     }.build()
     val response = client.customer_create(request)
     println("Customer: ${response.connectorCustomerId}")
+}
+
+// Flow: DisputeService.Accept
+fun disputeAccept(txnId: String, config: ConnectorConfig = _defaultConfig) {
+    val client = DisputeClient(config)
+    val request = DisputeServiceAcceptRequest.newBuilder().apply {
+        merchantDisputeId = "probe_dispute_001"  // Identification.
+        connectorTransactionId = "probe_txn_001"
+        disputeId = "probe_dispute_id_001"
+    }.build()
+    val response = client.accept(request)
+    println("Dispute status: ${response.disputeStatus.name}")
+}
+
+// Flow: DisputeService.SubmitEvidence
+fun disputeSubmitEvidence(txnId: String, config: ConnectorConfig = _defaultConfig) {
+    val client = DisputeClient(config)
+    val request = DisputeServiceSubmitEvidenceRequest.newBuilder().apply {
+        merchantDisputeId = "probe_dispute_001"  // Identification.
+        connectorTransactionId = "probe_txn_001"
+        disputeId = "probe_dispute_id_001"
+        // evidenceDocuments: [{"evidence_type": "SERVICE_DOCUMENTATION", "file_content": "probe evidence content", "file_mime_type": "application/pdf"}]  // Collection of evidence documents.
+    }.build()
+    val response = client.submit_evidence(request)
+    println("Dispute status: ${response.disputeStatus.name}")
 }
 
 // Flow: PaymentService.Get
@@ -558,6 +584,8 @@ fun main(args: Array<String>) {
         "capture" -> capture(txnId)
         "createClientAuthenticationToken" -> createClientAuthenticationToken(txnId)
         "customerCreate" -> customerCreate(txnId)
+        "disputeAccept" -> disputeAccept(txnId)
+        "disputeSubmitEvidence" -> disputeSubmitEvidence(txnId)
         "get" -> get(txnId)
         "handleEvent" -> handleEvent(txnId)
         "incrementalAuthorization" -> incrementalAuthorization(txnId)
@@ -571,6 +599,6 @@ fun main(args: Array<String>) {
         "tokenAuthorize" -> tokenAuthorize(txnId)
         "tokenSetupRecurring" -> tokenSetupRecurring(txnId)
         "void" -> void(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createClientAuthenticationToken, customerCreate, get, handleEvent, incrementalAuthorization, parseEvent, proxyAuthorize, proxySetupRecurring, recurringCharge, refund, refundGet, setupRecurring, tokenAuthorize, tokenSetupRecurring, void")
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createClientAuthenticationToken, customerCreate, disputeAccept, disputeSubmitEvidence, get, handleEvent, incrementalAuthorization, parseEvent, proxyAuthorize, proxySetupRecurring, recurringCharge, refund, refundGet, setupRecurring, tokenAuthorize, tokenSetupRecurring, void")
     }
 }

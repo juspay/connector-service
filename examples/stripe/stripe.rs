@@ -19,6 +19,8 @@ pub const SUPPORTED_FLOWS: &[&str] = &[
     "capture",
     "create_client_authentication_token",
     "customer_create",
+    "dispute_accept",
+    "dispute_submit_evidence",
     "get",
     "incremental_authorization",
     "parse_event",
@@ -117,6 +119,24 @@ pub fn build_customer_create_request() -> CustomerServiceCreateRequest {
         customer_name: Some("John Doe".to_string()),              // Name of the customer.
         email: Some(Secret::new("test@example.com".to_string())), // Email address of the customer.
         phone_number: Some(Secret::new("4155552671".to_string())), // Phone number of the customer.
+        ..Default::default()
+    }
+}
+
+pub fn build_dispute_accept_request() -> DisputeServiceAcceptRequest {
+    DisputeServiceAcceptRequest {
+        merchant_dispute_id: Some("probe_dispute_001".to_string()), // Identification.
+        connector_transaction_id: "probe_txn_001".to_string(),
+        dispute_id: "probe_dispute_id_001".to_string(),
+    }
+}
+
+pub fn build_dispute_submit_evidence_request() -> DisputeServiceSubmitEvidenceRequest {
+    DisputeServiceSubmitEvidenceRequest {
+        merchant_dispute_id: Some("probe_dispute_001".to_string()), // Identification.
+        connector_transaction_id: Some("probe_txn_001".to_string()),
+        dispute_id: "probe_dispute_id_001".to_string(),
+        // evidence_documents: [{"evidence_type": "SERVICE_DOCUMENTATION", "file_content": "probe evidence content", "file_mime_type": "application/pdf"}]  // Collection of evidence documents.
         ..Default::default()
     }
 }
@@ -662,6 +682,34 @@ pub async fn process_customer_create(
     Ok(format!("customer_id: {}", response.connector_customer_id))
 }
 
+// Flow: DisputeService.Accept
+#[allow(dead_code)]
+pub async fn process_dispute_accept(
+    client: &ConnectorClient,
+    _merchant_transaction_id: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client
+        .accept(build_dispute_accept_request(), &HashMap::new(), None)
+        .await?;
+    Ok(format!("dispute_status: {:?}", response.dispute_status()))
+}
+
+// Flow: DisputeService.SubmitEvidence
+#[allow(dead_code)]
+pub async fn process_dispute_submit_evidence(
+    client: &ConnectorClient,
+    _merchant_transaction_id: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client
+        .submit_evidence(
+            build_dispute_submit_evidence_request(),
+            &HashMap::new(),
+            None,
+        )
+        .await?;
+    Ok(format!("dispute_status: {:?}", response.dispute_status()))
+}
+
 // Flow: PaymentService.Get
 #[allow(dead_code)]
 pub async fn process_get(
@@ -832,6 +880,10 @@ async fn main() {
             process_create_client_authentication_token(&client, "txn_001").await
         }
         "process_customer_create" => process_customer_create(&client, "txn_001").await,
+        "process_dispute_accept" => process_dispute_accept(&client, "txn_001").await,
+        "process_dispute_submit_evidence" => {
+            process_dispute_submit_evidence(&client, "txn_001").await
+        }
         "process_get" => process_get(&client, "txn_001").await,
         "process_incremental_authorization" => {
             process_incremental_authorization(&client, "txn_001").await
@@ -846,7 +898,7 @@ async fn main() {
         "process_token_setup_recurring" => process_token_setup_recurring(&client, "txn_001").await,
         "process_void" => process_void(&client, "txn_001").await,
         _ => {
-            eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, process_get_payment, process_authorize, process_capture, process_create_client_authentication_token, process_customer_create, process_get, process_incremental_authorization, process_parse_event, process_proxy_authorize, process_proxy_setup_recurring, process_recurring_charge, process_refund_get, process_setup_recurring, process_token_authorize, process_token_setup_recurring, process_void", flow);
+            eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, process_get_payment, process_authorize, process_capture, process_create_client_authentication_token, process_customer_create, process_dispute_accept, process_dispute_submit_evidence, process_get, process_incremental_authorization, process_parse_event, process_proxy_authorize, process_proxy_setup_recurring, process_recurring_charge, process_refund_get, process_setup_recurring, process_token_authorize, process_token_setup_recurring, process_void", flow);
             return;
         }
     };
