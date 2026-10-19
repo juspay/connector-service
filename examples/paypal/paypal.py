@@ -15,7 +15,7 @@ from payments import RecurringPaymentClient
 from payments import RefundClient
 from payments.generated import sdk_config_pb2, payment_pb2, events_pb2, payment_methods_pb2
 
-SUPPORTED_FLOWS = ["authorize", "capture", "create_client_authentication_token", "create_order", "create_server_authentication_token", "get", "parse_event", "post_authenticate", "proxy_authorize", "recurring_charge", "refund", "refund_get", "setup_recurring", "void"]
+SUPPORTED_FLOWS = ["authorize", "capture", "create_client_authentication_token", "create_order", "create_server_authentication_token", "get", "parse_event", "post_authenticate", "proxy_authorize", "recurring_charge", "refund", "refund_get", "setup_recurring", "token_setup_recurring", "void"]
 
 _default_config = sdk_config_pb2.ConnectorConfig(
     options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
@@ -50,15 +50,44 @@ def _build_authorize_request(capture_method: str):
         ),
         capture_method=payment_pb2.CaptureMethod.Value(capture_method),  # Method for capturing the payment.
         address=payment_pb2.PaymentAddress(  # Address Information.
-            billing_address=payment_pb2.Address(),
+            shipping_address=payment_pb2.Address(
+                first_name=payment_methods_pb2.SecretString(value="Jane"),  # Personal Information.
+                last_name=payment_methods_pb2.SecretString(value="Doe"),
+                line1=payment_methods_pb2.SecretString(value="12 Main Street"),  # Address Details.
+                line2=payment_methods_pb2.SecretString(value="Suite 400"),
+                city=payment_methods_pb2.SecretString(value="Seattle"),
+                state=payment_methods_pb2.SecretString(value="WA"),
+                zip_code=payment_methods_pb2.SecretString(value="98101"),
+                country_alpha2_code=payment_methods_pb2.CountryAlpha2.Value("US"),
+            ),
+            billing_address=payment_pb2.Address(
+                line2=payment_methods_pb2.SecretString(value="Apt 2"),
+                state=payment_methods_pb2.SecretString(value="WA"),
+                country_alpha2_code=payment_methods_pb2.CountryAlpha2.Value("US"),
+            ),
         ),
         auth_type=payment_pb2.AuthenticationType.Value("NO_THREE_DS"),  # Authentication Details.
         return_url="https://example.com/return",  # URLs for Redirection and Webhooks.
+        setup_future_usage=payment_pb2.FutureUsage.Value("OFF_SESSION"),  # Behavioral Flags and Preferences.
+        billing_descriptor=payment_pb2.BillingDescriptor(  # Statement Descriptor.
+            statement_descriptor="PROBE DESCRIPTOR",  # Complete description that appears on customers' statements.
+        ),
         state=payment_pb2.ConnectorState(  # State Information.
             access_token=payment_pb2.AccessToken(  # Access token obtained from connector.
                 token=payment_methods_pb2.SecretString(value="probe_access_token"),  # The token string.
                 expires_in_seconds=3600,  # Expiration timestamp (seconds since epoch).
                 token_type="Bearer",  # Token type (e.g., "Bearer", "Basic").
+            ),
+        ),
+        l2_l3_data=payment_pb2.L2L3Data(  # Level 2 / Level 3 data for enhanced payment processing.
+            order_info=payment_pb2.OrderInfo(  # Order-level information.
+                # order_details: [{"product_name": "Probe item", "quantity": 1, "amount": 650, "total_tax_amount": 100, "product_id": "sku_probe_001", "description": "Probe line item", "unit_of_measure": "EA", "commodity_code": "4900"}]  # Line items for the order.
+                discount_amount=25,  # Discount applied to the order (in minor currency units).
+                shipping_cost=200,  # Shipping cost for the order (in minor currency units).
+                duty_amount=50,  # Duty/customs amount for the order (in minor currency units).
+            ),
+            tax_info=payment_pb2.TaxInfo(  # Tax information.
+                order_tax_amount=100,  # Total tax amount for the order (in minor currency units).
             ),
         ),
     )
@@ -295,6 +324,47 @@ def _build_setup_recurring_request():
         ),
     )
 
+def _build_token_setup_recurring_request():
+    return payment_pb2.PaymentServiceTokenSetupRecurringRequest(
+        merchant_recurring_payment_id="probe_tokenized_mandate_001",
+        amount=payment_pb2.Money(
+            minor_amount=0,  # Amount in minor units (e.g., 1000 = $10.00).
+            currency=payment_pb2.Currency.Value("USD"),  # ISO 4217 currency code (e.g., "USD", "EUR").
+        ),
+        connector_token=payment_methods_pb2.SecretString(value="pm_1AbcXyzStripeTestToken"),
+        address=payment_pb2.PaymentAddress(
+            billing_address=payment_pb2.Address(),
+        ),
+        state=payment_pb2.ConnectorState(
+            access_token=payment_pb2.AccessToken(  # Access token obtained from connector.
+                token=payment_methods_pb2.SecretString(value="probe_access_token"),  # The token string.
+                expires_in_seconds=3600,  # Expiration timestamp (seconds since epoch).
+                token_type="Bearer",  # Token type (e.g., "Bearer", "Basic").
+            ),
+        ),
+        customer_acceptance=payment_pb2.CustomerAcceptance(
+            acceptance_type=payment_pb2.AcceptanceType.Value("ONLINE"),  # Type of acceptance (e.g., online, offline).
+            accepted_at=0,  # Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
+            online_mandate_details=payment_pb2.OnlineMandate(  # Details if the acceptance was an online mandate.
+                ip_address="127.0.0.1",  # IP address from which the mandate was accepted.
+                user_agent="Mozilla/5.0",  # User agent string of the browser used for mandate acceptance.
+            ),
+        ),
+        setup_mandate_details=payment_pb2.SetupMandateDetails(
+            mandate_type=payment_pb2.MandateType(  # Type of mandate (single_use or multi_use) with amount details.
+                multi_use=payment_pb2.MandateAmountData(
+                    amount=0,  # Use amount_money instead (will be removed in a future release).
+                    currency=payment_pb2.Currency.Value("USD"),  # Use amount_money.currency instead (will be removed in a future release).
+                    amount_money=payment_pb2.Money(  # Amount in Money type.
+                        minor_amount=0,  # Amount in minor units (e.g., 1000 = $10.00).
+                        currency=payment_pb2.Currency.Value("USD"),  # ISO 4217 currency code (e.g., "USD", "EUR").
+                    ),
+                ),
+            ),
+        ),
+        setup_future_usage=payment_pb2.FutureUsage.Value("OFF_SESSION"),
+    )
+
 def _build_void_request(connector_transaction_id: str):
     return payment_pb2.PaymentServiceVoidRequest(
         merchant_void_id="probe_void_001",  # Identification.
@@ -526,6 +596,15 @@ async def process_setup_recurring(merchant_transaction_id: str, config: sdk_conf
     setup_response = await payment_client.setup_recurring(_build_setup_recurring_request())
 
     return {"status": setup_response.status, "mandate_id": setup_response.connector_recurring_payment_id}
+
+
+async def process_token_setup_recurring(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: PaymentService.TokenSetupRecurring"""
+    payment_client = PaymentClient(config)
+
+    token_response = await payment_client.token_setup_recurring(_build_token_setup_recurring_request())
+
+    return {"status": token_response.status}
 
 
 async def process_void(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
