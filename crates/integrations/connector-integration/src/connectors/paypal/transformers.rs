@@ -295,8 +295,13 @@ pub fn paypal_error_attempt_status(
             common_enums::RefundStatus::Failure
         })),
         PaypalErrorFlow::Authorize => Some(FlowStatus::Payment(
+            // `Pending`, not `Charged`: the replay proves the capture happened but carries no
+            // amount, and `Charged` is terminal in the router's PSync workflow -- it retires
+            // the already-scheduled sync task and leaves `amount_captured` null forever
+            // (B058). `Pending` is non-terminal, so PSync establishes the true captured
+            // amount, which matters most for a partial capture the replay cannot describe.
             if has(PaypalErrorIssue::OrderAlreadyCaptured) {
-                A::Charged
+                A::Pending
             } else if has(PaypalErrorIssue::OrderAlreadyAuthorized) {
                 A::Authorized
             } else if has(PaypalErrorIssue::PayerActionRequired) {
@@ -310,9 +315,10 @@ pub fn paypal_error_attempt_status(
             },
         )),
         PaypalErrorFlow::Capture => Some(FlowStatus::Payment(
-            if has(PaypalErrorIssue::AuthorizationAlreadyCaptured) {
-                A::Charged
-            } else if unknown_outcome {
+            // AUTHORIZATION_ALREADY_CAPTURED joins `unknown_outcome` rather than reporting
+            // `Charged`: as in Authorize/ORDER_ALREADY_CAPTURED above, the captured amount is
+            // unknown, so stay non-terminal and let PSync establish it (B058).
+            if has(PaypalErrorIssue::AuthorizationAlreadyCaptured) || unknown_outcome {
                 A::Pending
             } else {
                 A::CaptureFailed
