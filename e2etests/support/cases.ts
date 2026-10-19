@@ -25,36 +25,33 @@ export type RequestVariant = {
   fixture?: "stripe-connect" | "merchant-reference";
   clientConfirmation?: boolean;
   payment?: Json;
+  request?: Json;
+  confirmRequest?: Json;
+  description?: string;
+  verifies?: string;
+  sequence?: readonly string[];
+  coverage?: "reference-pattern" | "regression";
   connectorMetadata?: Json;
   profile?: Json;
   scenarios: readonly Scenario[];
 };
 
-// Baseline exercises the automatic payment. Additional variants can describe
-// distinct request/configuration behavior without duplicating connector setup.
-export function paymentCases(
-  variants: readonly RequestVariant[],
-  selected?: string,
-) {
-  const all: RequestVariant[] = [
-    { id: "baseline", scenarios: ["automatic"] },
-    ...variants,
-  ];
-  const ids = new Set<string>();
-  for (const variant of all) {
-    if (!/^[a-z][a-z0-9-]{0,47}$/.test(variant.id) || ids.has(variant.id)) {
-      throw new Error("Request variants require unique synthetic identifiers");
-    }
-    ids.add(variant.id);
-    if (
-      !variant.scenarios.length ||
-      new Set(variant.scenarios).size !== variant.scenarios.length ||
-      variant.scenarios.some((s) => !scenarios.includes(s))
-    ) {
-      throw new Error(`Invalid lifecycle selection for ${variant.id}`);
-    }
-  }
-  if (selected && !ids.has(selected))
-    throw new Error(`Unknown request variant: ${selected}`);
-  return all.filter((v) => !selected || v.id === selected);
-}
+export type OtpScenario = RequestVariant & {
+  description: string;
+  verifies: string;
+  sequence: readonly string[];
+  coverage: "reference-pattern" | "regression";
+  request: Json;
+};
+
+export type ConnectorCaseOverride = Omit<RequestVariant, "scenarios" | "id"> & {
+  id?: string;
+  completion?: "submission";
+};
+export type ConnectorScenarioConfig = {
+  payment?: Json;
+  cases: Record<
+    string,
+    ConnectorCaseOverride | readonly ConnectorCaseOverride[]
+  >;
+};

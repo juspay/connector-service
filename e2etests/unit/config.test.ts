@@ -10,9 +10,12 @@ import {
   resolveOverrides,
   readPrivateJson,
 } from "../support/config.js";
-import { connectors, paymentCases } from "../support/cases.js";
-import { variants as stripeVariants } from "../otp/stripe/card-no3ds/variants.js";
-
+import { type OtpScenario } from "../support/cases.js";
+import { otpSupersetCases } from "../support/otp-superset.js";
+import {
+  basicCardPayment,
+  checkoutPayment,
+} from "../otp/superset/card-no3ds/fixtures.js";
 test("merchant patches retain nested connector defaults, replace arrays, and do not mutate shared input", () => {
   const defaults = {
     metadata: { retained: true, replaced: 1 },
@@ -96,21 +99,51 @@ test("OTP overrides cannot accidentally switch the suite to mandate, wallet, or 
     assert.throws(() => assertOtp(merge(base, patch)), /OTP requires/);
 });
 
-test("baseline stays unique when request variants are added", () => {
-  assert.equal(connectors.includes("stripe"), true);
+test("one superset case expands across connectors and preserves terminal versus submission expectations", () => {
+  const definition: OtpScenario = {
+    id: "manual-capture",
+    description: "Authorize and capture",
+    verifies: "Terminal capture succeeds",
+    sequence: ["Authorize", "Capture", "Verify terminal capture"],
+    coverage: "regression",
+    request: basicCardPayment(),
+    scenarios: ["manual-capture"],
+  };
+  const cases = otpSupersetCases(definition);
+  assert.equal(cases.length, 5);
+  const stripe = cases.find((c) => c.connector === "stripe")!.scenario;
+  const adyen = cases.find((c) => c.connector === "adyen")!.scenario;
+  assert.deepEqual(stripe.scenarios, ["manual-capture"]);
+  assert.deepEqual(adyen.scenarios, ["capture-submission"]);
+  assert.match(adyen.verifies, /Terminal completion is not asserted/);
   assert.equal(
-    paymentCases(stripeVariants).filter((v) => v.id === "baseline").length,
-    1,
+    adyen.payment!.payment_method_data.card.card_number,
+    "4111111111111111",
   );
-  assert.deepEqual(paymentCases(stripeVariants)[0].scenarios, ["automatic"]);
-  assert.throws(() => paymentCases([], "missing"), /Unknown request variant/);
-  assert.throws(
-    () => paymentCases([{ id: "baseline", scenarios: ["automatic"] }]),
-    /unique synthetic/,
-  );
-  assert.throws(
-    () => paymentCases([{ id: "empty", scenarios: [] }]),
-    /Invalid lifecycle/,
+  assert.deepEqual(definition.scenarios, ["manual-capture"]);
+});
+
+test("complete connector request overrides retain absent fields and do not inherit common payment defaults", () => {
+  const cases = otpSupersetCases({
+    id: "direct-charge",
+    description: "Direct charge",
+    verifies: "Payment succeeds",
+    sequence: ["Confirm"],
+    coverage: "regression",
+    request: checkoutPayment(),
+    scenarios: ["automatic"],
+  });
+  assert.equal(cases.length, 1);
+  const selected = cases[0].scenario;
+  assert.equal(selected.coverage, "reference-pattern");
+  assert.equal("setup_future_usage" in selected.request, false);
+  assert.equal("authentication_type" in selected.request, false);
+  assert.equal("phone" in selected.request.customer, false);
+  assert.deepEqual(selected.request.billing_descriptor, {});
+  assert.equal(Object.keys(selected.request.metadata).length, 15);
+  assert.equal(
+    selected.request.split_payments.stripe_split_payment.charge_type,
+    "direct",
   );
 });
 

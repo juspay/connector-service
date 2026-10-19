@@ -8,7 +8,7 @@ Each case creates an isolated HS merchant, profile, connector account, and routi
 
 | Connector     | Cases | Coverage                                                                                                                                                                                           |
 | ------------- | ----: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Stripe        |    11 | Separate and inline confirmation, publishable-key confirmation, customer/shipping/metadata/descriptor fields, billing-profile override, Connect direct charges, capture, void, full/partial refund |
+| Stripe        |    12 | Separate and inline confirmation, publishable-key confirmation, customer/shipping/metadata/descriptor fields, billing-profile override, Connect direct charges, capture, void, full/partial refund |
 | Adyen         |     9 | Automatic capture, merchant-supplied references, customer acceptance without future usage, AUD/EUR/GBP/CHF/SGD, capture/void/refund submissions                                                    |
 | PayPal        |     8 | Automatic capture, publishable-key authorize/capture or void, USD/CAD/GBP/AUD, full/partial refund                                                                                                 |
 | Authorize.net |     6 | Automatic capture, inline customer details, merchant-key and publishable-key capture/void                                                                                                          |
@@ -30,7 +30,7 @@ export CONNECTOR_AUTH_FILE_PATH='/absolute/path/to/creds.json'
 npm run stack:up
 npm test                           # All six connectors; all credentials required
 # Or start with one connector:
-# E2E_VARIANT=baseline npm test -- otp/stripe
+# E2E_VARIANT=baseline npm test -- --grep @stripe
 npx playwright show-report
 npm run stack:down
 ```
@@ -96,11 +96,19 @@ For reproducible runs, select image digests/releases. `.runtime/versions.json` r
 
 ```text
 e2etests/
-  otp/<connector>/card-no3ds/
-    payment.spec.ts
-    variants.ts
+  otp/
+    superset/card-no3ds/
+      baseline.spec.ts
+      client-confirm.spec.ts
+      manual-capture.spec.ts
+      refund-full.spec.ts
+      ...
+      fixtures.ts
+    <connector>/card-no3ds/
+      overrides.ts
+      fixtures.ts              # When complete connector requests are needed
   support/
-    cases.ts
+    otp-superset.ts
     otp-scenarios.ts
     config.ts
     hs.ts
@@ -110,11 +118,17 @@ e2etests/
   playwright.config.ts
 ```
 
-Add request variants in `variants.ts` and pass them to `otpSuite` from the connector spec. Add connector directories under `otp/<connector>/<variant>/` and extend the connector registry, card fixtures, and UCS connector configuration when adding support.
+Each superset spec contains the scenario explanation, expected behavior, request fixture, API sequence, and test declaration. These explanations also appear in the HTML report. Scenarios are defined once and expanded across the connectors that enable them.
+
+Connector `overrides.ts` files select supported superset cases and supply request/configuration differences such as test cards, currencies, profile options, and metadata. `completion: "submission"` explicitly limits a case to processor acceptance rather than terminal completion. Currency variants expand a shared scenario without copying its test implementation.
+
+To add a scenario, add a spec under `otp/superset/card-no3ds/` and enable it in applicable connector overrides. To add a connector, register its overrides and UCS configuration; reuse the existing superset. For example, `npm test -- --grep @stripe` selects Stripe executions, while `npm test -- otp/superset/card-no3ds/manual-capture.spec.ts` runs a shared capture scenario across enabled connectors.
+
+Complete request fixtures are sent without injecting shared optional payment fields. `reference-pattern` identifies a reviewed integration request shape; `regression` identifies an intentional variation. Both use synthetic values and sandbox credentials. Processor-generated IDs and client secrets are obtained at runtime.
 
 Copy `overrides.example.json` to an ignored `overrides.local.json` and set `E2E_OVERRIDES_FILE`. Connector settings support credential-entry selection, connector metadata, profile flags, and payment fields. Variant settings override a named request shape without changing credentials.
 
-Resolution order: shared defaults → connector settings → built-in variant → variant overrides. Nested objects merge, arrays replace, and `null` clears a field. OTP guards reject future-usage, mandate, recurring-payment, wallet, and 3DS requests. Customer acceptance alone is allowed; the resulting payment must still have no future usage or mandate. Use synthetic fixture data.
+The superset chooses the request fixture; a connector can replace it completely or supply field overrides. External connector settings and named variant overrides are then resolved by the shared configuration helper. Nested objects merge, arrays replace, and `null` clears a field. OTP guards reject future-usage, mandate, recurring-payment, wallet, and 3DS requests. Customer acceptance alone is allowed; the resulting payment must still have no future usage or mandate. Use synthetic fixture data.
 
 ## Reports and checks
 

@@ -107,13 +107,13 @@ export function resolveOverrides(
     }
   }
   const { credential: _credential, ...common } = connectorPatch;
-  const {
-    id: _id,
-    scenarios: _scenarios,
-    fixture: _fixture,
-    clientConfirmation: _clientConfirmation,
-    ...builtin
-  } = variant;
+  const builtin = {
+    ...(variant.payment ? { payment: variant.payment } : {}),
+    ...(variant.profile ? { profile: variant.profile } : {}),
+    ...(variant.connectorMetadata
+      ? { connectorMetadata: variant.connectorMetadata }
+      : {}),
+  };
   return merge(merge(common, builtin), variantPatch);
 }
 
