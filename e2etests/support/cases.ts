@@ -6,6 +6,8 @@ export const scenarios = ["automatic"] as const;
 export type Scenario = (typeof scenarios)[number];
 export type RequestVariant = {
   id: string;
+  fixture?: "stripe-connect";
+  clientConfirmation?: boolean;
   payment?: Json;
   connectorMetadata?: Json;
   profile?: Json;

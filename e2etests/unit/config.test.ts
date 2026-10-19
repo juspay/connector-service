@@ -88,9 +88,12 @@ test("OTP overrides cannot accidentally switch the suite to mandate, wallet, or 
     assert.throws(() => assertOtp(merge(base, patch)), /OTP requires/);
 });
 
-test("baseline discovers one automatic Stripe payment and rejects invalid selections", () => {
+test("baseline stays unique when request variants are added", () => {
   assert.deepEqual(connectors, ["stripe"]);
-  assert.equal(paymentCases(stripeVariants).length, 1);
+  assert.equal(
+    paymentCases(stripeVariants).filter((v) => v.id === "baseline").length,
+    1,
+  );
   assert.deepEqual(paymentCases(stripeVariants)[0].scenarios, ["automatic"]);
   assert.throws(() => paymentCases([], "missing"), /Unknown request variant/);
   assert.throws(

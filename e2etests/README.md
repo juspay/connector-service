@@ -1,8 +1,21 @@
 # Hyperswitch → UCS card OTP test
 
-Playwright API test for a fresh-card, No3DS Stripe one-time payment through **Hyperswitch → UCS → Stripe sandbox**.
+Playwright API tests for fresh-card, No3DS Stripe one-time payments through **Hyperswitch → UCS → Stripe sandbox**.
 
-The test creates an isolated HS merchant, profile, connector account, and routing rule, then creates a payment, confirms it with automatic capture, and forces payment sync. It requires `succeeded`, the expected amount/currency/connector, and a PostgreSQL gateway value of `unified_connector_service`, and a charged Stripe attempt with a processor transaction reference. Test retries are disabled.
+Each test creates an isolated HS merchant, profile, connector account, and routing rule, then creates a payment, confirms it with automatic capture, and forces payment sync. It requires `succeeded`, the expected amount/currency/connector, and a PostgreSQL gateway value of `unified_connector_service`, and a charged Stripe attempt with a processor transaction reference. Test retries are disabled.
+
+## Stripe coverage
+
+| Variant               | Behavior                                                                  |
+| --------------------- | ------------------------------------------------------------------------- |
+| `baseline`            | Create with a fresh card, then merchant-key confirmation                  |
+| `client-confirm`      | Create without a card, then publishable-key/client-secret confirmation    |
+| `inline-confirm`      | Create and confirm in one request                                         |
+| `checkout-details`    | Inline payment with customer, billing, shipping, metadata, and descriptor |
+| `connect-direct`      | Direct charge with a connected account and application fee                |
+| `connect-no-shipping` | Direct charge with shipping omitted                                       |
+
+Stripe PaymentIntents are read back using the sandbox key to verify amount/currency, metadata/descriptor, and application fee where applicable. These reads do not create or modify processor resources. Connect cases select an existing charge-enabled sandbox account; set `STRIPE_CONNECTED_ACCOUNT_ID` to select one explicitly. The key must allow the corresponding account and PaymentIntent reads. Accounts are never created by the fixture helper.
 
 ## Local execution
 
@@ -51,20 +64,21 @@ HS runs from `docker.juspay.io/juspaydotin/hyperswitch-router:latest`. Its confi
 
 Stripe is routed through UCS. The test creates `ucs_enabled=true` when absent and fails if an existing value disables UCS. Default host ports are 8080 (HS), 15432 (PostgreSQL), and 8081 (Superposition). UCS and Redis are available only inside the Compose network. Existing services may conflict with published ports. `stack:down` preserves the test database volume.
 
-| Variable                   | Purpose/default                                                        |
-| -------------------------- | ---------------------------------------------------------------------- |
-| `HS_IMAGE`                 | `docker.juspay.io/juspaydotin/hyperswitch-router:latest`               |
-| `UCS_IMAGE`                | `juspaydotin/hyperswitch-prism:latest`                                 |
-| `HS_REF`                   | Optional explicit matching HS source revision                          |
-| `HS_SOURCE_DIR`            | Optional existing matching HS checkout                                 |
-| `UCS_BASE_URL`             | Optional external gRPC origin reachable from Docker; skips managed UCS |
-| `HS_BASE_URL`              | Runner-to-HS endpoint; `http://localhost:8080`                         |
-| `HS_ADMIN_API_KEY`         | `test_admin`                                                           |
-| `HS_DB_PORT`               | E2E PostgreSQL host port; `15432`                                      |
-| `HS_DATABASE_URL`          | `postgresql://db_user:db_pass@127.0.0.1:15432/hyperswitch_db`          |
-| `CONNECTOR_AUTH_FILE_PATH` | Credentials JSON; `CYPRESS_CONNECTOR_AUTH_FILE_PATH` also accepted     |
-| `E2E_OVERRIDES_FILE`       | Optional local configuration overrides                                 |
-| `E2E_VARIANT`              | Optional named variant selection; currently `baseline`                 |
+| Variable                      | Purpose/default                                                        |
+| ----------------------------- | ---------------------------------------------------------------------- |
+| `HS_IMAGE`                    | `docker.juspay.io/juspaydotin/hyperswitch-router:latest`               |
+| `UCS_IMAGE`                   | `juspaydotin/hyperswitch-prism:latest`                                 |
+| `HS_REF`                      | Optional explicit matching HS source revision                          |
+| `HS_SOURCE_DIR`               | Optional existing matching HS checkout                                 |
+| `UCS_BASE_URL`                | Optional external gRPC origin reachable from Docker; skips managed UCS |
+| `HS_BASE_URL`                 | Runner-to-HS endpoint; `http://localhost:8080`                         |
+| `HS_ADMIN_API_KEY`            | `test_admin`                                                           |
+| `HS_DB_PORT`                  | E2E PostgreSQL host port; `15432`                                      |
+| `HS_DATABASE_URL`             | `postgresql://db_user:db_pass@127.0.0.1:15432/hyperswitch_db`          |
+| `CONNECTOR_AUTH_FILE_PATH`    | Credentials JSON; `CYPRESS_CONNECTOR_AUTH_FILE_PATH` also accepted     |
+| `E2E_OVERRIDES_FILE`          | Optional local configuration overrides                                 |
+| `STRIPE_CONNECTED_ACCOUNT_ID` | Optional existing sandbox Connect account                              |
+| `E2E_VARIANT`                 | Optional named variant selection                                       |
 
 To use an existing UCS, set `UCS_BASE_URL` before `stack:up`, for example `http://host.docker.internal:8000`. This is the gRPC origin, not the UCS HTTP API. A gRPC health probe checks it before HS starts. Use an HTTPS origin for TLS. External UCS is never started or stopped by the harness.
 
@@ -107,4 +121,4 @@ npm test            # Live sandbox payment
 
 `npm test` generates terminal results, HTML at `playwright-report/`, and JUnit XML at `test-results/results.xml`. Open HTML with `npx playwright show-report`. Reports omit credential values and raw API payloads; API traces, screenshots, and videos are disabled.
 
-Only the automatic Stripe payment is implemented. Other lifecycles and connectors can be added separately. Type checks, unit tests, and discovery do not execute sandbox payments.
+Stripe currently covers the six automatic-payment variants listed above. Additional lifecycles and connectors can be added separately. Type checks, unit tests, and discovery do not execute sandbox payments.

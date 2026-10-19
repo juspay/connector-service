@@ -93,6 +93,9 @@ export async function assertUcsGateway(
   try {
     const result = await client.query(
       `SELECT p.feature_metadata->>'gateway_system' AS gateway,
+        (SELECT a.connector_transaction_id FROM payment_attempt a
+          WHERE a.merchant_id=p.merchant_id AND a.payment_id=p.payment_id
+            AND a.connector=$3 AND a.status='charged' ORDER BY a.created_at DESC LIMIT 1) AS processor_reference,
         EXISTS (SELECT 1 FROM payment_attempt a
           WHERE a.merchant_id=p.merchant_id AND a.payment_id=p.payment_id
             AND a.connector=$3 AND a.status='charged'
@@ -111,6 +114,7 @@ export async function assertUcsGateway(
         "Payment did not record a charged connector attempt with a processor reference",
       );
     }
+    return result.rows[0].processor_reference as string;
   } finally {
     await client.end();
   }
