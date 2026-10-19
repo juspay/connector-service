@@ -5219,34 +5219,13 @@ impl ForeignTryFrom<grpc_payment_types::HotelData> for connector_types::HotelDat
         // Read enum getters (which borrow `hotel_data`) before moving fields out.
         let refundability =
             Option::<common_enums::TicketRefundability>::foreign_from(hotel_data.refundability());
-        let room_class = Option::<common_enums::RoomClass>::foreign_from(hotel_data.room_class());
-        let accommodation_type = Option::<common_enums::AccommodationType>::foreign_from(
-            hotel_data.accommodation_type(),
-        );
         Ok(Self {
             booking_id: hotel_data.booking_id,
-            checkin: hotel_data.checkin,
-            checkout: hotel_data.checkout,
             number_of_guests: hotel_data.number_of_guests,
-            guests: hotel_data
-                .guests
-                .iter()
-                .map(CustomerInfo::foreign_try_from)
-                .collect::<Result<Vec<_>, _>>()?,
-            number_of_rooms: hotel_data.number_of_rooms,
-            hotel_name: hotel_data.hotel_name,
-            hotel_city: hotel_data.hotel_city,
-            hotel_country: hotel_data.hotel_country,
-            room_class,
-            accommodation_type,
             refundability,
             ticket_delivery_recipient: hotel_data
                 .ticket_delivery_recipient
                 .map(connector_types::TicketDeliveryContact::foreign_try_from)
-                .transpose()?,
-            host: hotel_data
-                .host
-                .map(connector_types::HostDetails::foreign_try_from)
                 .transpose()?,
             insurances: hotel_data
                 .insurances
@@ -5267,11 +5246,6 @@ impl ForeignTryFrom<grpc_payment_types::HotelData> for connector_types::HotelDat
                 .into_iter()
                 .map(connector_types::ExtraCharge::foreign_try_from)
                 .collect::<Result<Vec<_>, _>>()?,
-            number_of_night_stay: hotel_data.number_of_night_stay,
-            daily_rate: hotel_data
-                .daily_rate
-                .map(common_utils::types::Money::foreign_try_from)
-                .transpose()?,
             no_show: hotel_data.no_show,
             prepaid_amount: hotel_data
                 .prepaid_amount
@@ -5282,6 +5256,50 @@ impl ForeignTryFrom<grpc_payment_types::HotelData> for connector_types::HotelDat
                 .map(common_utils::types::Money::foreign_try_from)
                 .transpose()?,
             discount_code: hotel_data.discount_code,
+            hotel_segments: hotel_data
+                .hotel_segments
+                .into_iter()
+                .map(connector_types::HotelSegment::foreign_try_from)
+                .collect::<Result<Vec<_>, _>>()?,
+        })
+    }
+}
+
+impl ForeignTryFrom<grpc_payment_types::HotelSegment> for connector_types::HotelSegment {
+    type Error = IntegrationError;
+
+    fn foreign_try_from(
+        segment: grpc_payment_types::HotelSegment,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        // Read enum getters (which borrow `segment`) before moving fields out.
+        let room_class = Option::<common_enums::RoomClass>::foreign_from(segment.room_class());
+        let accommodation_type =
+            Option::<common_enums::AccommodationType>::foreign_from(segment.accommodation_type());
+        Ok(Self {
+            sequence_no: segment.sequence_no,
+            hotel_name: segment.hotel_name,
+            hotel_city: segment.hotel_city,
+            hotel_country: segment.hotel_country,
+            checkin: segment.checkin,
+            checkout: segment.checkout,
+            number_of_night_stay: segment.number_of_night_stay,
+            number_of_guests: segment.number_of_guests,
+            guests: segment
+                .guests
+                .iter()
+                .map(CustomerInfo::foreign_try_from)
+                .collect::<Result<Vec<_>, _>>()?,
+            number_of_rooms: segment.number_of_rooms,
+            room_class,
+            accommodation_type,
+            host: segment
+                .host
+                .map(connector_types::HostDetails::foreign_try_from)
+                .transpose()?,
+            daily_rate: segment
+                .daily_rate
+                .map(common_utils::types::Money::foreign_try_from)
+                .transpose()?,
         })
     }
 }

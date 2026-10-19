@@ -220,32 +220,44 @@ message AirlinePassenger {
 }
 
 // Connector-agnostic hotel / accommodation booking data. Every field is
-// optional so each connector enforces its own required subset.
+// optional so each connector enforces its own required subset. Booking-level
+// fields stay here; per-property stay details live on HotelSegment.
 message HotelData {
   optional string booking_id = 1;           // Merchant's booking reference
-  optional string checkin = 2;              // Check-in date/time (RFC 3339)
-  optional string checkout = 3;             // Check-out date/time (RFC 3339)
-  optional uint32 number_of_guests = 4;     // Number of guests
-  repeated Customer guests = 5;             // Guest details
-  optional uint32 number_of_rooms = 6;      // Number of rooms
-  optional string hotel_name = 7;           // Hotel or property name
-  optional string hotel_city = 8;           // City IATA code, e.g. RUH
-  optional string hotel_country = 9;        // ISO 3166-1 alpha-2, e.g. SA
-  optional RoomClass room_class = 10;       // Standard / Suite / Deluxe
-  optional AccommodationType accommodation_type = 11; // room / apartment / villa / suite
-  TicketRefundability refundability = 12;   // Customer can request a refund
-  optional TicketDeliveryContact ticket_delivery_recipient = 13; // email or phone
-  optional HostDetails host = 14;           // Host details
-  repeated InsuranceDetails insurances = 15; // Insurance bought with the booking
-  optional Money booking_amount = 16;       // Booking total, excluding tax and fees
-  repeated TaxItem tax_items = 17;          // Itemised taxes
-  repeated ExtraCharge extra_charges = 18;  // Extra charges, e.g. restaurant, mini bar
-  optional uint32 number_of_night_stay = 19; // Number of nights (derivable from check-in/out)
-  optional Money daily_rate = 20;           // Room rate per night, excluding tax
-  optional bool no_show = 22;               // Guest did not arrive, no-show fee charged
-  optional Money prepaid_amount = 25;       // Amount paid in advance (deposit)
-  optional Money cash_advances = 26;        // Cash advanced to guest during the stay
-  optional string discount_code = 27;       // Corporate client / discount programme code
+  optional uint32 number_of_guests = 2;     // Guest count across the booking
+  TicketRefundability refundability = 3;    // Customer can request a refund
+  optional TicketDeliveryContact ticket_delivery_recipient = 4; // email or phone
+  repeated InsuranceDetails insurances = 5; // Insurance bought with the booking
+  optional Money booking_amount = 6;        // Booking total, excluding tax and fees
+  repeated TaxItem tax_items = 7;           // Itemised taxes
+  repeated ExtraCharge extra_charges = 8;   // Extra charges, e.g. restaurant, mini bar
+  optional bool no_show = 9;                // Guest did not arrive, no-show fee charged
+  optional Money prepaid_amount = 10;       // Amount paid in advance (deposit)
+  optional Money cash_advances = 11;        // Cash advanced to guest during the stay
+  optional string discount_code = 12;       // Corporate client / discount programme code
+  repeated HotelSegment hotel_segments = 13; // Property stays, in itinerary order
+}
+
+// One property stay. Property identity, stay dates, room, guest and host
+// details moved here from HotelData, mirroring how AirlineData carries
+// AirlineSegment legs and TravelData carries TravelSegment legs. One segment
+// with several `guests` covers one hotel for multiple people; several segments
+// cover a multi-hotel itinerary in the same payment.
+message HotelSegment {
+  optional uint32 sequence_no = 1;          // 1-based stay order
+  optional string hotel_name = 2;           // Hotel or property name
+  optional string hotel_city = 3;           // City IATA code, e.g. RUH
+  optional string hotel_country = 4;        // ISO 3166-1 alpha-2, e.g. SA
+  optional string checkin = 5;              // Check-in date/time (RFC 3339)
+  optional string checkout = 6;             // Check-out date/time (RFC 3339)
+  optional uint32 number_of_night_stay = 7; // Number of nights (derivable from check-in/out)
+  optional uint32 number_of_guests = 8;     // Guests at this property
+  repeated Customer guests = 9;             // Guest details for this property
+  optional uint32 number_of_rooms = 10;     // Rooms booked at this property
+  optional RoomClass room_class = 11;       // Standard / Suite / Deluxe
+  optional AccommodationType accommodation_type = 12; // room / apartment / villa / suite
+  optional HostDetails host = 13;           // Host of this property
+  optional Money daily_rate = 14;           // Room rate per night, excluding tax
 }
 
 // Room category booked.

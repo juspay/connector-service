@@ -5089,34 +5089,18 @@ pub struct AirlinePassenger {
 }
 
 /// Connector-agnostic hotel / accommodation booking data. Every field is
-/// optional; each connector enforces its own required subset.
+/// optional; each connector enforces its own required subset. Booking-level
+/// fields stay here; per-property stay details live on [`HotelSegment`].
 #[derive(Debug, Clone, Default)]
 pub struct HotelData {
     /// Merchant's booking reference.
     pub booking_id: Option<String>,
-    /// Check-in date/time (RFC 3339).
-    pub checkin: Option<String>,
-    /// Check-out date/time (RFC 3339).
-    pub checkout: Option<String>,
+    /// Guest count across the booking.
     pub number_of_guests: Option<u32>,
-    /// Guest details.
-    pub guests: Vec<CustomerInfo>,
-    pub number_of_rooms: Option<u32>,
-    /// Hotel or property name.
-    pub hotel_name: Option<String>,
-    /// City IATA code, e.g. RUH.
-    pub hotel_city: Option<String>,
-    /// ISO 3166-1 alpha-2, e.g. SA.
-    pub hotel_country: Option<String>,
-    /// Standard / Suite / Deluxe.
-    pub room_class: Option<common_enums::RoomClass>,
-    /// room / apartment / villa / suite.
-    pub accommodation_type: Option<common_enums::AccommodationType>,
     /// Customer can request a refund.
     pub refundability: Option<common_enums::TicketRefundability>,
     /// Ticket recipient, email or phone.
     pub ticket_delivery_recipient: Option<TicketDeliveryContact>,
-    pub host: Option<HostDetails>,
     /// Insurance bought with the booking.
     pub insurances: Vec<InsuranceDetails>,
     /// Booking total, excluding tax and fees.
@@ -5125,10 +5109,6 @@ pub struct HotelData {
     pub tax_items: Vec<TaxItem>,
     /// Extra charges, e.g. restaurant, mini bar.
     pub extra_charges: Vec<ExtraCharge>,
-    /// Number of nights (derivable from check-in/out).
-    pub number_of_night_stay: Option<u32>,
-    /// Room rate per night, excluding tax.
-    pub daily_rate: Option<common_utils::types::Money>,
     /// Guest did not arrive, no-show fee charged.
     pub no_show: Option<bool>,
     /// Amount paid in advance (deposit).
@@ -5137,6 +5117,43 @@ pub struct HotelData {
     pub cash_advances: Option<common_utils::types::Money>,
     /// Corporate client / discount programme code.
     pub discount_code: Option<String>,
+    /// Property stays, in itinerary order.
+    pub hotel_segments: Vec<HotelSegment>,
+}
+
+/// One property stay (property identity, stay dates, room, guest and host
+/// details). One segment with several `guests` covers one hotel for multiple
+/// people; several segments cover a multi-hotel itinerary in one payment.
+#[derive(Debug, Clone, Default)]
+pub struct HotelSegment {
+    /// 1-based stay order.
+    pub sequence_no: Option<u32>,
+    /// Hotel or property name.
+    pub hotel_name: Option<String>,
+    /// City IATA code, e.g. RUH.
+    pub hotel_city: Option<String>,
+    /// ISO 3166-1 alpha-2, e.g. SA.
+    pub hotel_country: Option<String>,
+    /// Check-in date/time (RFC 3339).
+    pub checkin: Option<String>,
+    /// Check-out date/time (RFC 3339).
+    pub checkout: Option<String>,
+    /// Number of nights (derivable from check-in/out).
+    pub number_of_night_stay: Option<u32>,
+    /// Guests at this property.
+    pub number_of_guests: Option<u32>,
+    /// Guest details for this property.
+    pub guests: Vec<CustomerInfo>,
+    /// Rooms booked at this property.
+    pub number_of_rooms: Option<u32>,
+    /// Standard / Suite / Deluxe.
+    pub room_class: Option<common_enums::RoomClass>,
+    /// room / apartment / villa / suite.
+    pub accommodation_type: Option<common_enums::AccommodationType>,
+    /// Host of this property.
+    pub host: Option<HostDetails>,
+    /// Room rate per night, excluding tax.
+    pub daily_rate: Option<common_utils::types::Money>,
 }
 
 /// Host details for hosted accommodations (rental / homestay platforms).
