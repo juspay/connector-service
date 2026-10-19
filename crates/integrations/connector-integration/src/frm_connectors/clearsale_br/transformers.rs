@@ -1577,7 +1577,7 @@ fn passenger_to_clear_sale(p: &Traveller) -> Option<ClearSalePassenger> {
         // ClearSale identification type enum (spec): 1=CPF, 2=CNPJ, 3=RG, 4=IE,
         // 5=Passport, 6=CTPS, 7=Voter ID. PSN/Other have no ClearSale code.
         identification_type: p.document.as_ref().and_then(|doc| match doc.document_type {
-            DocumentKind::Cpf | DocumentKind::CustomerCpf => Some(1),
+            DocumentKind::Cpf => Some(1),
             DocumentKind::Cnpj => Some(2),
             DocumentKind::Other => Some(5),
             DocumentKind::Psn => None,

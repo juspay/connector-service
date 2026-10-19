@@ -4562,7 +4562,6 @@ impl TryFrom<grpc_payment_types::DocumentKind> for crate::payment_method_data::D
             grpc_payment_types::DocumentKind::Cpf => Ok(Self::Cpf),
             grpc_payment_types::DocumentKind::Cnpj => Ok(Self::Cnpj),
             grpc_payment_types::DocumentKind::Psn => Ok(Self::Psn),
-            grpc_payment_types::DocumentKind::CustomerCpf => Ok(Self::CustomerCpf),
             grpc_payment_types::DocumentKind::Other => Ok(Self::Other),
             grpc_payment_types::DocumentKind::Unspecified => Err(()),
         }
@@ -4577,7 +4576,6 @@ impl From<crate::payment_method_data::DocumentKind> for grpc_payment_types::Docu
             crate::payment_method_data::DocumentKind::Cpf => Self::Cpf,
             crate::payment_method_data::DocumentKind::Cnpj => Self::Cnpj,
             crate::payment_method_data::DocumentKind::Psn => Self::Psn,
-            crate::payment_method_data::DocumentKind::CustomerCpf => Self::CustomerCpf,
             crate::payment_method_data::DocumentKind::Other => Self::Other,
         }
     }
@@ -4674,8 +4672,8 @@ impl ForeignTryFrom<grpc_payment_types::DomainData> for connector_types::DomainD
             travel_data: domain_data
                 .travel_data
                 .into_iter()
-                .map(connector_types::TravelData::foreign_from)
-                .collect(),
+                .map(connector_types::TravelData::foreign_try_from)
+                .collect::<Result<Vec<_>, _>>()?,
         })
     }
 }
@@ -4724,8 +4722,12 @@ impl From<grpc_payment_types::HotelSegment> for connector_types::HotelSegment {
     }
 }
 
-impl ForeignFrom<grpc_payment_types::TravelData> for connector_types::TravelData {
-    fn foreign_from(travel: grpc_payment_types::TravelData) -> Self {
+impl ForeignTryFrom<grpc_payment_types::TravelData> for connector_types::TravelData {
+    type Error = IntegrationError;
+
+    fn foreign_try_from(
+        travel: grpc_payment_types::TravelData,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
         let mode = match travel.mode() {
             grpc_payment_types::TravelMode::Unspecified => None,
             grpc_payment_types::TravelMode::Bus => Some(connector_types::TravelMode::Bus),
@@ -4734,7 +4736,7 @@ impl ForeignFrom<grpc_payment_types::TravelData> for connector_types::TravelData
             grpc_payment_types::TravelMode::Other => Some(connector_types::TravelMode::Other),
         };
         let refundability = ticket_refundability_from_proto(travel.refundability());
-        Self {
+        Ok(Self {
             mode,
             carrier_name: travel.carrier_name,
             number_of_passengers: travel.number_of_passengers,
@@ -4743,45 +4745,54 @@ impl ForeignFrom<grpc_payment_types::TravelData> for connector_types::TravelData
             travel_segments: travel
                 .travel_segments
                 .into_iter()
-                .map(connector_types::TravelSegment::from)
-                .collect(),
-        }
+                .map(connector_types::TravelSegment::foreign_try_from)
+                .collect::<Result<Vec<_>, _>>()?,
+        })
     }
 }
 
-impl From<grpc_payment_types::TravelSegment> for connector_types::TravelSegment {
-    fn from(segment: grpc_payment_types::TravelSegment) -> Self {
-        Self {
+impl ForeignTryFrom<grpc_payment_types::TravelSegment> for connector_types::TravelSegment {
+    type Error = IntegrationError;
+
+    fn foreign_try_from(
+        segment: grpc_payment_types::TravelSegment,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
             origin: segment.origin,
             destination: segment.destination,
             travel_class: segment.travel_class,
             passengers: segment
                 .passengers
                 .into_iter()
-                .map(connector_types::Traveller::foreign_from)
-                .collect(),
+                .map(connector_types::Traveller::foreign_try_from)
+                .collect::<Result<Vec<_>, _>>()?,
             arrival: segment.arrival,
             boarding: segment.boarding,
             departure: segment.departure,
             identifier: segment.identifier,
-        }
+        })
     }
 }
 
-impl ForeignFrom<grpc_payment_types::Traveller> for connector_types::Traveller {
-    fn foreign_from(traveller: grpc_payment_types::Traveller) -> Self {
-        Self {
+impl ForeignTryFrom<grpc_payment_types::Traveller> for connector_types::Traveller {
+    type Error = IntegrationError;
+
+    fn foreign_try_from(
+        traveller: grpc_payment_types::Traveller,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
             first_name: traveller.first_name,
             last_name: traveller.last_name,
             phone_number: traveller.phone_number,
             date_of_birth: traveller.date_of_birth,
-            document: traveller.document.and_then(|doc| {
-                crate::payment_method_data::CustomerDocumentDetails::foreign_try_from(doc).ok()
-            }),
+            document: traveller
+                .document
+                .map(crate::payment_method_data::CustomerDocumentDetails::foreign_try_from)
+                .transpose()?,
             gender: traveller.gender,
             loyalty_card: traveller.loyalty_card,
             loyalty_card_issuer: traveller.loyalty_card_issuer,
-        }
+        })
     }
 }
 

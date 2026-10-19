@@ -232,7 +232,6 @@ enum DocumentKind {
   PSN = 3; // Philippine PhilSys Number (12-digit national ID), required by dLocal for GCash.
   // Identifier for the customer who actually buys the product or service
   // (ClearSale shipping.primaryDocument).
-  CUSTOMER_CPF = 4;
   OTHER = 5; // Generic / other non-Brazilian national document; the connector validates it per country. Kept last as the catch-all.
 }
 
