@@ -25,7 +25,6 @@ use grpc_api_types::payments::{
     PaymentServiceVerifyRedirectResponseResponse, PaymentServiceVoidRequest,
     RefundServiceGetRequest,
 };
-use hyperswitch_masking::ExposeInterface;
 
 use crate::utils::{
     get_access_token, get_connector_customer_id, get_payment_method_token, get_session_token,
