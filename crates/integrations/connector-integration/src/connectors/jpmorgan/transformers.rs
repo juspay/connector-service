@@ -104,54 +104,6 @@ impl requests::JpmorganSyncResource {
     }
 }
 
-impl responses::JpmorganVerificationAuthenticationResult {
-    fn status(&self, http_code: u16) -> Result<AttemptStatus, ResponseError> {
-        let invalid = || requests::JpmorganSyncResource::response_error(http_code);
-        if self
-            .three_domain_secure_server_error_message_text
-            .as_ref()
-            .is_some_and(|message| !message.peek().trim().is_empty())
-        {
-            return Err(invalid());
-        }
-        if let Some(completion) = &self.three_domain_secure_completion {
-            return match completion.peek().transaction_status {
-                Some(responses::JpmorganThreeDsTransactionStatus::AuthenticationSuccessful)
-                    if self.three_domain_secure_challenge.is_none() =>
-                {
-                    Ok(AttemptStatus::Charged)
-                }
-                Some(responses::JpmorganThreeDsTransactionStatus::AuthenticationDenied)
-                | Some(responses::JpmorganThreeDsTransactionStatus::AuthenticationRejected) => {
-                    Ok(AttemptStatus::AuthenticationFailed)
-                }
-                Some(responses::JpmorganThreeDsTransactionStatus::ChallengeRequired)
-                | Some(responses::JpmorganThreeDsTransactionStatus::DecoupledChallengeRequired) => {
-                    Err(invalid())
-                }
-                Some(responses::JpmorganThreeDsTransactionStatus::AuthenticationAttempted)
-                | Some(responses::JpmorganThreeDsTransactionStatus::AuthenticationUnavailable)
-                | Some(responses::JpmorganThreeDsTransactionStatus::InformationalAcknowledged) => {
-                    Err(invalid())
-                }
-                _ => Err(invalid()),
-            };
-        }
-        if self.authentication_id.is_none()
-            && self.authentication_return_url.is_none()
-            && self.authentication_orchestration_url.is_none()
-            && self.three_domain_secure_challenge.is_none()
-            && self.three_domain_secure_exemption.is_none()
-            && self.three_domain_secure_server_error_message_text.is_none()
-            && self.other.is_empty()
-        {
-            Ok(AttemptStatus::Charged)
-        } else {
-            Err(invalid())
-        }
-    }
-}
-
 impl responses::JpmorganVerificationResponse {
     fn status(&self, http_code: u16) -> Result<AttemptStatus, ResponseError> {
         match self.response_status {
@@ -160,11 +112,7 @@ impl responses::JpmorganVerificationResponse {
                 {
                     return Err(requests::JpmorganSyncResource::response_error(http_code));
                 }
-                self.verification_authentication_result
-                    .as_ref()
-                    .map_or(Ok(AttemptStatus::Charged), |result| {
-                        result.peek().status(http_code)
-                    })
+                Ok(AttemptStatus::Charged)
             }
             responses::JpmorganVerificationStatus::Denied
             | responses::JpmorganVerificationStatus::Error => Ok(AttemptStatus::Failure),
