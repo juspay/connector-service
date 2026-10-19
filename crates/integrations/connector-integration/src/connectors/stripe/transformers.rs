@@ -7601,7 +7601,10 @@ mod dispute_event_type_mapping_tests {
             );
         }
         assert_eq!(
-            event_type("charge.dispute.created", Some("a_status_stripe_has_not_shipped_yet")),
+            event_type(
+                "charge.dispute.created",
+                Some("a_status_stripe_has_not_shipped_yet")
+            ),
             EventType::IncomingWebhookEventUnspecified
         );
     }
