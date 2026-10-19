@@ -193,7 +193,6 @@ pub struct TamaraMerchantUrl {
     pub success: String,
     pub failure: String,
     pub cancel: String,
-    pub notification: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -249,7 +248,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .resource_common_data
             .connector_request_reference_id
             .clone();
-        let webhook = router_data.request.webhook_url.clone().unwrap_or_default();
         let return_url = router_data
             .request
             .router_return_url
@@ -428,11 +426,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 success: return_url.clone(),
                 failure: return_url.clone(),
                 cancel: return_url.clone(),
-                notification: if webhook.is_empty() {
-                    None
-                } else {
-                    Some(webhook)
-                },
             },
             shipping_address: TamaraAddress {
                 first_name,
