@@ -982,6 +982,9 @@ pub fn emit_event_with_config(event: Event, config: &EventConfig) {
         .unwrap_or_else(|e| format!("{{\"error\":\"Failed to serialize event: {}\"}}", e));
     tracing::info!(
         events_enabled = config.enabled,
+        // Machine-readable copy of the same processed, masked payload. Keep the
+        // legacy message intact for existing log consumers.
+        ucs_event = %event_json,
         "Event processed (Kafka publishing: {}) - Event JSON: {}",
         if config.enabled {
             "enabled"
@@ -1199,6 +1202,69 @@ mod runtime_metadata_tests {
             additional_fields: HashMap::new(),
             lineage_ids: lineage::LineageIds::default(),
             runtime_metadata,
+        }
+    }
+
+    #[cfg(feature = "logging")]
+    #[test]
+    fn structured_log_field_contains_the_existing_masked_event() {
+        use std::sync::{Arc, Mutex};
+
+        use tracing::field::{Field, Visit};
+        use tracing_subscriber::{layer::Context, prelude::*, Layer};
+
+        #[derive(Clone, Default)]
+        struct Capture(Arc<Mutex<Vec<String>>>);
+
+        impl Visit for Capture {
+            fn record_debug(&mut self, field: &Field, value: &dyn std::fmt::Debug) {
+                if field.name() == "ucs_event" {
+                    self.0
+                        .lock()
+                        .expect("capture lock")
+                        .push(format!("{value:?}"));
+                }
+            }
+        }
+
+        impl<S: tracing::Subscriber> Layer<S> for Capture {
+            fn on_event(&self, event: &tracing::Event<'_>, _context: Context<'_, S>) {
+                event.record(&mut self.clone());
+            }
+        }
+
+        #[derive(serde::Serialize)]
+        struct Request {
+            token: hyperswitch_masking::Secret<String>,
+        }
+
+        let capture = Capture::default();
+        let subscriber = tracing_subscriber::registry().with(capture.clone());
+        let config = super::EventConfig::default();
+        let mut expected = Vec::new();
+        tracing::subscriber::with_default(subscriber, || {
+            for stage in [EventStage::GrpcRequest, EventStage::ConnectorCall] {
+                let mut event = sample_event(RuntimeMetadata::default());
+                event.stage = stage;
+                event.request_data = super::MaskedSerdeValue::from_masked_optional(
+                    &Request {
+                        token: hyperswitch_masking::Secret::new("private-test-token".to_string()),
+                    },
+                    "request",
+                );
+                expected
+                    .push(super::process_event_with_config(&event, &config).expect("masked event"));
+                super::emit_event_with_config(event, &config);
+            }
+        });
+        let records = capture.0.lock().expect("capture lock");
+        assert_eq!(records.len(), expected.len());
+        for (record, expected) in records.iter().zip(expected) {
+            assert!(!record.contains("private-test-token"));
+            assert_eq!(
+                serde_json::from_str::<serde_json::Value>(record).expect("event JSON"),
+                expected
+            );
         }
     }
 
