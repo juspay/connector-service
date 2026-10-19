@@ -1,20 +1,29 @@
 import {
   request,
+  test,
+  type TestInfo,
   type APIRequestContext,
   type APIResponse,
 } from "@playwright/test";
 import pg from "pg";
 import type { Json } from "./config.js";
+import { collectAudit, createDockerLogReader } from "./audit.js";
 
 export class Hyperswitch {
-  private constructor(private api: APIRequestContext) {}
+  private readonly readAuditLogs = createDockerLogReader();
 
-  static async create() {
+  private constructor(
+    private api: APIRequestContext,
+    private report?: TestInfo,
+  ) {}
+
+  static async create(report?: TestInfo) {
     return new Hyperswitch(
       await request.newContext({
         baseURL: process.env.HS_BASE_URL ?? "http://localhost:8080",
         timeout: 60_000,
       }),
+      report,
     );
   }
 
@@ -24,14 +33,46 @@ export class Hyperswitch {
     key: string,
     data?: Json,
   ): Promise<Json> {
-    const response = await this.fetch(method, path, key, data);
-    if (!response.ok()) {
-      // Never include raw response bodies or keys in test output.
-      throw new Error(
-        `${method} ${path}: HTTP ${response.status()}, request-id=${response.headers()["x-request-id"] ?? "unknown"}`,
-      );
-    }
-    return response.json();
+    const invoke = async () => {
+      const since = new Date().toISOString();
+      const response = await this.fetch(method, path, key, data);
+      const requestId = response.headers()["x-request-id"];
+      if (this.report && /^\/(payments|refunds)(\/|\?|$)/.test(path)) {
+        await test.step("Collect masked UCS audit events (diagnostic snapshot)", async () => {
+          const audit = await collectAudit(
+            requestId,
+            since,
+            this.readAuditLogs,
+          );
+          await this.report!.attach("ucs-audit", {
+            body: JSON.stringify(
+              {
+                method,
+                path: path.split("?")[0],
+                requestId: requestId ?? null,
+                ...audit,
+                ordering:
+                  "event timestamp; completion order, not call-start order",
+                completeness: "not asserted; diagnostic snapshot only",
+              },
+              null,
+              2,
+            ),
+            contentType: "application/json",
+          });
+        });
+      }
+      if (!response.ok()) {
+        // Never include raw response bodies or keys in test output.
+        throw new Error(
+          `${method} ${path}: HTTP ${response.status()}, request-id=${requestId ?? "unknown"}`,
+        );
+      }
+      return response.json();
+    };
+    return this.report
+      ? test.step(`${method} ${path.split("?")[0]}`, invoke)
+      : invoke();
   }
 
   private async fetch(

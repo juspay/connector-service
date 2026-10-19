@@ -107,7 +107,7 @@ export function otpSuite(
           const auth = loadCredentials(connector, runConfig.credential);
           if (connector === "stripe") assertStripeSandboxKey(auth);
           const merchantId = `e2e_${randomUUID().replaceAll("-", "")}`;
-          const hs = await Hyperswitch.create();
+          const hs = await Hyperswitch.create(info);
           try {
             await hs.enableUcs(admin);
             const account = await hs.call("POST", "/accounts", admin, {
@@ -238,7 +238,9 @@ export function otpSuite(
               : await hs.call(
                   "POST",
                   `/payments/${paymentId}/confirm`,
-                  requestVariant.clientConfirmation ? account.publishable_key : key,
+                  requestVariant.clientConfirmation
+                    ? account.publishable_key
+                    : key,
                   {
                     ...body,
                     ...(requestVariant.clientConfirmation
@@ -268,26 +270,56 @@ export function otpSuite(
                       `/payments/${paymentId}?force_sync=true`,
                       key,
                     );
-                    expect(payment.connector).toBe(connector);
-                    expect(payment.authentication_type).toBe("no_three_ds");
-                    expect(payment.setup_future_usage == null).toBe(true);
-                    expect(payment.mandate_id == null).toBe(true);
-                    expect(payment.merchant_connector_id).toBe(
-                      mca.merchant_connector_id,
-                    );
-                    expect(payment.amount).toBe(body.amount);
-                    expect(payment.currency).toBe(body.currency);
-                    expect(payment.payment_id).toBe(paymentId);
+                    expect(
+                      payment.connector,
+                      "Payment uses the selected connector",
+                    ).toBe(connector);
+                    expect(
+                      payment.authentication_type,
+                      "Payment uses No3DS authentication",
+                    ).toBe("no_three_ds");
+                    expect(
+                      payment.setup_future_usage == null,
+                      "Payment does not set up future usage",
+                    ).toBe(true);
+                    expect(
+                      payment.mandate_id == null,
+                      "Payment does not create a mandate",
+                    ).toBe(true);
+                    expect(
+                      payment.merchant_connector_id,
+                      "Payment uses the configured connector account",
+                    ).toBe(mca.merchant_connector_id);
+                    expect(
+                      payment.amount,
+                      "Payment amount matches the request",
+                    ).toBe(body.amount);
+                    expect(
+                      payment.currency,
+                      "Payment currency matches the request",
+                    ).toBe(body.currency);
+                    expect(
+                      payment.payment_id,
+                      "Retrieve returns the same payment",
+                    ).toBe(paymentId);
                     if (payment.status === expected) {
-                      expect(payment.amount_capturable).toBe(
-                        expected === "requires_capture" ? body.amount : 0,
-                      );
+                      expect(
+                        payment.amount_capturable,
+                        "Capturable amount matches the payment state",
+                      ).toBe(expected === "requires_capture" ? body.amount : 0);
                       if (expected === "succeeded")
-                        expect(payment.amount_received).toBe(body.amount);
+                        expect(
+                          payment.amount_received,
+                          "Captured amount matches the requested amount",
+                        ).toBe(body.amount);
                     }
                     return payment.status;
                   },
-                  { intervals: [1000, 3000, 5000], timeout: 90_000 },
+                  {
+                    intervals: [1000, 3000, 5000],
+                    timeout: 90_000,
+                    message: `Payment reaches ${expected}`,
+                  },
                 )
                 .toBe(expected);
             };

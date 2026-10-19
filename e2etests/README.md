@@ -123,6 +123,10 @@ npm run list        # Test discovery
 npm test            # Live sandbox payment
 ```
 
-`npm test` generates terminal results, HTML at `playwright-report/`, and JUnit XML at `test-results/results.xml`. Open HTML with `npx playwright show-report`. Reports omit credential values and raw API payloads; API traces, screenshots, and videos are disabled.
+`npm test` generates terminal results, HTML at `playwright-report/`, and JUnit XML at `test-results/results.xml`. Open HTML with `npx playwright show-report`. API traces, screenshots, and videos are disabled. Each payment/refund API step attaches a `ucs-audit` diagnostic snapshot of existing masked UCS `GrpcRequest` and `ConnectorCall` events, matched by the HS response request ID. All matching flows and repeated calls are retained in event-timestamp order (completion order, not guaranteed call-start order). Events are not re-masked or reduced by the test harness.
+
+Audit collection reads only the structured `ucs_event` field from JSON container logs. It does not scrape message text. The UCS image must include that field; older images report evidence as unavailable. Missing IDs, unavailable Docker logs, and collection limits also produce an explicit unavailable attachment. A snapshot does not assert completeness and does not determine payment success. Raw container logs are never attached. These local reports can contain sandbox identifiers; keep them out of version control.
+
+The managed stack enables JSON console logging at INFO. By default, collection discovers the single running `ucs` service in Compose project `ucs-e2e`. Set `UCS_LOG_CONTAINER` explicitly for another Docker container. Remote log backends are not collected by this helper.
 
 Only card No3DS flows are covered. Browser/SDK interaction and callback-driven completion require additional tests. Type checks, unit tests, and discovery do not execute sandbox payments.

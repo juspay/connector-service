@@ -194,6 +194,9 @@ if (action !== "down") {
               CS__SERVER__HOST: "0.0.0.0",
               CS__SERVER__PORT: "8000",
               CS__COMMON__ENVIRONMENT: "development",
+              CS__LOG__CONSOLE__ENABLED: "true",
+              CS__LOG__CONSOLE__LEVEL: "info",
+              CS__LOG__CONSOLE__LOG_FORMAT: "json",
             },
             networks: ["router_net"],
             healthcheck: {
