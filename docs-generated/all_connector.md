@@ -184,7 +184,7 @@ Consolidated view of Get, Void, Refund, Capture, Reverse, CreateOrder, and other
 | [Checkout.com](connectors/checkout.md) | ✓ | ✓ | x | ✓ | ⚠ | ✓ | ⚠ | ⚠ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | x | ✓ | x | ⚠ | ⚠ | x | x | x | x | x | x | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ✓ | x |
 | [Citigate](connectors/citigate.md) | ✓ | ✓ | ⚠ | ✓ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ✓ | x | ⚠ | ⚠ | x | x | x | x | x | x | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | x |
 | [CryptoPay](connectors/cryptopay.md) | ✓ | x | x | x | x | ⚠ | x | ⚠ | ⚠ | x | ⚠ | x | ⚠ | ⚠ | ⚠ | ⚠ | x | ⚠ | ⚠ | x | x | x | x | x | x | x | x | x | x | x | x | x | ⚠ | x | x | ✓ | ✓ | x |
-| [CyberSource](connectors/cybersource.md) | ✓ | ✓ | ✓ | ✓ | ⚠ | ✓ | ✓ | ⚠ | ✓ | ✓ | x | ✓ | ✓ | ✓ | ✓ | ✓ | x | ⚠ | ⚠ | x | x | x | x | x | x | ⚠ | ⚠ | ? | ✓ | ✓ | ✓ | x | ⚠ | x | x | ⚠ | ⚠ | x |
+| [CyberSource](connectors/cybersource.md) | ✓ | ✓ | ✓ | ✓ | ⚠ | ✓ | ✓ | ⚠ | ✓ | ✓ | x | ✓ | ✓ | ✓ | ✓ | ✓ | x | ⚠ | ⚠ | x | x | x | x | x | x | ⚠ | ⚠ | ? | ✓ | ✓ | ✓ | x | ⚠ | x | x | ✓ | ✓ | x |
 | [D24](connectors/d24.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | x | ⚠ | ⚠ | x | x | x | x | x | x | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | x |
 | [Datatrans](connectors/datatrans.md) | ✓ | ✓ | ✓ | ✓ | ⚠ | ✓ | ⚠ | ⚠ | ✓ | ✓ | ✓ | ✓ | ✓ | ? | ⚠ | ✓ | x | ⚠ | ⚠ | x | x | x | x | x | x | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | x |
 | [Deutschebank](connectors/deutschebank.md) | x | x | x | x | x | x | x | ⚠ | x | x | x | x | x | x | x | x | x | x | x | x | x | x | x | x | x | x | x | x | x | x | x | x | ⚠ | x | x | ⚠ | ⚠ | x |
@@ -218,7 +218,7 @@ Consolidated view of Get, Void, Refund, Capture, Reverse, CreateOrder, and other
 | [Ilixium](connectors/ilixium.md) | ✓ | ✓ | x | ✓ | x | ✓ | x | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | x | ? | x | x | x | x | x | x | x | x | x | x | x | x | ? | x | x | x | ⚠ | x | x | ⚠ | ⚠ | x |
 | [Imerchantsolutions](connectors/imerchantsolutions.md) | ✓ | ✓ | ⚠ | ✓ | ⚠ | ✓ | x | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ? | ⚠ | ✓ | x | x | x | x | x | x | x | x | x | ⚠ | x | x | x | x | x | x | ⚠ | x | x | ✓ | ✓ | x |
 | [Itaubank](connectors/itaubank.md) | ⚠ | x | x | x | x | ⚠ | x | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | x | ⚠ | x | x | x | x | x | x | x | x | x | ✓ | x | x | x | x | x | x | ⚠ | x | x | ⚠ | ⚠ | x |
-| [Jpmorgan](connectors/jpmorgan.md) | ✓ | ✓ | ? | ✓ | ⚠ | ✓ | ⚠ | ⚠ | ✓ | ✓ | ⚠ | ✓ | ✓ | ✓ | ⚠ | ✓ | x | ⚠ | ⚠ | x | x | x | x | x | x | ✓ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | x |
+| [Jpmorgan](connectors/jpmorgan.md) | ✓ | ✓ | ? | ✓ | ⚠ | ✓ | ⚠ | ⚠ | ✓ | ✓ | ⚠ | ✓ | ✓ | x | ⚠ | ✓ | x | ⚠ | ⚠ | x | x | x | x | x | x | ✓ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | x |
 | [Jpmorgan Orbital](connectors/jpmorgan_orbital.md) | ✓ | ⚠ | ⚠ | ⚠ | x | ⚠ | x | ⚠ | x | x | x | ✓ | x | x | x | ⚠ | x | ⚠ | ⚠ | x | x | x | x | x | x | x | x | x | x | x | x | x | ⚠ | x | x | ⚠ | ⚠ | x |
 | [Jpmorganorbital](connectors/jpmorganorbital.md) | ✓ | ⚠ | ⚠ | ⚠ | x | ⚠ | x | ⚠ | x | x | x | ✓ | x | x | x | ⚠ | x | ⚠ | ⚠ | x | x | x | x | x | x | x | x | x | x | x | x | x | ⚠ | x | x | ⚠ | ⚠ | x |
 | [Juspay](connectors/juspay.md) | ✓ | ✓ | x | ✓ | ✓ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ✓ | x | ⚠ | ⚠ | x | x | x | x | x | x | ⚠ | ⚠ | ⚠ | x | x | x | x | ⚠ | x | x | ⚠ | ⚠ | x |
@@ -236,7 +236,7 @@ Consolidated view of Get, Void, Refund, Capture, Reverse, CreateOrder, and other
 | [Nmi](connectors/nmi.md) | ✓ | ✓ | x | ✓ | x | ✓ | x | ⚠ | ✓ | ⚠ | x | ✓ | ✓ | ✓ | ⚠ | ✓ | x | ⚠ | ⚠ | x | x | x | x | x | x | x | x | x | ✓ | ⚠ | ⚠ | x | ⚠ | x | x | ✓ | ✓ | x |
 | [Noon](connectors/noon.md) | ✓ | ✓ | ⚠ | ✓ | ⚠ | ✓ | x | ⚠ | ? | x | x | ✓ | ✓ | ✓ | ✓ | ✓ | x | x | x | x | x | x | x | x | x | x | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | x | ⚠ | x | x | ✓ | ✓ | x |
 | [Novalnet](connectors/novalnet.md) | ✓ | ✓ | x | ✓ | x | ✓ | ✓ | ⚠ | ✓ | ⚠ | ⚠ | ✓ | ✓ | ✓ | ⚠ | ✓ | x | x | x | x | x | x | x | x | x | ⚠ | x | x | x | x | x | x | ⚠ | x | x | ✓ | ✓ | x |
-| [Nuvei](connectors/nuvei.md) | ✓ | ✓ | x | ✓ | ✓ | ✓ | x | ⚠ | ? | ? | x | ? | ? | ? | x | ✓ | x | ⚠ | ⚠ | x | x | x | x | x | x | x | ✓ | ✓ | ⚠ | ⚠ | ⚠ | x | ⚠ | x | x | ⚠ | ⚠ | x |
+| [Nuvei](connectors/nuvei.md) | ✓ | ✓ | x | ✓ | ✓ | ✓ | x | ⚠ | ✓ | ? | x | ? | ? | ✓ | x | ✓ | x | ⚠ | ⚠ | x | x | x | x | x | x | x | ✓ | ✓ | ✓ | ? | ⚠ | x | ⚠ | x | x | ✓ | ✓ | x |
 | [Paybox](connectors/paybox.md) | ✓ | ✓ | ⚠ | ✓ | x | ✓ | x | ⚠ | ✓ | x | x | ✓ | ✓ | ? | ⚠ | ✓ | x | x | x | x | x | x | x | x | x | x | x | x | x | x | x | x | ⚠ | x | x | ⚠ | ⚠ | x |
 | [Payconex](connectors/payconex.md) | ✓ | ✓ | x | ✓ | ⚠ | ✓ | x | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ✓ | x | ⚠ | ⚠ | x | x | x | x | x | x | x | x | x | x | x | x | x | ⚠ | x | x | ⚠ | ⚠ | x |
 | [Paydotcom](connectors/paydotcom.md) | ✓ | ✓ | ⚠ | ✓ | ⚠ | ✓ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ✓ | ✓ | ? | ⚠ | ✓ | x | ⚠ | ⚠ | x | x | x | x | x | x | ⚠ | ⚠ | ⚠ | ✓ | ? | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | x |
