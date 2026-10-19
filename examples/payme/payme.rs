@@ -75,7 +75,7 @@ pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeR
         ), // Method for capturing the payment.
         customer: Some(Customer {
             // Customer Information.
-            name: Some(Secret::new("John Doe".to_string())),
+            name: Some("John Doe".to_string()),
             email: Some(Secret::new("test@example.com".to_string())),
             ..Default::default()
         }),
@@ -149,7 +149,7 @@ pub fn build_proxy_authorize_request() -> PaymentServiceProxyAuthorizeRequest {
             ..Default::default()
         }),
         customer: Some(Customer {
-            name: Some(Secret::new("John Doe".to_string())),
+            name: Some("John Doe".to_string()),
             email: Some(Secret::new("test@example.com".to_string())),
             ..Default::default()
         }),
