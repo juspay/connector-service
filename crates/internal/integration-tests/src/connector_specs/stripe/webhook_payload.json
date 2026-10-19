@@ -106,5 +106,73 @@
       },
       "merchant_event_id": "stripe_webhook_invalid_sig"
     }
+  },
+  "dispute_opened": {
+    "grpc_req": {
+      "request_details": {
+        "headers": {},
+        "body": {
+          "id": "evt_1NqLnJHfXbQ8wWVU6JZvDp01",
+          "object": "event",
+          "api_version": "2022-11-15",
+          "created": 1680614399,
+          "data": {
+            "object": {
+              "id": "dp_1NqLnJHfXbQ8wWVU0K8m5V6p",
+              "object": "dispute",
+              "amount": 2000,
+              "currency": "usd",
+              "created": 1680614399,
+              "charge": "ch_3MqLnJHfXbQ8wWVU0aBcDeF1",
+              "payment_intent": "pi_3MqLnJHfXbQ8wWVU0K8m5V6p",
+              "reason": "fraudulent",
+              "status": "needs_response",
+              "evidence_details": {
+                "due_by": 1682000000,
+                "has_evidence": false,
+                "past_due": false,
+                "submission_count": 0
+              }
+            }
+          },
+          "type": "charge.dispute.created"
+        }
+      },
+      "merchant_event_id": "stripe_webhook_dispute_opened"
+    }
+  },
+  "dispute_lost": {
+    "grpc_req": {
+      "request_details": {
+        "headers": {},
+        "body": {
+          "id": "evt_1NqLnJHfXbQ8wWVU6JZvDp02",
+          "object": "event",
+          "api_version": "2022-11-15",
+          "created": 1680700799,
+          "data": {
+            "object": {
+              "id": "dp_1NqLnJHfXbQ8wWVU0K8m5V6p",
+              "object": "dispute",
+              "amount": 2000,
+              "currency": "usd",
+              "created": 1680700799,
+              "charge": "ch_3MqLnJHfXbQ8wWVU0aBcDeF1",
+              "payment_intent": "pi_3MqLnJHfXbQ8wWVU0K8m5V6p",
+              "reason": "fraudulent",
+              "status": "lost",
+              "evidence_details": {
+                "due_by": 1682000000,
+                "has_evidence": false,
+                "past_due": false,
+                "submission_count": 0
+              }
+            }
+          },
+          "type": "charge.dispute.closed"
+        }
+      },
+      "merchant_event_id": "stripe_webhook_dispute_lost"
+    }
   }
 }

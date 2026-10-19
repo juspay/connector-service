@@ -1,0 +1,32 @@
+{
+  "EventService/HandleEvent": {
+    "dispute_opened": {
+      "grpc_req": {},
+      "assert": {
+        "event_type": {
+          "one_of": [
+            "WEBHOOK_DISPUTE_OPENED"
+          ]
+        },
+        "error": {
+          "must_not_exist": true
+        }
+      },
+      "display_name": "req 16: charge.dispute.created (needs_response) -> dispute opened"
+    },
+    "dispute_lost": {
+      "grpc_req": {},
+      "assert": {
+        "event_type": {
+          "one_of": [
+            "WEBHOOK_DISPUTE_LOST"
+          ]
+        },
+        "error": {
+          "must_not_exist": true
+        }
+      },
+      "display_name": "req 16: charge.dispute.closed (lost) -> dispute lost"
+    }
+  }
+}

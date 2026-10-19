@@ -7509,3 +7509,128 @@ mod dispute_network_details_tests {
         assert!(object.and_then(|o| o.network_details).is_none());
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::expect_used)]
+mod dispute_event_type_mapping_tests {
+    use super::{map_webhook_event_type, EventType, WebhookEventTypeBody};
+
+    /// Build the lighter `WebhookEventTypeBody` the mapper actually reads, from the two
+    /// keys that decide a dispute event: the event `type` and the dispute object's
+    /// `status`. Parsed from JSON rather than constructed, so a serde rename on either
+    /// key fails here instead of silently remapping every chargeback in production.
+    fn event_type(stripe_event: &str, dispute_status: Option<&str>) -> EventType {
+        let status = match dispute_status {
+            Some(s) => format!(r#""{s}""#),
+            None => "null".to_string(),
+        };
+        let body: WebhookEventTypeBody = serde_json::from_str(&format!(
+            r#"{{"type":"{stripe_event}","data":{{"object":{{"status":{status}}}}}}}"#
+        ))
+        .expect("dispute webhook body must deserialize");
+        map_webhook_event_type(&body)
+    }
+
+    #[test]
+    fn an_opened_dispute_maps_to_dispute_opened() {
+        // Stripe reports a new chargeback as `needs_response`; `warning_needs_response`
+        // is the same state on an early-warning (inquiry) dispute.
+        assert_eq!(
+            event_type("charge.dispute.created", Some("needs_response")),
+            EventType::DisputeOpened
+        );
+        assert_eq!(
+            event_type("charge.dispute.created", Some("warning_needs_response")),
+            EventType::DisputeOpened
+        );
+    }
+
+    #[test]
+    fn a_closed_dispute_maps_to_its_outcome() {
+        assert_eq!(
+            event_type("charge.dispute.closed", Some("won")),
+            EventType::DisputeWon
+        );
+        assert_eq!(
+            event_type("charge.dispute.closed", Some("lost")),
+            EventType::DisputeLost
+        );
+    }
+
+    #[test]
+    fn a_dispute_under_review_maps_to_challenged() {
+        assert_eq!(
+            event_type("charge.dispute.updated", Some("under_review")),
+            EventType::DisputeChallenged
+        );
+        assert_eq!(
+            event_type("charge.dispute.updated", Some("warning_under_review")),
+            EventType::DisputeChallenged
+        );
+    }
+
+    #[test]
+    fn a_warning_closed_dispute_maps_to_cancelled() {
+        assert_eq!(
+            event_type("charge.dispute.closed", Some("warning_closed")),
+            EventType::DisputeCancelled
+        );
+    }
+
+    /// The guard that matters most. `prevented` is a documented dispute status with no
+    /// lifecycle meaning and no `DisputeStatus` equivalent; mapping it to `DisputeOpened`
+    /// would raise a chargeback against a merchant who never received one.
+    #[test]
+    fn a_prevented_dispute_is_never_reported_as_opened() {
+        assert_eq!(
+            event_type("charge.dispute.created", Some("prevented")),
+            EventType::IncomingWebhookEventUnspecified
+        );
+    }
+
+    /// A payment-lifecycle status arriving on a dispute event is not actionable, and an
+    /// unrecognised one decodes to `Unknown` via `#[serde(other)]` — neither may be
+    /// guessed into a dispute outcome.
+    #[test]
+    fn a_non_dispute_status_on_a_dispute_event_is_unspecified() {
+        for status in ["succeeded", "processing", "canceled", "charge_refunded"] {
+            assert_eq!(
+                event_type("charge.dispute.created", Some(status)),
+                EventType::IncomingWebhookEventUnspecified,
+                "status {status} must not map to a dispute outcome"
+            );
+        }
+        assert_eq!(
+            event_type("charge.dispute.created", Some("a_status_stripe_has_not_shipped_yet")),
+            EventType::IncomingWebhookEventUnspecified
+        );
+    }
+
+    /// With no `status` on the object the event code is the only signal left, so each
+    /// code carries its own default. `funds_withdrawn` / `funds_reinstated` are the
+    /// money-movement events and are decisive on their own.
+    #[test]
+    fn a_dispute_without_a_status_falls_back_to_the_event_code() {
+        assert_eq!(
+            event_type("charge.dispute.created", None),
+            EventType::DisputeOpened
+        );
+        assert_eq!(
+            event_type("charge.dispute.closed", None),
+            EventType::DisputeCancelled
+        );
+        assert_eq!(
+            event_type("charge.dispute.funds_withdrawn", None),
+            EventType::DisputeLost
+        );
+        assert_eq!(
+            event_type("charge.dispute.funds_reinstated", None),
+            EventType::DisputeWon
+        );
+        // An update with nothing to update is not an outcome.
+        assert_eq!(
+            event_type("charge.dispute.updated", None),
+            EventType::IncomingWebhookEventUnspecified
+        );
+    }
+}
