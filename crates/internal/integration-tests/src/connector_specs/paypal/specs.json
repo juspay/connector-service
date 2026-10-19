@@ -2,6 +2,7 @@
   "connector": "paypal",
   "supported_suites": [
     "PaymentService/Authorize",
+    "PaymentService/ProxyAuthorize",
     "PaymentService/Capture",
     "MerchantAuthenticationService/CreateClientAuthenticationToken",
     "PaymentService/CompleteAuthorize",
@@ -14,6 +15,33 @@
     "MerchantAuthenticationService/CreateServerAuthenticationToken",
     "PaymentService/SetupRecurring",
     "PaymentService/Void",
-    "PaymentMethodAuthenticationService/PostAuthenticate"
-  ]
+    "PaymentMethodAuthenticationService/PostAuthenticate",
+    "PaymentMethodService/Tokenize",
+    "PaymentService/TokenSetupRecurring"
+  ],
+  "unsupported_scenarios": {
+    "PaymentService/Authorize": {
+      "no3ds_auto_capture_ach_bank_transfer": "PM_NOT_OFFERED: data/field_probe/paypal.json authorize.AchBankTransfer = not_implemented \u2014 PayPal Orders v2 has no payment_source for this method",
+      "no3ds_auto_capture_affirm": "PM_NOT_OFFERED: data/field_probe/paypal.json authorize.Affirm = not_supported \u2014 PayPal Orders v2 has no payment_source for this method",
+      "no3ds_auto_capture_afterpay_clearpay": "PM_NOT_OFFERED: data/field_probe/paypal.json authorize.Afterpay = not_supported \u2014 PayPal Orders v2 has no payment_source for this method",
+      "no3ds_auto_capture_alipay": "PM_NOT_OFFERED: data/field_probe/paypal.json authorize.AliPayRedirect = not_supported \u2014 PayPal Orders v2 has no payment_source for this method",
+      "no3ds_auto_capture_apple_pay_decrypted_cit": "CONNECTOR_API_LACKS: run:rca/probes/r2/B029/apple_pay_vault.json + doc:https://developer.paypal.com/api/orders/v2/definitions/apple_pay_request \u2014 PayPal Orders v2 refuses apple_pay.decrypted_token together with attributes.vault (422 INCOMPATIBLE_PARAMETER_VALUE on both fields, sandbox-verified 3/3); an HS-decrypted Apple Pay token cannot be vaulted. Apple Pay MIT is served by PaymentMethodService/Tokenize (Vault v3 apple_pay.token) -> PaymentService/TokenSetupRecurring -> RecurringPaymentService/Charge",
+      "no3ds_auto_capture_bacs_bank_transfer": "PM_NOT_OFFERED: data/field_probe/paypal.json authorize.BacsBankTransfer = not_implemented \u2014 PayPal Orders v2 has no payment_source for this method",
+      "no3ds_auto_capture_bancontact": "PM_NOT_OFFERED: data/field_probe/paypal.json authorize.BancontactCard = not_implemented \u2014 the scenario sends the BancontactCard variant, a card scheme PayPal does not take; Orders v2 does offer payment_source.bancontact (redirect), which this connector does not implement",
+      "no3ds_auto_capture_giropay": "PM_NOT_OFFERED: doc:https://www.paypal.com/us/cshelp/article/giropay-deprecation-help1183 + run:rca/verify/r2/B030/1/run.log \u2014 PayPal discontinued giropay (unavailable from 2024-07-01); sandbox POST /v2/checkout/orders with payment_source.giropay returns 403 PERMISSION_DENIED",
+      "no3ds_auto_capture_google_pay_decrypted_cit": "CONNECTOR_API_LACKS: doc:https://developer.paypal.com/api/orders/v2/definitions/google_pay_request + run:rca/probes/r2/B031/google_pay_vault.json \u2014 PayPal cannot vault Google Pay: Orders v2 google_pay_request has no vault/attributes/vault_id/stored_credential (fields: name, email_address, phone_number, card, decrypted_token, assurance_details, experience_context) and Vault v3 payment_source has no google_pay; the CIT is charged without a mandate",
+      "no3ds_auto_capture_klarna": "PM_NOT_OFFERED: data/field_probe/paypal.json authorize.Klarna = not_supported \u2014 PayPal Orders v2 has no payment_source for this method",
+      "no3ds_auto_capture_przelewy24": "FLOW_NOT_IN_SCOPE: run:rca/probes/r4/B050/1.json \u2014 not implemented by this connector, not a vendor gap: PayPal Orders v2 offers payment_source.p24 (sandbox 200 PAYER_ACTION_REQUIRED on a PLN order, 3/3), but the BankRedirect::Przelewy24 arm returns NotImplemented and Przelewy24 is not a unit of this run",
+      "no3ds_auto_capture_sepa_bank_transfer": "PM_NOT_OFFERED: data/field_probe/paypal.json authorize.SepaBankTransfer = not_implemented \u2014 PayPal Orders v2 has no payment_source for this method",
+      "no3ds_auto_capture_upi_collect": "PM_NOT_OFFERED: data/field_probe/paypal.json authorize.UpiCollect = not_supported \u2014 PayPal Orders v2 has no payment_source for this method",
+      "no3ds_auto_capture_upi_intent": "PM_NOT_OFFERED: data/field_probe/paypal.json authorize.UpiIntent = not_supported \u2014 PayPal Orders v2 has no payment_source for this method",
+      "no3ds_auto_capture_upi_qr": "PM_NOT_OFFERED: data/field_probe/paypal.json authorize.UpiQr = not_supported \u2014 PayPal Orders v2 has no payment_source for this method",
+      "no3ds_manual_capture_incremental_auth": "FLOW_NOT_IN_SCOPE: run.json units \u2014 IncrementalAuthorization is not a unit of this run"
+    },
+    "PaymentService/Get": {
+      "sync_upi_collect": "PM_NOT_OFFERED: data/field_probe/paypal.json authorize.UpiCollect = not_supported \u2014 PayPal has no UPI payment_source",
+      "sync_upi_intent": "PM_NOT_OFFERED: data/field_probe/paypal.json authorize.UpiIntent = not_supported \u2014 PayPal has no UPI payment_source",
+      "sync_upi_qr": "PM_NOT_OFFERED: data/field_probe/paypal.json authorize.UpiQr = not_supported \u2014 PayPal has no UPI payment_source"
+    }
+  }
 }

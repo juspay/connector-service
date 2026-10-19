@@ -3,6 +3,13 @@
     "no3ds_auto_capture_google_pay_encrypted": {
       "grpc_req": {
         "shipping_cost": 100
+      },
+      "assert": {
+        "status": null,
+        "connector_transaction_id": null,
+        "error": {
+          "must_exist": true
+        }
       }
     },
     "no3ds_auto_capture_credit_card": {
@@ -50,11 +57,6 @@
         "shipping_cost": 100
       }
     },
-    "no3ds_auto_capture_giropay": {
-      "grpc_req": {
-        "shipping_cost": 100
-      }
-    },
     "no3ds_auto_capture_bancontact": {
       "grpc_req": {
         "shipping_cost": 100
@@ -77,7 +79,42 @@
     },
     "no3ds_fail_payment": {
       "grpc_req": {
-        "shipping_cost": 100
+        "shipping_cost": 100,
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4111111111111111"
+            },
+            "card_holder_name": {
+              "value": "CCREJECT-REFUSED"
+            }
+          }
+        },
+        "address": {
+          "billing_address": {
+            "first_name": {
+              "value": "CCREJECT-REFUSED"
+            },
+            "last_name": null
+          }
+        }
+      },
+      "assert": {
+        "error": {
+          "must_exist": true
+        },
+        "status": {
+          "equals": "FAILURE"
+        },
+        "error.connector_details.code": {
+          "equals": "0500"
+        },
+        "error.connector_details.message": {
+          "contains": "DO_NOT_HONOR"
+        },
+        "error.issuer_details.network_details.decline_code": {
+          "equals": "0500"
+        }
       }
     },
     "no3ds_auto_capture_przelewy24": {
@@ -154,6 +191,11 @@
         "connector_customer_id": null,
         "customer": null
       }
+    },
+    "recurring_charge": {
+      "grpc_req": {
+        "payment_method_type": "CREDIT"
+      }
     }
   },
   "EventService/HandleEvent": {
@@ -184,6 +226,77 @@
     "invalid_signature": {
       "assert": {
         "event_status": null
+      }
+    }
+  },
+  "PaymentService/TokenSetupRecurring": {
+    "token_setup_mandate": {
+      "grpc_req": {},
+      "assert": {
+        "status": {
+          "one_of": [
+            "CHARGED"
+          ]
+        },
+        "mandate_id": null,
+        "mandate_reference.connector_mandate_id.connector_mandate_id": {
+          "must_exist": true
+        }
+      }
+    }
+  },
+  "PaymentMethodService/Tokenize": {
+    "tokenize_credit_card": {
+      "grpc_req": {
+        "return_url": "https://example.com/payment/return",
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4111111111111111"
+            }
+          }
+        }
+      }
+    },
+    "tokenize_debit_card": {
+      "grpc_req": {
+        "return_url": "https://example.com/payment/return",
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4111111111111111"
+            }
+          }
+        }
+      }
+    },
+    "tokenize_with_metadata": {
+      "grpc_req": {
+        "return_url": "https://example.com/payment/return",
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4111111111111111"
+            }
+          }
+        }
+      }
+    },
+    "tokenize_fail_expired_card": {
+      "grpc_req": {
+        "return_url": "https://example.com/payment/return"
+      }
+    },
+    "tokenize_fail_invalid_card_number": {
+      "grpc_req": {
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "1234567890123452"
+            }
+          }
+        },
+        "return_url": "https://example.com/payment/return"
       }
     }
   }
