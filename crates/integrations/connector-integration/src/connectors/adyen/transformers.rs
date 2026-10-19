@@ -10332,6 +10332,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         connector_feature_data: None,
                         connector_response_reference_id: response.merchant_reference.clone(),
                         status_code: http_code,
+                        // adyen Authenticate/PostAuthenticate are authenticationOnly (`/payments/details`),
+                        // so this leg never charges: AdyenAuthenticationResponse carries no `additionalData`,
+                        // and an Adyen-side authorisation here is rejected as ADYEN_UNEXPECTED_AUTHORISATION
+                        // before this variant is built.
+                        mandate_reference: None,
+                        network_txn_id: None,
+                        network_txn_link_id: None,
                     }),
                 ),
                 Err(error) => (AttemptStatus::AuthenticationFailed, Err(error)),
