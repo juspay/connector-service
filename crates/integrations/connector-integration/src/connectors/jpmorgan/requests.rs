@@ -38,6 +38,150 @@ pub struct JpmorganPaymentsRequest<T: PaymentMethodDataTypes> {
     pub account_on_file: Option<JpmorganAccountOnFile>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_amount_final: Option<bool>,
+    /// Level 2 commercial-card data. Omitted entirely for non-card payment
+    /// methods and whenever the merchant supplied no L2 inputs.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub retail_addenda: Option<JpmorganRetailAddenda>,
+    /// Shipping destination. Sent alongside `retailAddenda` because American
+    /// Express requires the destination postal code for Level 2.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ship_to: Option<JpmorganShipTo>,
+}
+
+/// Level 2 commercial-card data (`retailAddenda`).
+///
+/// Which members a card network requires — and which it rejects outright —
+/// differs per network, so every field is optional on the wire and the
+/// per-network gating lives in `transformers::build_retail_addenda`.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JpmorganRetailAddenda {
+    /// Max 17 characters per JPMorgan's schema.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub purchase_order_number: Option<String>,
+    /// `YYYY-MM-DD`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub order_date: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tax_amount: Option<MinorUnit>,
+    /// Mastercard / Discover spelling of the taxable flag.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_taxable: Option<bool>,
+    /// Visa / ChaseNet spelling of the same flag. Not accepted by American
+    /// Express or Discover.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub taxable_indicator: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub customer_vat_registration_number: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub merchant_vat_registration_number: Option<Secret<String>>,
+    /// Commodity code for the order as a whole. Visa only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub summary_item_commodity_code: Option<String>,
+    /// Level 3 line-item data. Present only for the networks whose Level 3
+    /// requirements JPMorgan documents, and only when the line items
+    /// reconcile against the transaction amount.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub level3: Option<JpmorganLevel3>,
+}
+
+/// Level 3 commercial-card data (`retailAddenda.level3`).
+///
+/// Only Visa and Mastercard are built today, so the fields JPMorgan marks as
+/// not applicable to both of those networks are absent from this struct
+/// rather than present and permanently unset.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JpmorganLevel3 {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_shipping_amount: Option<MinorUnit>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duty_amount: Option<MinorUnit>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ship_to_address_postal_code: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ship_to_address_country_code: Option<common_enums::CountryAlpha2>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ship_from_address_postal_code: Option<Secret<String>>,
+    /// Visa only — not applicable to Mastercard.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_transaction_discount_amount: Option<MinorUnit>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value_added_tax_amount: Option<MinorUnit>,
+    /// A percentage scaled by 100 and sent as a string: JPMorgan implies two
+    /// decimal places and allows four digits, so `"250"` is 2.5%.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value_added_tax_percent: Option<String>,
+    /// Visa only — not applicable to Mastercard.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shipping_value_added_tax_amount: Option<MinorUnit>,
+    /// Visa only. A percentage scaled by 100 and sent as a string, matching
+    /// JPMorgan's example where `"1000"` is 10.00%.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shipping_value_added_tax_percent: Option<String>,
+    /// Visa only — not applicable to Mastercard.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value_added_tax_invoice_reference_number: Option<String>,
+    /// The merchant's tax identifier. Required by Mastercard, optional for
+    /// Visa.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub party_tax_government_issued_identifier: Option<Secret<String>>,
+    /// At least one line item is required; an empty list means no Level 3.
+    pub line_items: Vec<JpmorganLineItem>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JpmorganLineItem {
+    pub line_item_description_text: String,
+    pub merchant_product_identifier: String,
+    /// JPMorgan's schema misspells "commodity" with one `m`. Reproduced
+    /// verbatim because that is the name their API accepts.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub item_comodity_code: Option<String>,
+    pub line_item_unit_quantity: String,
+    /// JPMorgan spells this with a lowercase `of`, which `rename_all` would
+    /// not produce, so the wire name is given explicitly.
+    #[serde(rename = "lineItemUnitofMeasureCode")]
+    pub line_item_unit_of_measure_code: String,
+    pub unit_price_amount: MinorUnit,
+    pub tax_inclusive_line_item_total_amount: MinorUnit,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transaction_discount_amount: Option<MinorUnit>,
+    /// Mastercard only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub line_item_tax_indicator: Option<bool>,
+    /// Mastercard only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub line_item_discount_indicator: Option<bool>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub line_item_taxes: Vec<JpmorganLineItemTax>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JpmorganLineItemTax {
+    pub line_item_tax_amount: MinorUnit,
+    /// A percentage scaled by 1000 and sent as a string: JPMorgan implies
+    /// three decimal places here, so `"1300"` is 1.3%. Note this differs from
+    /// the order-level VAT percents, which imply two.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tax_percent: Option<String>,
+    /// Required by Mastercard.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tax_type_code: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JpmorganShipTo {
+    pub shipping_address: JpmorganShippingAddress,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JpmorganShippingAddress {
+    pub postal_code: Secret<String>,
 }
 
 #[derive(Debug, Serialize)]

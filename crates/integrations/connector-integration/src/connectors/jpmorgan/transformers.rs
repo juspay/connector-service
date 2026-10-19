@@ -1,6 +1,6 @@
 use common_enums::{AttemptStatus, CaptureMethod};
 use common_utils::consts::NO_ERROR_MESSAGE;
-use common_utils::{fp_utils::when, pii::SecretSerdeValue};
+use common_utils::{fp_utils::when, pii::SecretSerdeValue, types::MinorUnit};
 use domain_types::{
     connector_flow::{
         Authorize, Capture, ClientAuthenticationToken, Refund, RepeatPayment,
@@ -10,13 +10,14 @@ use domain_types::{
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
         ConnectorSpecificClientAuthenticationResponse,
         JpmorganClientAuthenticationResponse as JpmorganClientAuthenticationResponseDomain,
-        MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
+        L2L3Data, MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId, ServerAuthenticationTokenRequestData,
         ServerAuthenticationTokenResponseData, SetupMandateRequestData,
     },
     merchant_authentication_flow_data::MerchantAuthenticationFlowData,
+    payment_address::OrderDetailsWithAmount,
     payment_method_data::{
         ApplePayDecryptedData, ApplePayPaymentData, BankDebitData, GooglePayDecryptedData,
         PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
@@ -39,6 +40,440 @@ type ResponseError = error_stack::Report<ConnectorError>;
 const JPMORGAN_GETTING_STARTED_DOC: &str =
     "https://developer.payments.jpmorgan.com/docs/commerce-solutions/online-payments/guides/getting-started";
 const JPMORGAN_THREE_DS_NOT_IMPLEMENTED: &str = "3DS payments";
+
+const JPMORGAN_PURCHASE_ORDER_NUMBER_MAX_LENGTH: usize = 17;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum JpmorganCardFamily {
+    Visa,
+    Mastercard,
+    Amex,
+    Discover,
+}
+
+impl JpmorganCardFamily {
+    fn from_network(network: Option<&common_enums::CardNetwork>) -> Option<Self> {
+        match network? {
+            common_enums::CardNetwork::Visa => Some(Self::Visa),
+            common_enums::CardNetwork::Mastercard | common_enums::CardNetwork::Maestro => {
+                Some(Self::Mastercard)
+            }
+            common_enums::CardNetwork::AmericanExpress => Some(Self::Amex),
+            common_enums::CardNetwork::Discover
+            | common_enums::CardNetwork::DinersClub
+            | common_enums::CardNetwork::JCB => Some(Self::Discover),
+            _ => None,
+        }
+    }
+
+    fn from_card_number(card_number: &str) -> Option<Self> {
+        use domain_types::utils::CardIssuer;
+        match domain_types::utils::get_card_issuer(card_number).ok()? {
+            CardIssuer::Visa => Some(Self::Visa),
+            CardIssuer::Master | CardIssuer::Maestro => Some(Self::Mastercard),
+            CardIssuer::AmericanExpress => Some(Self::Amex),
+            CardIssuer::Discover | CardIssuer::DinersClub | CardIssuer::JCB => Some(Self::Discover),
+            _ => None,
+        }
+    }
+
+    fn accepts_visa_mastercard_tax_tags(self) -> bool {
+        matches!(self, Self::Visa | Self::Mastercard)
+    }
+
+    /// `merchantVatRegistrationNumber` and `summaryItemCommodityCode` are
+    /// Visa-only tags.
+    fn accepts_visa_only_tags(self) -> bool {
+        matches!(self, Self::Visa)
+    }
+
+    /// Resolve from the network name a wallet declares for the card the
+    /// cardholder selected.
+    ///
+    /// Apple Pay and Google Pay each spell these their own way — `MasterCard`
+    /// against `MASTERCARD`, `Amex` against `AMEX` — and neither spelling
+    /// matches `CardNetwork`'s exact-match `FromStr`, so the comparison runs
+    /// on a case- and separator-insensitive form.
+    fn from_wallet_network(network: &str) -> Option<Self> {
+        let normalized: String = network
+            .chars()
+            .filter(|character| character.is_ascii_alphanumeric())
+            .map(|character| character.to_ascii_lowercase())
+            .collect();
+        match normalized.as_str() {
+            "visa" | "visaelectron" | "electron" => Some(Self::Visa),
+            "mastercard" | "master" | "mc" | "maestro" => Some(Self::Mastercard),
+            "amex" | "americanexpress" => Some(Self::Amex),
+            "discover" | "discovercard" | "diners" | "dinersclub" | "jcb" => Some(Self::Discover),
+            _ => None,
+        }
+    }
+}
+
+fn resolve_card_family<T: PaymentMethodDataTypes>(
+    payment_method_data: &PaymentMethodData<T>,
+) -> Option<JpmorganCardFamily> {
+    match payment_method_data {
+        PaymentMethodData::Card(card) => {
+            JpmorganCardFamily::from_network(card.card_network.as_ref())
+                .or_else(|| JpmorganCardFamily::from_card_number(card.card_number.peek()))
+        }
+        PaymentMethodData::NetworkToken(token) => {
+            JpmorganCardFamily::from_network(token.card_network.as_ref())
+                .or_else(|| JpmorganCardFamily::from_card_number(token.token_number.peek()))
+        }
+        PaymentMethodData::Wallet(WalletData::ApplePay(apple_pay_data)) => {
+            JpmorganCardFamily::from_wallet_network(&apple_pay_data.payment_method.network).or_else(
+                || match &apple_pay_data.payment_data {
+                    ApplePayPaymentData::Decrypted(data) => JpmorganCardFamily::from_card_number(
+                        data.application_primary_account_number.peek(),
+                    ),
+                    ApplePayPaymentData::Encrypted(_) => None,
+                },
+            )
+        }
+        PaymentMethodData::Wallet(WalletData::GooglePay(google_pay_data)) => {
+            JpmorganCardFamily::from_wallet_network(&google_pay_data.info.card_network).or_else(
+                || match &google_pay_data.tokenization_data {
+                    domain_types::payment_method_data::GpayTokenizationData::Decrypted(data) => {
+                        JpmorganCardFamily::from_card_number(
+                            data.application_primary_account_number.peek(),
+                        )
+                    }
+                    domain_types::payment_method_data::GpayTokenizationData::Encrypted(_) => None,
+                },
+            )
+        }
+        _ => None,
+    }
+}
+
+const JPMORGAN_MAX_LINE_ITEMS: usize = 998;
+const JPMORGAN_MAX_VAT_PERCENT: i64 = 9999;
+
+fn build_line_item(
+    index: usize,
+    detail: &OrderDetailsWithAmount,
+    family: JpmorganCardFamily,
+) -> Result<requests::JpmorganLineItem, Error> {
+    let line_item_description_text = detail
+        .description
+        .clone()
+        .filter(|description| !description.trim().is_empty())
+        .or_else(|| Some(detail.product_name.clone()).filter(|name| !name.trim().is_empty()))
+        .ok_or_else(|| {
+            error_stack::report!(IntegrationError::MissingRequiredField {
+                field_name: "order_details.description",
+                context: Default::default(),
+            })
+        })?;
+
+    let merchant_product_identifier = detail
+        .product_id
+        .clone()
+        .or_else(|| detail.sku.clone())
+        .ok_or(IntegrationError::MissingRequiredField {
+            field_name: "order_details.product_id",
+            context: Default::default(),
+        })?;
+
+    when(detail.quantity == 0, || {
+        Err(error_stack::report!(
+            IntegrationError::MissingRequiredField {
+                field_name: "order_details.quantity",
+                context: Default::default(),
+            }
+        ))
+    })?;
+
+    let line_item_unit_of_measure_code = detail.unit_of_measure.clone().ok_or_else(|| {
+        error_stack::report!(IntegrationError::MissingRequiredField {
+            field_name: "order_details.unit_of_measure",
+            context: Default::default(),
+        })
+    })?;
+
+    let tax_inclusive_line_item_total_amount = detail.total_amount.ok_or_else(|| {
+        error_stack::report!(IntegrationError::MissingRequiredField {
+            field_name: "order_details.total_amount",
+            context: Default::default(),
+        })
+    })?;
+
+    let quantity = i64::from(detail.quantity);
+    let transaction_discount_amount = detail
+        .unit_discount_amount
+        .and_then(|unit_discount| unit_discount.get_amount_as_i64().checked_mul(quantity))
+        .filter(|discount| *discount > 0)
+        .map(MinorUnit::new);
+
+    let is_mastercard = family == JpmorganCardFamily::Mastercard;
+
+    let line_item_taxes = detail
+        .total_tax_amount
+        .filter(|tax| tax.get_amount_as_i64() > 0)
+        .map(|tax| requests::JpmorganLineItemTax {
+            line_item_tax_amount: tax,
+            tax_percent: detail
+                .tax_rate
+                .map(|rate| format!("{:.0}", rate * 1000.0)),
+            tax_type_code: detail.product_tax_code.clone(),
+        })
+        .map_or_else(Vec::new, |tax| vec![tax]);
+
+    Ok(requests::JpmorganLineItem {
+        line_item_description_text,
+        merchant_product_identifier,
+        item_comodity_code: detail.commodity_code.clone(),
+        line_item_unit_quantity: detail.quantity.to_string(),
+        line_item_unit_of_measure_code,
+        unit_price_amount: detail.amount,
+        tax_inclusive_line_item_total_amount,
+        transaction_discount_amount,
+        line_item_tax_indicator: is_mastercard.then_some(!line_item_taxes.is_empty()),
+        line_item_discount_indicator: is_mastercard
+            .then_some(transaction_discount_amount.is_some()),
+        line_item_taxes,
+    })
+}
+
+fn build_level3(
+    l2_l3_data: &L2L3Data,
+    transaction_amount: MinorUnit,
+    fallback_shipping_cost: Option<MinorUnit>,
+    family: Option<JpmorganCardFamily>,
+) -> Result<Option<requests::JpmorganLevel3>, Error> {
+    let family = family.filter(|family| {
+        matches!(
+            family,
+            JpmorganCardFamily::Visa | JpmorganCardFamily::Mastercard
+        )
+    });
+    let Some(family) = family else {
+        return Ok(None);
+    };
+    let is_visa = family == JpmorganCardFamily::Visa;
+
+    let Some(order_details) = l2_l3_data.get_order_details() else {
+        return Ok(None);
+    };
+    if order_details.is_empty() {
+        return Ok(None);
+    }
+    if order_details.len() > JPMORGAN_MAX_LINE_ITEMS {
+        tracing::warn!(
+            line_items = order_details.len(),
+            max_line_items = JPMORGAN_MAX_LINE_ITEMS,
+            "Order carries more line items than JPMorgan accepts: Level 3 is omitted while \
+             Level 2 data is still sent"
+        );
+        return Ok(None);
+    }
+
+    let line_items = order_details
+        .iter()
+        .enumerate()
+        .map(|(index, detail)| build_line_item(index, detail, family))
+        .collect::<Result<Vec<_>, Error>>()?;
+
+    let total_shipping_amount = l2_l3_data.get_shipping_cost().or(fallback_shipping_cost);
+    let duty_amount = l2_l3_data.get_duty_amount();
+    let value_added_tax_amount = l2_l3_data.get_value_added_tax_amount();
+    let total_transaction_discount_amount = l2_l3_data.get_discount_amount().filter(|_| is_visa);
+    let shipping_value_added_tax_amount = l2_l3_data.get_shipping_amount_tax().filter(|_| is_visa);
+    let value_added_tax_invoice_reference_number = l2_l3_data
+        .get_vat_invoice_reference_number()
+        .filter(|reference| !reference.trim().is_empty())
+        .filter(|_| is_visa);
+
+    // JPMorgan implies two decimal places on the VAT percent fields — their
+    // reference gives 250 for 2.5% — so the percentage is scaled by 100:
+    // 20 of tax on 200 of shipping is 10%, sent as "1000".
+    let value_added_tax_percent = l2_l3_data
+        .get_value_added_tax_percent()
+        .map(|percent| format!("{:.0}", percent * 100.0));
+
+    let shipping_value_added_tax_percent = shipping_value_added_tax_amount
+        .zip(total_shipping_amount)
+        .map(|(tax, shipping)| (tax.get_amount_as_i64(), shipping.get_amount_as_i64()))
+        .filter(|(_, shipping)| *shipping > 0)
+        .and_then(|(tax, shipping)| tax.checked_mul(10_000).map(|scaled| scaled / shipping))
+        .filter(|scaled_percent| (0..=JPMORGAN_MAX_VAT_PERCENT).contains(scaled_percent))
+        .map(|scaled_percent| scaled_percent.to_string());
+
+    Ok(Some(requests::JpmorganLevel3 {
+        total_shipping_amount,
+        duty_amount,
+        ship_to_address_postal_code: l2_l3_data.get_shipping_zip(),
+        ship_to_address_country_code: l2_l3_data.get_shipping_country(),
+        ship_from_address_postal_code: l2_l3_data.get_shipping_origin_zip(),
+        total_transaction_discount_amount,
+        value_added_tax_amount,
+        value_added_tax_percent,
+        shipping_value_added_tax_amount,
+        shipping_value_added_tax_percent,
+        value_added_tax_invoice_reference_number,
+        party_tax_government_issued_identifier: l2_l3_data.get_merchant_tax_registration_id(),
+        line_items,
+    }))
+}
+
+fn build_retail_addenda(
+    l2_l3_data: Option<&L2L3Data>,
+    transaction_amount: MinorUnit,
+    fallback_order_tax_amount: Option<MinorUnit>,
+    fallback_shipping_cost: Option<MinorUnit>,
+    family: Option<JpmorganCardFamily>,
+) -> Result<Option<requests::JpmorganRetailAddenda>, Error> {
+    let Some(l2_l3_data) = l2_l3_data else {
+        return Ok(None);
+    };
+
+    let purchase_order_number = l2_l3_data
+        .get_merchant_order_reference_id()
+        .filter(|purchase_order_number| !purchase_order_number.is_empty())
+        .and_then(|purchase_order_number| {
+            if purchase_order_number.len() > JPMORGAN_PURCHASE_ORDER_NUMBER_MAX_LENGTH {
+                tracing::warn!(
+                    length = purchase_order_number.len(),
+                    max_length = JPMORGAN_PURCHASE_ORDER_NUMBER_MAX_LENGTH,
+                    "merchant_order_reference_id is longer than JPMorgan's purchaseOrderNumber \
+                     limit: the field is omitted while the rest of retailAddenda is still sent"
+                );
+                None
+            } else {
+                Some(purchase_order_number)
+            }
+        });
+
+    let order_date = l2_l3_data.get_order_date().map(|date| {
+        format!(
+            "{:04}-{:02}-{:02}",
+            date.year(),
+            u8::from(date.month()),
+            date.day()
+        )
+    });
+
+    let tax_amount = l2_l3_data
+        .get_order_tax_amount()
+        .or(fallback_order_tax_amount)
+        .filter(|tax_amount| tax_amount.get_amount_as_i64() > 0);
+
+    let is_taxable = l2_l3_data
+        .get_tax_status()
+        .map(|tax_status| matches!(tax_status, common_enums::TaxStatus::Taxable));
+
+    let taxable_indicator = is_taxable
+        .filter(|_| family.is_some_and(JpmorganCardFamily::accepts_visa_mastercard_tax_tags));
+
+    let customer_vat_registration_number = l2_l3_data
+        .get_customer_tax_registration_id()
+        .filter(|_| family.is_some_and(JpmorganCardFamily::accepts_visa_mastercard_tax_tags));
+
+    let merchant_vat_registration_number = l2_l3_data
+        .get_merchant_tax_registration_id()
+        .filter(|_| family.is_some_and(JpmorganCardFamily::accepts_visa_only_tags));
+
+    let summary_item_commodity_code = l2_l3_data
+        .get_order_commodity_code()
+        .filter(|code| !code.trim().is_empty());
+
+    let level3 = build_level3(
+        l2_l3_data,
+        transaction_amount,
+        fallback_shipping_cost,
+        family,
+    )?;
+
+    let addenda = requests::JpmorganRetailAddenda {
+        purchase_order_number,
+        order_date,
+        tax_amount,
+        is_taxable,
+        taxable_indicator,
+        customer_vat_registration_number,
+        merchant_vat_registration_number,
+        summary_item_commodity_code,
+        level3,
+    };
+
+    // Destructured so that a field added later forces this emptiness check to
+    // be revisited by the compiler rather than silently excluded from it.
+    let requests::JpmorganRetailAddenda {
+        purchase_order_number,
+        order_date,
+        tax_amount,
+        is_taxable,
+        taxable_indicator,
+        customer_vat_registration_number,
+        merchant_vat_registration_number,
+        summary_item_commodity_code,
+        level3,
+    } = &addenda;
+    let all_none = purchase_order_number.is_none()
+        && order_date.is_none()
+        && tax_amount.is_none()
+        && is_taxable.is_none()
+        && taxable_indicator.is_none()
+        && customer_vat_registration_number.is_none()
+        && merchant_vat_registration_number.is_none()
+        && summary_item_commodity_code.is_none()
+        && level3.is_none();
+
+    Ok((!all_none).then_some(addenda))
+}
+
+/// `shipTo.shippingAddress.postalCode` — required by American Express for
+/// Level 2 and optional on the other networks, so it is sent whenever the
+/// merchant supplied a shipping address.
+fn build_ship_to(l2_l3_data: Option<&L2L3Data>) -> Option<requests::JpmorganShipTo> {
+    l2_l3_data
+        .and_then(|l2_l3_data| l2_l3_data.get_shipping_zip())
+        .map(|postal_code| requests::JpmorganShipTo {
+            shipping_address: requests::JpmorganShippingAddress { postal_code },
+        })
+}
+
+/// Level 2 data for an Authorize request: the gated `retailAddenda` plus the
+/// `shipTo` block Amex needs alongside it.
+fn authorize_level2_data<T: PaymentMethodDataTypes>(
+    router_data: &RouterDataV2<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData<T>,
+        PaymentsResponseData,
+    >,
+) -> Result<
+    (
+        Option<requests::JpmorganRetailAddenda>,
+        Option<requests::JpmorganShipTo>,
+    ),
+    Error,
+> {
+    let l2_l3_data = router_data.resource_common_data.l2_l3_data.as_deref();
+    let retail_addenda = build_retail_addenda(
+        l2_l3_data,
+        router_data.request.amount.amount,
+        router_data
+            .request
+            .order_tax_amount
+            .as_ref()
+            .map(|order_tax_amount| order_tax_amount.amount),
+        router_data
+            .request
+            .shipping_cost
+            .as_ref()
+            .map(|shipping_cost| shipping_cost.amount),
+        resolve_card_family(&router_data.request.payment_method_data),
+    )?;
+    // shipTo only earns its place next to Level 2 data; without retailAddenda
+    // it is just an unused address on the wire.
+    let ship_to = retail_addenda
+        .as_ref()
+        .and_then(|_| build_ship_to(l2_l3_data));
+    Ok((retail_addenda, ship_to))
+}
 
 impl TryFrom<Option<common_enums::BankType>> for requests::JpmorganAchAccountType {
     type Error = error_stack::Report<IntegrationError>;
@@ -375,6 +810,7 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganPaymentsRequest<T> {
             .into());
         }
         let auth = JpmorganAuthType::try_from(&router_data.connector_config)?;
+        let (retail_addenda, ship_to) = authorize_level2_data(router_data)?;
         Ok(Self {
             capture_method: map_capture_method(router_data.request.capture_method)?,
             amount: JpmorganAmountConvertor::convert(
@@ -395,6 +831,8 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganPaymentsRequest<T> {
             initiator_type: Some(requests::JpmorganInitiatorType::Cardholder),
             account_on_file: Some(requests::JpmorganAccountOnFile::NotStored),
             is_amount_final: Some(true),
+            retail_addenda,
+            ship_to,
         })
     }
 }
@@ -425,6 +863,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
+        let (retail_addenda, ship_to) = authorize_level2_data(router_data)?;
 
         match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
@@ -505,6 +944,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     initiator_type: None,
                     account_on_file: None,
                     is_amount_final: None,
+                    retail_addenda,
+                    ship_to,
                 })
             }
             PaymentMethodData::NetworkToken(token_data) => {
@@ -599,6 +1040,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     initiator_type: None,
                     account_on_file: None,
                     is_amount_final: None,
+                    retail_addenda,
+                    ship_to,
                 })
             }
             PaymentMethodData::BankDebit(BankDebitData::AchBankDebit {
@@ -664,6 +1107,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     initiator_type: None,
                     account_on_file: None,
                     is_amount_final: None,
+                    // Level 2 data exists to earn a lower card interchange
+                    // rate. An ACH debit has no interchange, so JPMorgan has
+                    // nothing to do with retailAddenda here.
+                    retail_addenda: None,
+                    ship_to: None,
                 })
             }
             PaymentMethodData::PaymentMethodToken(token_data) => {
@@ -707,6 +1155,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     initiator_type: None,
                     account_on_file: None,
                     is_amount_final: None,
+                    retail_addenda,
+                    ship_to,
                 })
             }
             PaymentMethodData::BankDebit(_) => {
@@ -840,6 +1290,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 initiator_type: None,
                                 account_on_file: None,
                                 is_amount_final: None,
+                                retail_addenda,
+                                ship_to,
                             })
                         }
                         domain_types::payment_method_data::GpayTokenizationData::Decrypted(
@@ -1503,7 +1955,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             })
                     })
                     .transpose()?
-                    .unwrap_or(common_utils::types::MinorUnit::new(0));
+                    .unwrap_or(MinorUnit::new(0));
 
                 let recurring = requests::JpmorganRecurring {
                     recurring_sequence: requests::JpmorganRecurringSequence::First,
