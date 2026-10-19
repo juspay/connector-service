@@ -1,14 +1,19 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync, existsSync, readFileSync, writeFileSync, renameSync, rmSync,
+} from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const runtime = resolve(root, ".runtime");
-const checkout = process.env.HS_SOURCE_DIR
+let checkout = process.env.HS_SOURCE_DIR
   ? resolve(process.env.HS_SOURCE_DIR)
   : resolve(runtime, "hyperswitch");
-const override = resolve(runtime, "compose.e2e.json");
+const override = resolve(runtime, "compose.e2e.yaml");
+const versionsFile = resolve(runtime, "versions.json");
+const image =
+  process.env.HS_IMAGE ?? "docker.juspay.io/juspaydotin/hyperswitch-router:latest";
 const action = process.argv[2];
 if (!["up", "down", "prepare"].includes(action))
   throw new Error("Use stack.mjs up|down|prepare");
@@ -20,18 +25,35 @@ function run(command, args, options = {}) {
 }
 mkdirSync(runtime, { recursive: true });
 if (action !== "down") {
-  // Checkout is solely for the matching config, migrations, and upstream Compose dependencies.
-  // The router itself always runs from an image.
-  if (!existsSync(checkout)) {
-    run("git", [
-      "clone",
-      "--depth",
-      "1",
-      "--branch",
-      process.env.HS_REF ?? "main",
-      "https://github.com/juspay/hyperswitch.git",
-      checkout,
-    ]);
+  // Resolve configuration and migrations from the binary's own source revision.
+  // Floating image and main tags are not guaranteed to describe the same build.
+  let sourceRef = process.env.HS_REF;
+  if (!process.env.HS_SOURCE_DIR) {
+    if (!sourceRef) {
+      if (action === "up") run("docker", ["pull", image]);
+      const version = spawnSync("docker", ["run", "--rm", "--network", "none",
+        "--entrypoint", "/local/bin/router", image, "--version"], { encoding: "utf8" });
+      if (version.status !== 0) throw new Error("Cannot read HS image version; ensure Docker is running and the image is available");
+      sourceRef = version.stdout.match(/-[0-9a-f]{7,40}-/)?.[0].slice(1, -1);
+      if (!sourceRef) throw new Error("HS image does not report a source revision; set HS_REF or HS_SOURCE_DIR to its matching source");
+    }
+    const response = await fetch(`https://api.github.com/repos/juspay/hyperswitch/commits/${encodeURIComponent(sourceRef)}`, { signal: AbortSignal.timeout(30_000) });
+    if (!response.ok) throw new Error(`Cannot resolve HS source revision (GitHub HTTP ${response.status}); retry or set HS_SOURCE_DIR`);
+    const sourceCommit = (await response.json()).sha;
+    if (!/^[0-9a-f]{40}$/.test(sourceCommit)) throw new Error("Invalid HS source revision");
+    checkout = resolve(runtime, `hyperswitch-${sourceCommit}`);
+    if (!existsSync(checkout)) {
+      // Download only runtime assets. Publish the cache only after checkout succeeds.
+      const pending = `${checkout}.partial`;
+      rmSync(pending, { recursive: true, force: true });
+      mkdirSync(pending, { recursive: true });
+      run("git", ["init", "--quiet", pending]);
+      run("git", ["-C", pending, "remote", "add", "origin", "https://github.com/juspay/hyperswitch.git"]);
+      run("git", ["-C", pending, "fetch", "--depth", "1", "--filter=blob:none", "origin", sourceCommit]);
+      run("git", ["-C", pending, "sparse-checkout", "set", "config", "migrations", "scripts", "files"]);
+      run("git", ["-C", pending, "checkout", "--detach", "FETCH_HEAD"]);
+      renameSync(pending, checkout);
+    }
   }
   const config = resolve(runtime, "hs.toml");
   let contents = readFileSync(
@@ -49,35 +71,50 @@ if (action !== "down") {
     "connection_timeout = 10\nrequest_timeout = 60\n" +
     'ucs_only_connectors = "adyen,stripe,paypal,authorizedotnet,cybersource,checkout"\n';
   writeFileSync(config, contents);
+  // Runtime migrations must not regenerate or patch the source checkout's schema.
+  const dieselConfig = resolve(runtime, "diesel.toml");
+  writeFileSync(dieselConfig, '[migrations_directory]\ndir = "/app/migrations"\n');
+  const migrationCommand = [
+    "set -eu",
+    "apt-get update",
+    "apt-get install -y curl xz-utils",
+    "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/diesel-rs/diesel/releases/download/v2.3.5/diesel_cli-installer.sh -o /tmp/install-diesel.sh",
+    "bash /tmp/install-diesel.sh",
+    '/root/.cargo/bin/diesel migration run --database-url "$${DATABASE_URL}" --migration-dir /app/migrations --config-file /e2e-diesel.toml',
+  ].join(" && ");
   writeFileSync(
     override,
-    JSON.stringify(
-      {
-        services: {
-          "hyperswitch-server": {
-            image:
-              process.env.HS_IMAGE ??
-              "docker.juspay.io/juspaydotin/hyperswitch-router:latest",
-            pull_policy: "always",
-            command: ["/local/bin/router", "-f", "/local/config/e2e.toml"],
-            volumes: [`${config}:/local/config/e2e.toml:ro`],
-            extra_hosts: ["host.docker.internal:host-gateway"],
-            healthcheck: { start_period: "60s", retries: 30 },
-          },
-        },
-      },
-      null,
-      2,
-    ),
+    // Redis is accessed by its Compose service name; no host port is needed.
+    // YAML's reset tag removes the port inherited from upstream Compose.
+    "services:\n" +
+      "  redis-standalone:\n    ports: !reset []\n" +
+      "  migration_runner: " +
+      JSON.stringify({
+        command: ["bash", "-c", migrationCommand],
+        volumes: [`${dieselConfig}:/e2e-diesel.toml:ro`],
+        depends_on: { pg: { condition: "service_healthy" } },
+      }) + "\n" +
+      "  superposition-init: " +
+      JSON.stringify({
+        command: ["sh", "-c", "apk add --no-cache bash curl jq yq && bash /seed_superposition.sh"],
+      }) + "\n" +
+      "  hyperswitch-server: " +
+      JSON.stringify({
+        image,
+        pull_policy: "missing",
+        command: ["/local/bin/router", "-f", "/local/config/e2e.toml"],
+        volumes: [`${config}:/local/config/e2e.toml:ro`],
+        extra_hosts: ["host.docker.internal:host-gateway"],
+        healthcheck: { start_period: "60s", retries: 30 },
+      }) + "\n",
   );
   writeFileSync(
-    resolve(runtime, "versions.json"),
+    versionsFile,
     JSON.stringify(
       {
-        image:
-          process.env.HS_IMAGE ??
-          "docker.juspay.io/juspaydotin/hyperswitch-router:latest",
+        image,
         ucs: process.env.UCS_BASE_URL ?? "http://host.docker.internal:8000",
+        hsSourceDir: checkout,
         hsCommit: spawnSync("git", ["-C", checkout, "rev-parse", "HEAD"], {
           encoding: "utf8",
         }).stdout.trim(),
@@ -86,8 +123,11 @@ if (action !== "down") {
       2,
     ),
   );
-} else if (!existsSync(override)) {
-  throw new Error("No E2E stack has been prepared");
+} else {
+  if (!existsSync(override)) throw new Error("No E2E stack has been prepared");
+  if (existsSync(versionsFile)) {
+    checkout = JSON.parse(readFileSync(versionsFile, "utf8")).hsSourceDir ?? checkout;
+  }
 }
 if (action === "prepare") {
   console.log(`Prepared ${override}`);

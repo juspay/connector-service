@@ -49,15 +49,15 @@ npm run stack:down
 
 Use Playwright path filtering to select a connector, or `E2E_VARIANT` to select a request variant.
 
-`stack:up` reuses HS main's Compose dependencies, config, superposition seed, and migrations. It starts the router image and its dependencies, without compiling HS. It forces the six connectors into `ucs_only_connectors`. Tests create `ucs_enabled=true` when absent and fail if an existing value disables UCS.
+`stack:up` reads the router image's source revision and downloads the matching Compose dependencies, config, superposition seed, and migrations. Only runtime asset directories are checked out and cached; HS source is not compiled. It starts the router image and its dependencies. It forces the six connectors into `ucs_only_connectors`. Tests create `ucs_enabled=true` when absent and fail if an existing value disables UCS.
 
-Default upstream host ports are 8080 (HS), 5432 (PostgreSQL), 6379 (Redis), and 8081 (Superposition); existing services may conflict. For an existing dedicated sandbox HS instance, configure UCS routing and set `HS_BASE_URL`, `HS_ADMIN_API_KEY`, and `HS_DATABASE_URL`, then skip `stack:up`.
+Default upstream host ports are 8080 (HS), 5432 (PostgreSQL), and 8081 (Superposition); existing services may conflict. Redis is available only inside the Compose network. For an existing dedicated sandbox HS instance, configure UCS routing and set `HS_BASE_URL`, `HS_ADMIN_API_KEY`, and `HS_DATABASE_URL`, then skip `stack:up`.
 
 | Variable                   | Purpose/default                                                               |
 | -------------------------- | ----------------------------------------------------------------------------- |
 | `HS_IMAGE`                 | `docker.juspay.io/juspaydotin/hyperswitch-router:latest`                      |
-| `HS_REF`                   | `main`; initial config/migrations checkout                                    |
-| `HS_SOURCE_DIR`            | Optional existing HS checkout                                                 |
+| `HS_REF`                   | Image-reported source revision; optional explicit matching revision                                    |
+| `HS_SOURCE_DIR`            | Optional existing matching HS checkout                                                 |
 | `UCS_BASE_URL`             | Container-to-UCS gRPC endpoint; `http://host.docker.internal:8000`            |
 | `HS_BASE_URL`              | Runner-to-HS API endpoint; `http://localhost:8080`                            |
 | `HS_ADMIN_API_KEY`         | Local config default `test_admin`                                             |
@@ -66,7 +66,7 @@ Default upstream host ports are 8080 (HS), 5432 (PostgreSQL), 6379 (Redis), and 
 | `E2E_VARIANT`              | Optional request variant ID such as `baseline`                                |
 | `E2E_OVERRIDES_FILE`       | Optional JSON file with sandbox configuration overrides                       |
 
-For reproducibility, use an HS image digest/release and matching source revision. Floating `latest` and `main` may drift. `.runtime/versions.json` records the requested image, UCS endpoint and config checkout commit. The checkout is retained between runs; update it or supply `HS_SOURCE_DIR` when changing versions. Accounts remain in the test database for debugging; `stack:down` preserves volumes.
+For reproducibility, use an HS image digest/release. By default, configuration and migrations follow the source revision reported by that image. `HS_REF` or `HS_SOURCE_DIR` can explicitly select matching runtime assets for custom builds. `.runtime/versions.json` records the requested image, UCS endpoint, and config checkout commit. Runtime assets are cached by source revision. Accounts remain in the test database for debugging; `stack:down` preserves volumes.
 
 ## Structure and extension
 
