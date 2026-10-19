@@ -398,7 +398,6 @@ jobs:
   auto-fix:
     name: Auto-fix (format + docs + generate)
     needs: changes
-    # Exercise toolchain setup and generation when CI configuration changes too.
     if: >-
       github.event_name == 'pull_request' &&
       !github.event.pull_request.draft &&
@@ -406,8 +405,7 @@ jobs:
       (needs.changes.outputs.any-rs == 'true' ||
        needs.changes.outputs.docs-trigger == 'true' ||
        needs.changes.outputs.sdk == 'true' ||
-       needs.changes.outputs.proto == 'true' ||
-       needs.changes.outputs.ci == 'true')
+       needs.changes.outputs.proto == 'true')
     runs-on: >-
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
