@@ -12,7 +12,7 @@ from payments import PaymentMethodAuthenticationClient
 from payments import EventClient
 from payments import RecurringPaymentClient
 from payments import RefundClient
-from payments.generated import common_types_pb2, payment_methods_pb2, payment_pb2, sdk_config_pb2
+from payments.generated import common_types_pb2, events_pb2, payment_methods_pb2, payment_pb2, sdk_config_pb2
 
 SUPPORTED_FLOWS = ["authenticate", "authorize", "capture", "get", "incremental_authorization", "parse_event", "post_authenticate", "pre_authenticate", "proxy_authorize", "proxy_setup_recurring", "recurring_charge", "recurring_revoke", "refund", "refund_get", "reverse", "setup_recurring", "token_authorize", "void"]
 
@@ -97,9 +97,9 @@ def _build_authorize_request(capture_method: str):
         ),
         address=payment_pb2.PaymentAddress(  # Address Information.
             shipping_address=common_types_pb2.Address(
-                first_name=payment_methods_pb2.SecretString(value="Jane"),  # Personal Information.
+                first_name=payment_methods_pb2.SecretString(value="Jane"),
                 last_name=payment_methods_pb2.SecretString(value="Doe"),
-                line1=payment_methods_pb2.SecretString(value="123 Main St"),  # Address Details.
+                line1=payment_methods_pb2.SecretString(value="123 Main St"),
                 line2=payment_methods_pb2.SecretString(value="Suite 4"),
                 city=payment_methods_pb2.SecretString(value="Seattle"),
                 state=payment_methods_pb2.SecretString(value="WA"),

@@ -155,9 +155,9 @@ pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeR
         address: Some(PaymentAddress {
             // Address Information.
             shipping_address: Some(Address {
-                first_name: Some(Secret::new("Jane".to_string())), // Personal Information.
+                first_name: Some(Secret::new("Jane".to_string())),
                 last_name: Some(Secret::new("Doe".to_string())),
-                line1: Some(Secret::new("123 Main St".to_string())), // Address Details.
+                line1: Some(Secret::new("123 Main St".to_string())),
                 line2: Some(Secret::new("Suite 4".to_string())),
                 city: Some(Secret::new("Seattle".to_string())),
                 state: Some(Secret::new("WA".to_string())),

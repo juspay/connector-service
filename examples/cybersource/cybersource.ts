@@ -93,9 +93,9 @@ function _buildAuthorizeRequest(captureMethod: types.CaptureMethod): types.IPaym
         },
         "address": {  // Address Information.
             "shippingAddress": {
-                "firstName": {"value": "Jane"},  // Personal Information.
+                "firstName": {"value": "Jane"},
                 "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details.
+                "line1": {"value": "123 Main St"},
                 "line2": {"value": "Suite 4"},
                 "city": {"value": "Seattle"},
                 "state": {"value": "WA"},

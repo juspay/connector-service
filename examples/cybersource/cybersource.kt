@@ -73,9 +73,9 @@ private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAutho
         }
         addressBuilder.apply {  // Address Information.
             shippingAddressBuilder.apply {
-                firstNameBuilder.value = "Jane"  // Personal Information.
+                firstNameBuilder.value = "Jane"
                 lastNameBuilder.value = "Doe"
-                line1Builder.value = "123 Main St"  // Address Details.
+                line1Builder.value = "123 Main St"
                 line2Builder.value = "Suite 4"
                 cityBuilder.value = "Seattle"
                 stateBuilder.value = "WA"
