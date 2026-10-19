@@ -58,7 +58,7 @@ private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAutho
         }
         captureMethod = CaptureMethod.valueOf(captureMethodStr)  // Method for capturing the payment.
         customerBuilder.apply {  // Customer Information.
-            nameBuilder.value = "John Doe"
+            name = "John Doe"
             emailBuilder.value = "test@example.com"
         }
         addressBuilder.apply {  // Address Information.
@@ -277,7 +277,7 @@ fun proxyAuthorize(txnId: String, config: ConnectorConfig = _defaultConfig) {
             cardNetwork = CardNetwork.VISA
         }
         customerBuilder.apply {
-            nameBuilder.value = "John Doe"
+            name = "John Doe"
             emailBuilder.value = "test@example.com"
         }
         addressBuilder.apply {

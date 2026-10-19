@@ -41,7 +41,7 @@ function _buildAuthorizeRequest(captureMethod: types.CaptureMethod): types.IPaym
         },
         "captureMethod": captureMethod,  // Method for capturing the payment.
         "customer": {  // Customer Information.
-            "name": {"value": "John Doe"},
+            "name": "John Doe",
             "email": {"value": "test@example.com"}
         },
         "address": {  // Address Information.
@@ -102,7 +102,7 @@ function _buildProxyAuthorizeRequest(): types.IPaymentServiceProxyAuthorizeReque
             "cardNetwork": CardNetwork.VISA
         },
         "customer": {
-            "name": {"value": "John Doe"},
+            "name": "John Doe",
             "email": {"value": "test@example.com"}
         },
         "address": {

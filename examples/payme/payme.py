@@ -45,7 +45,7 @@ def _build_authorize_request(capture_method: str):
         ),
         capture_method=payment_pb2.CaptureMethod.Value(capture_method),  # Method for capturing the payment.
         customer=common_types_pb2.Customer(  # Customer Information.
-            name=payment_methods_pb2.SecretString(value="John Doe"),
+            name="John Doe",
             email=payment_methods_pb2.SecretString(value="test@example.com"),
         ),
         address=payment_pb2.PaymentAddress(  # Address Information.
@@ -101,7 +101,7 @@ def _build_proxy_authorize_request():
             card_network=payment_methods_pb2.CardNetwork.Value("VISA"),
         ),
         customer=common_types_pb2.Customer(
-            name=payment_methods_pb2.SecretString(value="John Doe"),
+            name="John Doe",
             email=payment_methods_pb2.SecretString(value="test@example.com"),
         ),
         address=payment_pb2.PaymentAddress(
