@@ -51,8 +51,6 @@ def _build_authorize_request(capture_method: str):
         capture_method=payment_pb2.CaptureMethod.Value(capture_method),  # Method for capturing the payment.
         address=payment_pb2.PaymentAddress(  # Address Information.
             billing_address=common_types_pb2.Address(
-                first_name=payment_methods_pb2.SecretString(value="John"),
-                last_name=payment_methods_pb2.SecretString(value="Doe"),
                 country_alpha2_code=payment_methods_pb2.CountryAlpha2.Value("US"),
                 email=payment_methods_pb2.SecretString(value="test@example.com"),
             ),
@@ -127,9 +125,9 @@ def _build_parse_event_request():
 
 def _build_pre_authenticate_request():
     return payment_pb2.PaymentMethodAuthenticationServicePreAuthenticateRequest(
-        amount=payment_pb2.Money(  # Amount Information.
-            minor_amount=1000,  # Amount in minor units (e.g., 1000 = $10.00).
-            currency=payment_pb2.Currency.Value("USD"),  # ISO 4217 currency code (e.g., "USD", "EUR").
+        amount=common_types_pb2.Money(  # Amount Information.
+            minor_amount=1000,
+            currency=common_types_pb2.Currency.Value("USD"),
         ),
         payment_method=payment_methods_pb2.PaymentMethod(  # Payment Method.
             card=payment_methods_pb2.CardDetails(
@@ -141,7 +139,7 @@ def _build_pre_authenticate_request():
             ),
         ),
         address=payment_pb2.PaymentAddress(  # Address Information.
-            billing_address=payment_pb2.Address(),
+            billing_address=common_types_pb2.Address(),
         ),
         enrolled_for_3ds=False,  # Authentication Details.
         return_url="https://example.com/3ds-return",  # URLs for Redirection.
@@ -168,9 +166,9 @@ def _build_recurring_charge_request():
                 connector_mandate_id="probe-mandate-123",
             ),
         ),
-        amount=payment_pb2.Money(  # Amount Information.
-            minor_amount=1000,  # Amount in minor units (e.g., 1000 = $10.00).
-            currency=payment_pb2.Currency.Value("USD"),  # ISO 4217 currency code (e.g., "USD", "EUR").
+        amount=common_types_pb2.Money(  # Amount Information.
+            minor_amount=1000,
+            currency=common_types_pb2.Currency.Value("USD"),
         ),
         payment_method=payment_methods_pb2.PaymentMethod(  # Optional payment Method Information (for network transaction flows).
             token=payment_methods_pb2.TokenPaymentMethodType(
@@ -179,9 +177,9 @@ def _build_recurring_charge_request():
         ),
         return_url="https://example.com/recurring-return",
         address=payment_pb2.PaymentAddress(  # Address Information.
-            billing_address=payment_pb2.Address(
+            billing_address=common_types_pb2.Address(
                 country_alpha2_code=payment_methods_pb2.CountryAlpha2.Value("US"),
-                email=payment_methods_pb2.SecretString(value="test@example.com"),  # Contact Information.
+                email=payment_methods_pb2.SecretString(value="test@example.com"),
             ),
         ),
         connector_customer_id="cust_probe_123",
@@ -225,9 +223,9 @@ def _build_refund_get_request():
 def _build_setup_recurring_request():
     return payment_pb2.PaymentServiceSetupRecurringRequest(
         merchant_recurring_payment_id="probe_mandate_001",  # Identification.
-        amount=payment_pb2.Money(  # Mandate Details.
-            minor_amount=0,  # Amount in minor units (e.g., 1000 = $10.00).
-            currency=payment_pb2.Currency.Value("USD"),  # ISO 4217 currency code (e.g., "USD", "EUR").
+        amount=common_types_pb2.Money(  # Mandate Details.
+            minor_amount=0,
+            currency=common_types_pb2.Currency.Value("USD"),
         ),
         payment_method=payment_methods_pb2.PaymentMethod(
             card=payment_methods_pb2.CardDetails(
@@ -238,13 +236,13 @@ def _build_setup_recurring_request():
                 card_holder_name=payment_methods_pb2.SecretString(value="John Doe"),  # Cardholder Information.
             ),
         ),
-        customer=payment_pb2.Customer(
-            id="cust_probe_123",  # Internal customer ID.
+        customer=common_types_pb2.Customer(
+            id="cust_probe_123",
         ),
         address=payment_pb2.PaymentAddress(  # Address Information.
-            billing_address=payment_pb2.Address(
+            billing_address=common_types_pb2.Address(
                 country_alpha2_code=payment_methods_pb2.CountryAlpha2.Value("US"),
-                email=payment_methods_pb2.SecretString(value="test@example.com"),  # Contact Information.
+                email=payment_methods_pb2.SecretString(value="test@example.com"),
             ),
         ),
         auth_type=payment_pb2.AuthenticationType.Value("NO_THREE_DS"),  # Type of authentication to be used.

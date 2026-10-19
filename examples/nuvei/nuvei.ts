@@ -43,8 +43,6 @@ function _buildAuthorizeRequest(captureMethod: types.CaptureMethod): types.IPaym
         "captureMethod": captureMethod,  // Method for capturing the payment.
         "address": {  // Address Information.
             "billingAddress": {
-                "firstName": {"value": "John"},
-                "lastName": {"value": "Doe"},
                 "countryAlpha2Code": CountryAlpha2.US,
                 "email": {"value": "test@example.com"}
             }
@@ -141,8 +139,8 @@ function _buildParseEventRequest(): types.IEventServiceParseRequest {
 function _buildPreAuthenticateRequest(): types.IPaymentMethodAuthenticationServicePreAuthenticateRequest {
     return {
         "amount": {  // Amount Information.
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+            "minorAmount": 1000,
+            "currency": Currency.USD
         },
         "paymentMethod": {  // Payment Method.
             "card": {  // Generic card payment.
@@ -181,8 +179,8 @@ function _buildRecurringChargeRequest(): types.IRecurringPaymentServiceChargeReq
         "connectorRecurringPaymentId": {  // Reference to existing mandate.
         },
         "amount": {  // Amount Information.
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+            "minorAmount": 1000,
+            "currency": Currency.USD
         },
         "paymentMethod": {  // Optional payment Method Information (for network transaction flows).
             "token": {  // Payment tokens.
@@ -193,7 +191,7 @@ function _buildRecurringChargeRequest(): types.IRecurringPaymentServiceChargeReq
         "address": {  // Address Information.
             "billingAddress": {
                 "countryAlpha2Code": CountryAlpha2.US,
-                "email": {"value": "test@example.com"}  // Contact Information.
+                "email": {"value": "test@example.com"}
             }
         },
         "connectorCustomerId": "cust_probe_123",
@@ -241,8 +239,8 @@ function _buildSetupRecurringRequest(): types.IPaymentServiceSetupRecurringReque
     return {
         "merchantRecurringPaymentId": "probe_mandate_001",  // Identification.
         "amount": {  // Mandate Details.
-            "minorAmount": 0,  // Amount in minor units (e.g., 1000 = $10.00).
-            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+            "minorAmount": 0,
+            "currency": Currency.USD
         },
         "paymentMethod": {
             "card": {  // Generic card payment.
@@ -254,12 +252,12 @@ function _buildSetupRecurringRequest(): types.IPaymentServiceSetupRecurringReque
             }
         },
         "customer": {
-            "id": "cust_probe_123"  // Internal customer ID.
+            "id": "cust_probe_123"
         },
         "address": {  // Address Information.
             "billingAddress": {
                 "countryAlpha2Code": CountryAlpha2.US,
-                "email": {"value": "test@example.com"}  // Contact Information.
+                "email": {"value": "test@example.com"}
             }
         },
         "authType": AuthenticationType.NO_THREE_DS,  // Type of authentication to be used.

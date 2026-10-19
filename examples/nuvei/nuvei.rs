@@ -84,8 +84,6 @@ pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeR
         address: Some(PaymentAddress {
             // Address Information.
             billing_address: Some(Address {
-                first_name: Some(Secret::new("John".to_string())),
-                last_name: Some(Secret::new("Doe".to_string())),
                 country_alpha2_code: Some(CountryAlpha2::Us.into()),
                 email: Some(Secret::new("test@example.com".to_string())),
                 ..Default::default()
@@ -190,8 +188,8 @@ pub fn build_pre_authenticate_request() -> PaymentMethodAuthenticationServicePre
     PaymentMethodAuthenticationServicePreAuthenticateRequest {
         amount: Some(Money {
             // Amount Information.
-            minor_amount: 1000, // Amount in minor units (e.g., 1000 = $10.00).
-            currency: Currency::Usd.into(), // ISO 4217 currency code (e.g., "USD", "EUR").
+            minor_amount: 1000,
+            currency: Currency::Usd.into(),
         }),
         payment_method: Some(PaymentMethod {
             // Payment Method.
@@ -243,8 +241,8 @@ pub fn build_recurring_charge_request() -> RecurringPaymentServiceChargeRequest 
         }),
         amount: Some(Money {
             // Amount Information.
-            minor_amount: 1000, // Amount in minor units (e.g., 1000 = $10.00).
-            currency: Currency::Usd.into(), // ISO 4217 currency code (e.g., "USD", "EUR").
+            minor_amount: 1000,
+            currency: Currency::Usd.into(),
         }),
         payment_method: Some(PaymentMethod {
             // Optional payment Method Information (for network transaction flows).
@@ -261,7 +259,7 @@ pub fn build_recurring_charge_request() -> RecurringPaymentServiceChargeRequest 
             // Address Information.
             billing_address: Some(Address {
                 country_alpha2_code: Some(CountryAlpha2::Us.into()),
-                email: Some(Secret::new("test@example.com".to_string())), // Contact Information.
+                email: Some(Secret::new("test@example.com".to_string())),
                 ..Default::default()
             }),
             ..Default::default()
@@ -317,8 +315,8 @@ pub fn build_setup_recurring_request() -> PaymentServiceSetupRecurringRequest {
         merchant_recurring_payment_id: "probe_mandate_001".to_string(), // Identification.
         amount: Some(Money {
             // Mandate Details.
-            minor_amount: 0, // Amount in minor units (e.g., 1000 = $10.00).
-            currency: Currency::Usd.into(), // ISO 4217 currency code (e.g., "USD", "EUR").
+            minor_amount: 0,
+            currency: Currency::Usd.into(),
         }),
         payment_method: Some(PaymentMethod {
             payment_method: Some(payment_method::PaymentMethod::Card(CardDetails {
@@ -332,14 +330,14 @@ pub fn build_setup_recurring_request() -> PaymentServiceSetupRecurringRequest {
             ..Default::default()
         }),
         customer: Some(Customer {
-            id: Some("cust_probe_123".to_string()), // Internal customer ID.
+            id: Some("cust_probe_123".to_string()),
             ..Default::default()
         }),
         address: Some(PaymentAddress {
             // Address Information.
             billing_address: Some(Address {
                 country_alpha2_code: Some(CountryAlpha2::Us.into()),
-                email: Some(Secret::new("test@example.com".to_string())), // Contact Information.
+                email: Some(Secret::new("test@example.com".to_string())),
                 ..Default::default()
             }),
             ..Default::default()

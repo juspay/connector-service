@@ -68,8 +68,6 @@ private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAutho
         captureMethod = CaptureMethod.valueOf(captureMethodStr)  // Method for capturing the payment.
         addressBuilder.apply {  // Address Information.
             billingAddressBuilder.apply {
-                firstNameBuilder.value = "John"
-                lastNameBuilder.value = "Doe"
                 countryAlpha2Code = CountryAlpha2.US
                 emailBuilder.value = "test@example.com"
             }
@@ -338,8 +336,8 @@ fun preAuthenticate(txnId: String, config: ConnectorConfig = _defaultConfig) {
     val client = PaymentMethodAuthenticationClient(config)
     val request = PaymentMethodAuthenticationServicePreAuthenticateRequest.newBuilder().apply {
         amountBuilder.apply {  // Amount Information.
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+            minorAmount = 1000L
+            currency = Currency.USD
         }
         paymentMethodBuilder.apply {  // Payment Method.
             cardBuilder.apply {  // Generic card payment.
@@ -387,8 +385,8 @@ fun recurringCharge(txnId: String, config: ConnectorConfig = _defaultConfig) {
             }
         }
         amountBuilder.apply {  // Amount Information.
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+            minorAmount = 1000L
+            currency = Currency.USD
         }
         paymentMethodBuilder.apply {  // Optional payment Method Information (for network transaction flows).
             tokenBuilder.apply {  // Payment tokens.
@@ -399,7 +397,7 @@ fun recurringCharge(txnId: String, config: ConnectorConfig = _defaultConfig) {
         addressBuilder.apply {  // Address Information.
             billingAddressBuilder.apply {
                 countryAlpha2Code = CountryAlpha2.US
-                emailBuilder.value = "test@example.com"  // Contact Information.
+                emailBuilder.value = "test@example.com"
             }
         }
         connectorCustomerId = "cust_probe_123"
@@ -454,8 +452,8 @@ fun setupRecurring(txnId: String, config: ConnectorConfig = _defaultConfig) {
     val request = PaymentServiceSetupRecurringRequest.newBuilder().apply {
         merchantRecurringPaymentId = "probe_mandate_001"  // Identification.
         amountBuilder.apply {  // Mandate Details.
-            minorAmount = 0L  // Amount in minor units (e.g., 1000 = $10.00).
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+            minorAmount = 0L
+            currency = Currency.USD
         }
         paymentMethodBuilder.apply {
             cardBuilder.apply {  // Generic card payment.
@@ -467,12 +465,12 @@ fun setupRecurring(txnId: String, config: ConnectorConfig = _defaultConfig) {
             }
         }
         customerBuilder.apply {
-            id = "cust_probe_123"  // Internal customer ID.
+            id = "cust_probe_123"
         }
         addressBuilder.apply {  // Address Information.
             billingAddressBuilder.apply {
                 countryAlpha2Code = CountryAlpha2.US
-                emailBuilder.value = "test@example.com"  // Contact Information.
+                emailBuilder.value = "test@example.com"
             }
         }
         authType = AuthenticationType.NO_THREE_DS  // Type of authentication to be used.
