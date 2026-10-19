@@ -267,18 +267,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for ClearSaleBr<T>
 {
-    /// No webhook signature is documented by ClearSale (spec §11 open question
-    /// 2). For now every verified-source check accepts; the payload is logged
-    /// by the event pipeline. TODO: add signature verification if the merchant
-    /// pack documents one.
-    fn verify_webhook_source(
-        &self,
-        _request: RequestDetails,
-        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<bool, error_stack::Report<WebhookError>> {
-        Ok(true)
-    }
+    // No webhook signature is documented by ClearSale (spec §11 open question
+    // 2). `verify_webhook_source` therefore keeps the trait default (`Ok(false)`)
+    // — an unauthenticated webhook must not be treated as source-verified.
+    // TODO: add signature verification if the merchant pack documents one.
 
     fn get_event_type(
         &self,

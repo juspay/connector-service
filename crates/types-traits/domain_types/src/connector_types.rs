@@ -4913,8 +4913,9 @@ pub struct DomainData {
     pub airline_data: Option<AirlineData>,
     pub education_data: Option<EducationData>,
     pub hotel_data: Vec<HotelData>,
-    /// One entry per leg of a ground / sea journey — ClearSale maps each
-    /// entry onto connections[] and appends every leg's passengers.
+    /// Ground / sea travel bookings — ClearSale maps each booking's
+    /// `travel_segments` onto connections[] and appends every segment's
+    /// passengers into order-level passengers[].
     pub travel_data: Vec<TravelData>,
 }
 
@@ -4937,46 +4938,62 @@ pub enum TravelMode {
 
 // Cabin / seating class is a free-form string at the wire (e.g. "ECONOMY") so
 // carriers can pass their own vocabulary; the domain field is plain
-// `Option<String>` on `TravelData::travel_class`.
+// `Option<String>` on `TravelSegment::travel_class`.
 
-/// Connector-agnostic hotel / accommodation booking data. Mirrors the proto
-/// `HotelData` (tags 30+ are the ClearSale BR extension).
+/// Connector-agnostic hotel / accommodation booking. One booking may cover
+/// several stays; ClearSale maps each [`HotelSegment`] onto `hotels[]`.
+/// Mirrors the proto `HotelData` and the caller-repo Haskell `HotelData`.
 #[derive(Debug, Clone, Default)]
 pub struct HotelData {
     /// Merchant's booking reference.
     pub booking_id: Option<String>,
-    /// Check-in date/time (RFC 3339 or yyyy-MM-dd).
-    pub checkin: Option<String>,
-    /// Check-out date/time (RFC 3339 or yyyy-MM-dd).
-    pub checkout: Option<String>,
-    pub number_of_guests: Option<u32>,
-    pub number_of_rooms: Option<u32>,
-    /// Hotel or property name.
+    /// One entry per stay / property under this booking.
+    pub hotel_segments: Vec<HotelSegment>,
+}
+
+/// One hotel stay under a booking. Mirrors the proto `HotelSegment` and the
+/// caller-repo Haskell `HotelSegment`.
+#[derive(Debug, Clone, Default)]
+pub struct HotelSegment {
+    /// Hotel or property name — mandatory for ClearSale hotels[].name.
     pub hotel_name: Option<String>,
     /// City or its IATA code.
     pub hotel_city: Option<String>,
     /// ISO 3166-1 alpha-2.
     pub hotel_country: Option<String>,
-    /// Standard / Suite / Deluxe.
-    pub room_class: Option<String>,
-    /// room / apartment / villa / suite.
-    pub accommodation_type: Option<String>,
-    pub refundability: Option<common_enums::TicketRefundability>,
-    /// Reservation creation timestamp — ClearSale hotels[].reservationDate.
-    pub reservation_date: Option<String>,
-    /// Reservation hold expiry — ClearSale hotels[].reserveExpirationDate.
-    pub reservation_expiration_date: Option<String>,
     /// State / province of the property — ClearSale hotels[].state.
     pub hotel_state: Option<String>,
+    /// Check-in date/time (RFC 3339 or yyyy-MM-dd) — ClearSale hotels[].checkInDate.
+    pub check_in: Option<String>,
+    /// Check-out date/time (RFC 3339 or yyyy-MM-dd) — ClearSale hotels[].checkOutDate.
+    pub check_out: Option<String>,
+    /// Reservation creation timestamp — ClearSale hotels[].reservationDate.
+    pub reservation_at: Option<String>,
+    /// Reservation hold expiry — ClearSale hotels[].reserveExpirationDate.
+    pub reservation_expires_at: Option<String>,
 }
 
-/// Connector-agnostic ground / sea travel data — one leg of the journey
-/// (a multi-leg journey sends one entry per leg; ClearSale maps each entry
-/// onto connections[]). Mirrors the proto `TravelData` (tags 20+ are the
-/// ClearSale BR leg extension).
+/// Connector-agnostic ground / sea travel booking. One booking may cover
+/// several [`TravelSegment`]s; ClearSale maps each segment onto
+/// `connections[]`. Mirrors the proto `TravelData` and the caller-repo
+/// Haskell `TravelData`.
 #[derive(Debug, Clone, Default)]
 pub struct TravelData {
     pub mode: Option<TravelMode>,
+    /// e.g. bus operator / train company — ClearSale connections[].company.
+    pub carrier_name: Option<String>,
+    pub number_of_passengers: Option<u32>,
+    /// Travel date of this journey (yyyy-MM-dd or RFC 3339).
+    pub travel_date: Option<String>,
+    pub refundability: Option<common_enums::TicketRefundability>,
+    /// One entry per journey segment / leg.
+    pub travel_segments: Vec<TravelSegment>,
+}
+
+/// One ground / sea journey leg. Mirrors the proto `TravelSegment` and the
+/// caller-repo Haskell `TravelSegment`.
+#[derive(Debug, Clone, Default)]
+pub struct TravelSegment {
     /// Origin station / terminal code of this leg.
     pub origin: Option<String>,
     /// Destination station / terminal code of this leg.
@@ -4984,27 +5001,18 @@ pub struct TravelData {
     /// Free-form cabin / seating class (e.g. "ECONOMY"); an empty string
     /// deserializes to `None`.
     pub travel_class: Option<String>,
-    pub carrier_name: Option<String>,
-    /// Passengers on this leg.
+    /// Passengers on this segment — ClearSale appends them all into its
+    /// order-level passengers[].
     pub passengers: Vec<Traveller>,
-    pub number_of_passengers: Option<u32>,
-    /// Travel date of this leg (yyyy-MM-dd or RFC 3339).
-    pub travel_date: Option<String>,
-    pub refundability: Option<common_enums::TicketRefundability>,
-    /// Departure (RFC 3339).
-    pub departure_time: Option<String>,
-    /// Arrival (RFC 3339).
-    pub arrival_time: Option<String>,
-    /// Boarding gate opening (RFC 3339).
-    pub boarding_time: Option<String>,
-    /// e.g. bus operator / train code.
-    pub carrier_code: Option<String>,
-    /// Trip / service / coach number.
-    pub service_number: Option<String>,
-    /// Fare basis (e.g. "Y").
-    pub fare_class: Option<String>,
-    /// Seat category when distinct from travel_class.
-    pub seat_class: Option<String>,
+    /// Arrival (RFC 3339) — ClearSale connections[].arriving.
+    pub arrival: Option<String>,
+    /// Boarding gate opening (RFC 3339) — ClearSale connections[].boarding.
+    pub boarding: Option<String>,
+    /// Departure (RFC 3339) — ClearSale connections[].date.
+    pub departure: Option<String>,
+    /// Trip / service / coach / flight number —
+    /// ClearSale connections[].identificationNumber when numeric.
+    pub identifier: Option<String>,
 }
 
 /// A person travelling. Mirrors the proto `Traveller`.

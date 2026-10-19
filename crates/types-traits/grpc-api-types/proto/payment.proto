@@ -1516,7 +1516,7 @@ message DomainData {
   optional AirlineData airline_data = 1; // Airline / travel itinerary data
   optional EducationData education_data = 2; // Education / student data
   repeated HotelData hotel_data = 3;     // Hotel / accommodation bookings
-  repeated TravelData travel_data = 4;   // Ground / sea travel legs
+  repeated TravelData travel_data = 4;   // Ground / sea travel bookings
 }
 
 // Connector-agnostic education data (e.g. Flywire tuition payments).
@@ -1532,36 +1532,36 @@ message StudentDetails {
   optional SecretString student_email = 4; // PII — student's email address
 }
 
-// Connector-agnostic hotel / accommodation booking data (shared with the
-// risk-schema work in PR #2517; extended fields needed by ClearSale BR use
-// tags 30+).
+// Connector-agnostic hotel / accommodation booking. One booking may cover
+// several stays (segments); ClearSale maps each segment onto hotels[].
+// Mirrors the caller-repo Haskell `HotelData` / `HotelSegment` pair.
 message HotelData {
   // Merchant's booking reference.
   optional string booking_id = 1;
-  // Check-in date/time (RFC 3339 or yyyy-MM-dd).
-  optional string checkin = 2;
-  // Check-out date/time (RFC 3339 or yyyy-MM-dd).
-  optional string checkout = 3;
-  optional uint32 number_of_guests = 4;
-  optional uint32 number_of_rooms = 5;
-  // Hotel or property name.
-  optional string hotel_name = 6;
-  // City or its IATA code, e.g. RUH.
-  optional string hotel_city = 7;
-  // ISO 3166-1 alpha-2, e.g. SA.
-  optional string hotel_country = 8;
-  // Standard / Suite / Deluxe.
-  optional string room_class = 9;
-  // room / apartment / villa / suite.
-  optional string accommodation_type = 10;
-  TicketRefundability refundability = 11;
+  // One entry per stay / property under this booking.
+  repeated HotelSegment hotel_segments = 2;
+}
 
-  // Reservation creation timestamp (RFC 3339) — ClearSale hotels[].reservationDate.
-  optional string reservation_date = 30;
-  // Reservation hold expiry (RFC 3339) — ClearSale hotels[].reserveExpirationDate.
-  optional string reservation_expiration_date = 31;
+// One hotel stay under a booking. JSON keys accept the caller-repo aliases
+// (checkIn/checkin, reservationExpirationAt, …) on the Haskell side; the wire
+// names here are the canonical snake_case.
+message HotelSegment {
+  // Hotel or property name — mandatory for ClearSale hotels[].name.
+  optional string hotel_name = 1;
+  // City or its IATA code, e.g. RUH.
+  optional string hotel_city = 2;
+  // ISO 3166-1 alpha-2, e.g. SA.
+  optional string hotel_country = 3;
   // State / province of the property — ClearSale hotels[].state.
-  optional string hotel_state = 32;
+  optional string hotel_state = 4;
+  // Check-in date/time (RFC 3339 or yyyy-MM-dd) — ClearSale hotels[].checkInDate.
+  optional string check_in = 5;
+  // Check-out date/time (RFC 3339 or yyyy-MM-dd) — ClearSale hotels[].checkOutDate.
+  optional string check_out = 6;
+  // Reservation creation timestamp (RFC 3339) — ClearSale hotels[].reservationDate.
+  optional string reservation_at = 7;
+  // Reservation hold expiry (RFC 3339) — ClearSale hotels[].reserveExpirationDate.
+  optional string reservation_expires_at = 8;
 }
 
 // How the traveller is moving (bus / train / ferry …).
@@ -1573,35 +1573,42 @@ enum TravelMode {
   TRAVEL_MODE_OTHER = 4;
 }
 
-// Connector-agnostic ground / sea travel data — one leg of the journey
-// (shared with PR #2517; extended with per-leg detail and passenger docs
-// needed by ClearSale BR, tags 20+). A multi-leg journey sends one entry per
-// leg; ClearSale maps each entry onto connections[].
+// Connector-agnostic ground / sea travel booking. One booking may cover
+// several journey segments; ClearSale maps each segment onto connections[]
+// and appends every segment's passengers into order-level passengers[].
+// Mirrors the caller-repo Haskell `TravelData` / `TravelSegment` pair.
 message TravelData {
   TravelMode mode = 1;
-  // Origin station / terminal code of this leg.
-  optional string origin = 2;
-  // Destination station / terminal code of this leg.
-  optional string destination = 3;
-  // Free-form cabin / seating class (e.g. "ECONOMY", "PREMIUM_ECONOMY",
-  // "BUSINESS", "FIRST").
-  optional string travel_class = 4;
-  optional string carrier_name = 5;
-  // Passengers on this leg — ClearSale appends all legs' passengers into
-  // its order-level passengers[].
-  repeated Traveller passengers = 6;
-  optional uint32 number_of_passengers = 7;
-  // Travel date of this leg (yyyy-MM-dd or RFC 3339).
-  optional string travel_date = 8;
-  TicketRefundability refundability = 9;
+  // e.g. bus operator / train company — ClearSale connections[].company.
+  optional string carrier_name = 2;
+  optional uint32 number_of_passengers = 3;
+  // Travel date of this journey (yyyy-MM-dd or RFC 3339).
+  optional string travel_date = 4;
+  TicketRefundability refundability = 5;
+  // One entry per journey segment / leg.
+  repeated TravelSegment travel_segments = 6;
+}
 
-  optional string departure_time = 20;    // Departure (RFC 3339)
-  optional string arrival_time = 21;      // Arrival (RFC 3339)
-  optional string boarding_time = 22;     // Boarding gate opening (RFC 3339)
-  optional string carrier_code = 23;      // e.g. bus operator / train code
-  optional string service_number = 24;    // Trip / service / coach number
-  optional string fare_class = 25;        // Fare basis (e.g. "Y")
-  optional string seat_class = 26;        // Seat category when distinct from travel_class
+// One ground / sea journey leg (ClearSale connections[]).
+message TravelSegment {
+  // Origin station / terminal code of this leg.
+  optional string origin = 1;
+  // Destination station / terminal code of this leg.
+  optional string destination = 2;
+  // Free-form cabin / seating class (e.g. "ECONOMY", "PREMIUM_ECONOMY",
+  // "BUSINESS", "FIRST") — ClearSale connections[].seatClass.
+  optional string travel_class = 3;
+  // Passengers on this segment — ClearSale order-level passengers[].
+  repeated Traveller passengers = 4;
+  // Arrival (RFC 3339) — ClearSale connections[].arriving.
+  optional string arrival = 5;
+  // Boarding gate opening (RFC 3339) — ClearSale connections[].boarding.
+  optional string boarding = 6;
+  // Departure (RFC 3339) — ClearSale connections[].date.
+  optional string departure = 7;
+  // Trip / service / coach / flight number (e.g. "G3-1234", "101") —
+  // ClearSale connections[].identificationNumber when numeric.
+  optional string identifier = 8;
 }
 
 // A person travelling (shared with PR #2517; tags 10+ are the ClearSale BR

@@ -1383,7 +1383,8 @@ impl
             }),
             merchant_details: item.merchant_details.clone(),
             mandate_details: item.mandate_details.clone(),
-            document_details: item.document_details.clone(),
+            billing_document_data: item.billing_document_data.clone(),
+            shipping_document_data: item.shipping_document_data.clone(),
             domain_data: item.domain_data.clone(),
         }
     }
@@ -1481,6 +1482,8 @@ impl
             connector_transaction_id: item.connector_transaction_id.clone(),
             payment_connector: item.payment_connector,
             address: item.address.clone(),
+            billing_document_data: item.billing_document_data.clone(),
+            shipping_document_data: item.shipping_document_data.clone(),
             state: Some(ConnectorState {
                 access_token,
                 connector_customer_id,

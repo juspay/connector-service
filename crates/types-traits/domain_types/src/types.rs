@@ -4698,22 +4698,28 @@ fn ticket_refundability_from_proto(
 
 impl ForeignFrom<grpc_payment_types::HotelData> for connector_types::HotelData {
     fn foreign_from(hotel: grpc_payment_types::HotelData) -> Self {
-        let refundability = ticket_refundability_from_proto(hotel.refundability());
         Self {
             booking_id: hotel.booking_id,
-            checkin: hotel.checkin,
-            checkout: hotel.checkout,
-            number_of_guests: hotel.number_of_guests,
-            number_of_rooms: hotel.number_of_rooms,
-            hotel_name: hotel.hotel_name,
-            hotel_city: hotel.hotel_city,
-            hotel_country: hotel.hotel_country,
-            room_class: hotel.room_class,
-            accommodation_type: hotel.accommodation_type,
-            refundability,
-            reservation_date: hotel.reservation_date,
-            reservation_expiration_date: hotel.reservation_expiration_date,
-            hotel_state: hotel.hotel_state,
+            hotel_segments: hotel
+                .hotel_segments
+                .into_iter()
+                .map(connector_types::HotelSegment::from)
+                .collect(),
+        }
+    }
+}
+
+impl From<grpc_payment_types::HotelSegment> for connector_types::HotelSegment {
+    fn from(segment: grpc_payment_types::HotelSegment) -> Self {
+        Self {
+            hotel_name: segment.hotel_name,
+            hotel_city: segment.hotel_city,
+            hotel_country: segment.hotel_country,
+            hotel_state: segment.hotel_state,
+            check_in: segment.check_in,
+            check_out: segment.check_out,
+            reservation_at: segment.reservation_at,
+            reservation_expires_at: segment.reservation_expires_at,
         }
     }
 }
@@ -4730,25 +4736,34 @@ impl ForeignFrom<grpc_payment_types::TravelData> for connector_types::TravelData
         let refundability = ticket_refundability_from_proto(travel.refundability());
         Self {
             mode,
-            origin: travel.origin,
-            destination: travel.destination,
-            travel_class: travel.travel_class,
             carrier_name: travel.carrier_name,
-            passengers: travel
+            number_of_passengers: travel.number_of_passengers,
+            travel_date: travel.travel_date,
+            refundability,
+            travel_segments: travel
+                .travel_segments
+                .into_iter()
+                .map(connector_types::TravelSegment::from)
+                .collect(),
+        }
+    }
+}
+
+impl From<grpc_payment_types::TravelSegment> for connector_types::TravelSegment {
+    fn from(segment: grpc_payment_types::TravelSegment) -> Self {
+        Self {
+            origin: segment.origin,
+            destination: segment.destination,
+            travel_class: segment.travel_class,
+            passengers: segment
                 .passengers
                 .into_iter()
                 .map(connector_types::Traveller::foreign_from)
                 .collect(),
-            number_of_passengers: travel.number_of_passengers,
-            travel_date: travel.travel_date,
-            refundability,
-            departure_time: travel.departure_time,
-            arrival_time: travel.arrival_time,
-            boarding_time: travel.boarding_time,
-            carrier_code: travel.carrier_code,
-            service_number: travel.service_number,
-            fare_class: travel.fare_class,
-            seat_class: travel.seat_class,
+            arrival: segment.arrival,
+            boarding: segment.boarding,
+            departure: segment.departure,
+            identifier: segment.identifier,
         }
     }
 }

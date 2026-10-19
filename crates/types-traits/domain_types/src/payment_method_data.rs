@@ -2025,21 +2025,20 @@ pub struct ReceiverDetails {
 #[serde(rename_all = "snake_case")]
 pub enum DocumentKind {
     /// Cadastro de Pessoas Físicas - the Brazilian individual taxpayer identifier.
-    #[serde(alias = "CPF")]
+    #[serde(alias = "CPF", alias = "Cpf")]
     Cpf,
     /// Cadastro Nacional da Pessoa Jurídica - the Brazilian business identifier.
-    #[serde(alias = "CNPJ")]
+    #[serde(alias = "CNPJ", alias = "Cnpj")]
     Cnpj,
     /// Philippine PhilSys Number (PSN) — a 12-digit national ID required by dLocal for GCash.
-    #[serde(alias = "PSN")]
+    #[serde(alias = "PSN", alias = "Psn")]
     Psn,
-    /// Identifier for the customer who actually buys the product or service
-    /// (ClearSale `shipping.primaryDocument`).
-    #[serde(alias = "CUSTOMER_CPF")]
+    /// Identifier for the customer who actually buys the product or service.
+    #[serde(alias = "CUSTOMER_CPF", alias = "CustomerCpf")]
     CustomerCpf,
     /// Generic / other non-Brazilian national document. Carried through as-is; the
     /// connector validates it per country. Kept last as the catch-all.
-    #[serde(alias = "OTHER")]
+    #[serde(alias = "OTHER", alias = "Other")]
     Other,
 }
 

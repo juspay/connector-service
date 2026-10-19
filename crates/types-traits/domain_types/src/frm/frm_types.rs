@@ -98,11 +98,11 @@ pub struct PreRiskCheckRequest {
     pub merchant_details: Option<MerchantDetails>,
     /// Payment method sub-type (e.g. `Card`, `GooglePay`, `UpiCollect`) for risk scoring.
     pub payment_method_type: Option<PaymentMethodType>,
-    /// Payer's identity document (e.g. Brazilian CPF/CNPJ in `document_number`).
-    /// The buyer's document, when distinct, is sent as `DocumentKind.CUSTOMER_CPF` —
-    /// ClearSale maps CPF/CNPJ → billing.primaryDocument and CUSTOMER_CPF →
-    /// shipping.primaryDocument (falling back to billing when absent).
-    pub document_details: Option<CustomerDocumentDetails>,
+    /// Billing-side identity document (CPF/CNPJ) — ClearSale `billing.primaryDocument`.
+    pub billing_document_data: Option<CustomerDocumentDetails>,
+    /// Shipping/buyer identity document — ClearSale `shipping.primaryDocument`.
+    /// Falls back to the billing document when absent.
+    pub shipping_document_data: Option<CustomerDocumentDetails>,
     /// Domain-specific order context (travel, hotel, airline…) as a typed
     /// object. Replaces the earlier free-form merchant_transient_info JSON.
     pub domain_data: Option<DomainData>,
@@ -133,6 +133,10 @@ pub struct PostRiskCheckRequest {
     pub connector_transaction_id: Option<String>,
     pub payment_connector: Option<grpc_api_types::payments::Connector>,
     pub address: Option<PaymentAddress>,
+    /// Billing-side identity document (CPF/CNPJ) — ClearSale `billing.primaryDocument`.
+    pub billing_document_data: Option<CustomerDocumentDetails>,
+    /// Shipping/buyer identity document — ClearSale `shipping.primaryDocument`.
+    pub shipping_document_data: Option<CustomerDocumentDetails>,
 }
 
 /// Response data for post-risk check
@@ -245,7 +249,8 @@ pub struct FrmMetadata {
     pub custom_fields: Option<std::collections::HashMap<String, serde_json::Value>>,
     // Travel/hotel blocks (passengers / travelSegments / accommodations) are
     // intentionally NOT consumed here — they ride on the typed
-    // `PreRiskCheckRequest::domain_data` (DomainData.travel_data / hotel_data).
+    // `PreRiskCheckRequest::domain_data` (DomainData.travel_data / hotel_data
+    // with nested HotelData.hotel_segments).
 }
 
 impl FrmMetadata {
