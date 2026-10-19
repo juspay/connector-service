@@ -9,6 +9,22 @@ import pg from "pg";
 import type { Json } from "./config.js";
 import { collectAudit, createDockerLogReader } from "./audit.js";
 
+function apiStepName(method: string, path: string): string {
+  const route = path.split("?")[0];
+  if (method === "POST" && route === "/payments") return "Create payment";
+  if (method === "GET" && route.startsWith("/payments/"))
+    return "Retrieve payment";
+  if (method === "POST" && route.startsWith("/payments/")) {
+    if (route.endsWith("/confirm")) return "Confirm payment";
+    if (route.endsWith("/capture")) return "Capture payment";
+    if (route.endsWith("/cancel")) return "Cancel payment";
+  }
+  if (method === "POST" && route === "/refunds") return "Create refund";
+  if (method === "GET" && route.startsWith("/refunds/"))
+    return "Retrieve refund";
+  return `${method} ${route}`;
+}
+
 export class Hyperswitch {
   private readonly readAuditLogs = createDockerLogReader();
 
@@ -45,10 +61,15 @@ export class Hyperswitch {
             this.readAuditLogs,
           );
           if (audit.events.length) {
-            await this.report!.attach("ucs-audit", {
-              body: JSON.stringify(audit.events, null, 2),
-              contentType: "application/json",
-            });
+            for (const event of audit.events) {
+              await this.report!.attach(
+                `${apiStepName(method, path)} / ${event.flow_type} / ${event.stage}`,
+                {
+                  body: JSON.stringify(event, null, 2),
+                  contentType: "application/json",
+                },
+              );
+            }
           } else {
             this.report!.annotations.push({
               type: "UCS audit unavailable",
@@ -66,7 +87,7 @@ export class Hyperswitch {
       return response.json();
     };
     return this.report
-      ? test.step(`${method} ${path.split("?")[0]}`, invoke)
+      ? test.step(apiStepName(method, path), invoke)
       : invoke();
   }
 
@@ -151,7 +172,12 @@ export async function assertUcsGateway(
         "Payment did not record the expected connector outcome with a processor reference",
       );
     }
-    return result.rows[0].processor_reference as string;
+    return {
+      processorReference: result.rows[0].processor_reference as string,
+      gateway: result.rows[0].gateway as string,
+      processorOutcomeVerified: result.rows[0]
+        .processor_payment_completed as boolean,
+    };
   } finally {
     await client.end();
   }

@@ -109,80 +109,84 @@ export function otpSuite(
           const merchantId = `e2e_${randomUUID().replaceAll("-", "")}`;
           const hs = await Hyperswitch.create(info);
           try {
-            await hs.enableUcs(admin);
-            const account = await hs.call("POST", "/accounts", admin, {
-              merchant_name: "UCS Playwright OTP",
-              primary_business_details: [
-                { country: "US", business: "default" },
-              ],
-              merchant_id: merchantId,
-            });
-            const apiKey = await hs.call(
-              "POST",
-              `/api_keys/${merchantId}`,
-              admin,
-              {
-                name: "UCS E2E",
-                expiration: new Date(Date.now() + 86_400_000).toISOString(),
-                description: "Disposable sandbox e2e test key",
-              },
-            );
-            const key = apiKey.api_key;
-            expect(typeof key).toBe("string");
-            let profileId = account.default_profile;
-            if (!profileId) {
-              const profile = await hs.call(
-                "POST",
-                `/account/${merchantId}/business_profile`,
-                key,
-                { profile_name: "ucs-e2e" },
-              );
-              profileId = profile.profile_id;
-            }
-            expect(typeof profileId).toBe("string");
-            if (overrides.profile) {
-              await hs.call(
-                "POST",
-                `/account/${merchantId}/business_profile/${profileId}`,
-                key,
-                overrides.profile,
-              );
-            }
-            const mca = await hs.call(
-              "POST",
-              `/account/${merchantId}/connectors`,
-              key,
-              {
-                connector_account_details: auth.connector_account_details,
-                metadata: merge(
-                  auth.metadata ?? {},
-                  overrides.connectorMetadata,
-                ),
-                payment_methods_enabled: [],
-                connector_type: "payment_processor",
-                connector_name: connector,
-                connector_label: `${connector}_e2e`,
-                profile_id: profileId,
-                test_mode: true,
-                disabled: false,
-              },
-            );
-            expect(typeof mca.merchant_connector_id).toBe("string");
-            const routing = await hs.call("POST", "/routing", key, {
-              name: "ucs-e2e",
-              description: "Single sandbox connector",
-              profile_id: profileId,
-              algorithm: {
-                type: "single",
-                data: {
-                  connector,
-                  merchant_connector_id: mca.merchant_connector_id,
-                },
-              },
-            });
-            await hs.call("POST", `/routing/${routing.id}/activate`, key, {
-              profile_id: profileId,
-            });
+            const { account, key, profileId, mca } =
+              await test.step("Prepare sandbox merchant and routing", async () => {
+                await hs.enableUcs(admin);
+                const account = await hs.call("POST", "/accounts", admin, {
+                  merchant_name: "UCS Playwright OTP",
+                  primary_business_details: [
+                    { country: "US", business: "default" },
+                  ],
+                  merchant_id: merchantId,
+                });
+                const apiKey = await hs.call(
+                  "POST",
+                  `/api_keys/${merchantId}`,
+                  admin,
+                  {
+                    name: "UCS E2E",
+                    expiration: new Date(Date.now() + 86_400_000).toISOString(),
+                    description: "Disposable sandbox e2e test key",
+                  },
+                );
+                const key = apiKey.api_key;
+                expect(typeof key).toBe("string");
+                let profileId = account.default_profile;
+                if (!profileId) {
+                  const profile = await hs.call(
+                    "POST",
+                    `/account/${merchantId}/business_profile`,
+                    key,
+                    { profile_name: "ucs-e2e" },
+                  );
+                  profileId = profile.profile_id;
+                }
+                expect(typeof profileId).toBe("string");
+                if (overrides.profile) {
+                  await hs.call(
+                    "POST",
+                    `/account/${merchantId}/business_profile/${profileId}`,
+                    key,
+                    overrides.profile,
+                  );
+                }
+                const mca = await hs.call(
+                  "POST",
+                  `/account/${merchantId}/connectors`,
+                  key,
+                  {
+                    connector_account_details: auth.connector_account_details,
+                    metadata: merge(
+                      auth.metadata ?? {},
+                      overrides.connectorMetadata,
+                    ),
+                    payment_methods_enabled: [],
+                    connector_type: "payment_processor",
+                    connector_name: connector,
+                    connector_label: `${connector}_e2e`,
+                    profile_id: profileId,
+                    test_mode: true,
+                    disabled: false,
+                  },
+                );
+                expect(typeof mca.merchant_connector_id).toBe("string");
+                const routing = await hs.call("POST", "/routing", key, {
+                  name: "ucs-e2e",
+                  description: "Single sandbox connector",
+                  profile_id: profileId,
+                  algorithm: {
+                    type: "single",
+                    data: {
+                      connector,
+                      merchant_connector_id: mca.merchant_connector_id,
+                    },
+                  },
+                });
+                await hs.call("POST", `/routing/${routing.id}/activate`, key, {
+                  profile_id: profileId,
+                });
+                return { account, key, profileId, mca };
+              });
             const body = merge(paymentDefaults(connector), overrides.payment);
             if (requestVariant.fixture === "merchant-reference") {
               body.payment_id = `synthetic_${randomUUID().replaceAll("-", "")}`;
@@ -217,21 +221,34 @@ export function otpSuite(
               capture_method: captureMethod,
             });
             if (!inlineConfirm)
-              expect(intent.status).toBe(
+              expect(
+                intent.status,
+                "Payment is ready for the selected confirmation mode",
+              ).toBe(
                 requestVariant.clientConfirmation
                   ? "requires_payment_method"
                   : "requires_confirmation",
               );
             if (requestVariant.clientConfirmation) {
-              expect(typeof account.publishable_key).toBe("string");
-              expect(typeof intent.client_secret).toBe("string");
+              expect(
+                typeof account.publishable_key,
+                "A publishable key is available for client confirmation",
+              ).toBe("string");
+              expect(
+                typeof intent.client_secret,
+                "A client secret is available for client confirmation",
+              ).toBe("string");
             }
             const paymentId = intent.payment_id;
             if (requestVariant.fixture === "merchant-reference") {
-              expect(paymentId).toBe(body.payment_id);
-              expect(intent.merchant_order_reference_id).toBe(
-                body.merchant_order_reference_id,
-              );
+              expect(
+                paymentId,
+                "Payment preserves the supplied test reference",
+              ).toBe(body.payment_id);
+              expect(
+                intent.merchant_order_reference_id,
+                "Payment preserves the supplied order reference",
+              ).toBe(body.merchant_order_reference_id);
             }
             const confirmed = inlineConfirm
               ? intent
@@ -251,95 +268,166 @@ export function otpSuite(
                   },
                 );
             if (!requestVariant.clientConfirmation) {
-              expect(confirmed.connector).toBe(connector);
-              expect(confirmed.merchant_connector_id).toBe(
-                mca.merchant_connector_id,
-              );
+              expect(
+                confirmed.connector,
+                "Confirmation uses the selected connector",
+              ).toBe(connector);
+              expect(
+                confirmed.merchant_connector_id,
+                "Confirmation uses the configured connector account",
+              ).toBe(mca.merchant_connector_id);
             }
-            expect(confirmed.next_action == null).toBe(true);
-            expect(confirmed.mandate_id == null).toBe(true);
+            expect(
+              confirmed.next_action == null,
+              "No additional customer action is required",
+            ).toBe(true);
+            expect(
+              confirmed.mandate_id == null,
+              "Confirmation does not create a mandate",
+            ).toBe(true);
             const initialTarget = manual ? "requires_capture" : "succeeded";
             let target = initialTarget;
-            expect([initialTarget, "processing"]).toContain(confirmed.status);
-            const sync = async (expected: string) => {
-              let actual: string | null = null;
-              try {
-                await expect
-                  .poll(
-                    async () => {
-                      const payment = await hs.call(
-                        "GET",
-                        `/payments/${paymentId}?force_sync=true`,
-                        key,
-                      );
-                      actual =
-                        typeof payment.status === "string"
-                          ? payment.status
-                          : null;
-                      expect(
-                        payment.connector,
-                        "Payment uses the selected connector",
-                      ).toBe(connector);
-                      expect(
-                        payment.authentication_type,
-                        "Payment uses No3DS authentication",
-                      ).toBe("no_three_ds");
-                      expect(
-                        payment.setup_future_usage == null,
-                        "Payment does not set up future usage",
-                      ).toBe(true);
-                      expect(
-                        payment.mandate_id == null,
-                        "Payment does not create a mandate",
-                      ).toBe(true);
-                      expect(
-                        payment.merchant_connector_id,
-                        "Payment uses the configured connector account",
-                      ).toBe(mca.merchant_connector_id);
-                      expect(
-                        payment.amount,
-                        "Payment amount matches the request",
-                      ).toBe(body.amount);
-                      expect(
-                        payment.currency,
-                        "Payment currency matches the request",
-                      ).toBe(body.currency);
-                      expect(
-                        payment.payment_id,
-                        "Retrieve returns the same payment",
-                      ).toBe(paymentId);
-                      if (payment.status === expected) {
-                        expect(
-                          payment.amount_capturable,
-                          "Capturable amount matches the payment state",
-                        ).toBe(
-                          expected === "requires_capture" ? body.amount : 0,
+            expect(
+              [initialTarget, "processing"],
+              `Confirmation status is ${initialTarget} or processing; actual ${confirmed.status}`,
+            ).toContain(confirmed.status);
+            const sync = async (expected: string) =>
+              test.step(`Verify payment status: ${expected}`, async () => {
+                let actual: string | null = null;
+                let observed: Json | undefined;
+                try {
+                  await expect
+                    .poll(
+                      async () => {
+                        const payment = await hs.call(
+                          "GET",
+                          `/payments/${paymentId}?force_sync=true`,
+                          key,
                         );
-                        if (expected === "succeeded")
+                        observed = payment;
+                        actual =
+                          typeof payment.status === "string"
+                            ? payment.status
+                            : null;
+                        expect(
+                          payment.connector,
+                          "Payment uses the selected connector",
+                        ).toBe(connector);
+                        expect(
+                          payment.authentication_type,
+                          "Payment uses No3DS authentication",
+                        ).toBe("no_three_ds");
+                        expect(
+                          payment.setup_future_usage == null,
+                          "Payment does not set up future usage",
+                        ).toBe(true);
+                        expect(
+                          payment.mandate_id == null,
+                          "Payment does not create a mandate",
+                        ).toBe(true);
+                        expect(
+                          payment.merchant_connector_id,
+                          "Payment uses the configured connector account",
+                        ).toBe(mca.merchant_connector_id);
+                        expect(
+                          payment.amount,
+                          "Payment amount matches the request",
+                        ).toBe(body.amount);
+                        expect(
+                          payment.currency,
+                          "Payment currency matches the request",
+                        ).toBe(body.currency);
+                        expect(
+                          payment.payment_id,
+                          "Retrieve returns the same payment",
+                        ).toBe(paymentId);
+                        if (payment.status === expected) {
                           expect(
-                            payment.amount_received,
-                            "Captured amount matches the requested amount",
-                          ).toBe(body.amount);
-                      }
-                      return payment.status;
-                    },
+                            payment.amount_capturable,
+                            "Capturable amount matches the payment state",
+                          ).toBe(
+                            expected === "requires_capture" ? body.amount : 0,
+                          );
+                          if (expected === "succeeded")
+                            expect(
+                              payment.amount_received,
+                              "Captured amount matches the requested amount",
+                            ).toBe(body.amount);
+                        }
+                        return payment.status;
+                      },
+                      {
+                        intervals: [1000, 3000, 5000],
+                        timeout: 90_000,
+                        message: `Verify payment status: expected ${expected}`,
+                      },
+                    )
+                    .toBe(expected);
+                } finally {
+                  if (observed) {
+                    const checks = {
+                      connector: {
+                        expected: connector,
+                        actual: observed.connector,
+                      },
+                      authentication_type: {
+                        expected: "no_three_ds",
+                        actual: observed.authentication_type,
+                      },
+                      setup_future_usage: {
+                        expected: null,
+                        actual: observed.setup_future_usage ?? null,
+                      },
+                      mandate_created: {
+                        expected: false,
+                        actual: observed.mandate_id != null,
+                      },
+                      connector_account_matches: {
+                        expected: true,
+                        actual:
+                          observed.merchant_connector_id ===
+                          mca.merchant_connector_id,
+                      },
+                      payment_id_matches: {
+                        expected: true,
+                        actual: observed.payment_id === paymentId,
+                      },
+                      amount: {
+                        expected: body.amount,
+                        actual: observed.amount,
+                      },
+                      currency: {
+                        expected: body.currency,
+                        actual: observed.currency,
+                      },
+                      amount_capturable: {
+                        expected:
+                          expected === "requires_capture" ? body.amount : 0,
+                        actual: observed.amount_capturable,
+                      },
+                      ...(expected === "succeeded"
+                        ? {
+                            amount_received: {
+                              expected: body.amount,
+                              actual: observed.amount_received,
+                            },
+                          }
+                        : {}),
+                    };
+                    await info.attach("Payment field checks", {
+                      body: JSON.stringify(checks, null, 2),
+                      contentType: "application/json",
+                    });
+                  }
+                  await info.attach(
+                    `Payment status: expected ${expected}, actual ${actual ?? "unavailable"}`,
                     {
-                      intervals: [1000, 3000, 5000],
-                      timeout: 90_000,
-                      message: `Verify payment status: expected ${expected}`,
+                      body: JSON.stringify({ expected, actual }, null, 2),
+                      contentType: "application/json",
                     },
-                  )
-                  .toBe(expected);
-              } finally {
-                await info.attach(
-                  `Payment status: expected ${expected}, actual ${actual ?? "unavailable"}`,
-                  {
-                    body: JSON.stringify({ expected, actual }, null, 2),
-                    contentType: "application/json",
-                  },
-                );
-              }
-            };
+                  );
+                }
+              });
             await sync(initialTarget);
             let attemptStatus = "charged";
             if (
@@ -352,7 +440,21 @@ export function otpSuite(
                 key,
                 { amount_to_capture: body.amount },
               );
-              expect(["succeeded", "processing"]).toContain(captured.status);
+              expect(
+                ["succeeded", "processing"],
+                "Capture response is succeeded or processing",
+              ).toContain(captured.status);
+              await info.attach("Capture response check", {
+                body: JSON.stringify(
+                  {
+                    expected: ["succeeded", "processing"],
+                    actual: captured.status,
+                  },
+                  null,
+                  2,
+                ),
+                contentType: "application/json",
+              });
               target = captured.status;
               if (variant === "capture-submission")
                 attemptStatus = target === "succeeded" ? "charged" : "pending";
@@ -370,7 +472,21 @@ export function otpSuite(
                 key,
                 { cancellation_reason: "requested_by_customer" },
               );
-              expect(["cancelled", "processing"]).toContain(cancelled.status);
+              expect(
+                ["cancelled", "processing"],
+                "Cancellation response is cancelled or processing",
+              ).toContain(cancelled.status);
+              await info.attach("Cancellation response check", {
+                body: JSON.stringify(
+                  {
+                    expected: ["cancelled", "processing"],
+                    actual: cancelled.status,
+                  },
+                  null,
+                  2,
+                ),
+                contentType: "application/json",
+              });
               target = cancelled.status;
               attemptStatus = target === "cancelled" ? "voided" : "pending";
               if (variant !== "void-submission") {
@@ -389,111 +505,263 @@ export function otpSuite(
                 variant === "refund-partial"
                   ? Math.floor(body.amount / 2)
                   : body.amount;
-              const refund = await hs.call("POST", "/refunds", key, {
-                payment_id: paymentId,
-                amount: refundedAmount,
-              });
-              expect(typeof refund.refund_id).toBe("string");
-              expect(["pending", "succeeded"]).toContain(refund.status);
-              expect(refund.payment_id).toBe(paymentId);
-              expect(refund.amount).toBe(refundedAmount);
-              if (variant !== "refund-submission")
-                await expect
-                  .poll(
-                    async () => {
-                      const synced = await hs.call(
-                        "GET",
-                        `/refunds/${refund.refund_id}?force_sync=true`,
-                        key,
-                      );
-                      expect(synced.payment_id).toBe(paymentId);
-                      expect(synced.amount).toBe(refundedAmount);
-                      expect(synced.currency).toBe(body.currency);
-                      return synced.status;
-                    },
-                    { intervals: [1000, 3000, 5000], timeout: 90_000 },
-                  )
-                  .toBe("succeeded");
-              await assertConnectorRefund(
-                merchantId,
-                refund.refund_id,
-                connector,
+              await test.step(
+                variant === "refund-submission"
+                  ? "Verify refund submission"
+                  : "Verify refund status: succeeded",
+                async () => {
+                  const refund = await hs.call("POST", "/refunds", key, {
+                    payment_id: paymentId,
+                    amount: refundedAmount,
+                  });
+                  let observedRefund = refund;
+                  expect(typeof refund.refund_id, "Refund ID is recorded").toBe(
+                    "string",
+                  );
+                  expect(
+                    ["pending", "succeeded"],
+                    "Refund response is pending or succeeded",
+                  ).toContain(refund.status);
+                  expect(
+                    refund.payment_id,
+                    "Refund belongs to the test payment",
+                  ).toBe(paymentId);
+                  expect(
+                    refund.amount,
+                    "Refund amount matches the request",
+                  ).toBe(refundedAmount);
+                  if (variant !== "refund-submission")
+                    await expect
+                      .poll(
+                        async () => {
+                          const synced = await hs.call(
+                            "GET",
+                            `/refunds/${refund.refund_id}?force_sync=true`,
+                            key,
+                          );
+                          observedRefund = synced;
+                          expect(
+                            synced.payment_id,
+                            "Retrieved refund belongs to the test payment",
+                          ).toBe(paymentId);
+                          expect(
+                            synced.amount,
+                            "Retrieved refund amount matches the request",
+                          ).toBe(refundedAmount);
+                          expect(
+                            synced.currency,
+                            "Refund currency matches the payment",
+                          ).toBe(body.currency);
+                          return synced.status;
+                        },
+                        { intervals: [1000, 3000, 5000], timeout: 90_000 },
+                      )
+                      .toBe("succeeded");
+                  await assertConnectorRefund(
+                    merchantId,
+                    refund.refund_id,
+                    connector,
+                  );
+                  await info.attach("Refund checks", {
+                    body: JSON.stringify(
+                      {
+                        status: {
+                          expected:
+                            variant === "refund-submission"
+                              ? ["pending", "succeeded"]
+                              : "succeeded",
+                          actual: observedRefund.status,
+                        },
+                        amount: {
+                          expected: refundedAmount,
+                          actual: observedRefund.amount,
+                        },
+                        payment_id_matches: {
+                          expected: true,
+                          actual: observedRefund.payment_id === paymentId,
+                        },
+                        ...(variant !== "refund-submission"
+                          ? {
+                              currency: {
+                                expected: body.currency,
+                                actual: observedRefund.currency,
+                              },
+                            }
+                          : {}),
+                      },
+                      null,
+                      2,
+                    ),
+                    contentType: "application/json",
+                  });
+                },
               );
             }
-            const reference = await assertUcsGateway(
-              merchantId,
-              paymentId,
-              connector,
-              attemptStatus,
-            );
+            const reference =
+              await test.step("Verify UCS routing and processor reference", async () => {
+                const result = await assertUcsGateway(
+                  merchantId,
+                  paymentId,
+                  connector,
+                  attemptStatus,
+                );
+                await info.attach("UCS routing checks", {
+                  body: JSON.stringify(
+                    {
+                      gateway: {
+                        expected: "unified_connector_service",
+                        actual: result.gateway,
+                      },
+                      processor_outcome_recorded: {
+                        expected: true,
+                        actual: result.processorOutcomeVerified,
+                      },
+                    },
+                    null,
+                    2,
+                  ),
+                  contentType: "application/json",
+                });
+                return result.processorReference;
+              });
             if (connector === "stripe") {
-              const connectedAccount =
-                body.split_payments?.stripe_split_payment?.transfer_account_id;
-              const processor = await stripePaymentIntent(
-                auth,
-                reference,
-                connectedAccount,
-              );
-              if (refundedAmount !== undefined) {
-                const chargeId =
-                  typeof processor.latest_charge === "string"
-                    ? processor.latest_charge
-                    : processor.latest_charge?.id;
-                const charge = await stripeCharge(
+              await test.step("Verify payment in Stripe sandbox", async () => {
+                const connectedAccount =
+                  body.split_payments?.stripe_split_payment
+                    ?.transfer_account_id;
+                const processor = await stripePaymentIntent(
                   auth,
-                  chargeId,
+                  reference,
                   connectedAccount,
                 );
-                expect(charge.amount_refunded).toBe(refundedAmount);
-                expect(charge.refunded).toBe(refundedAmount === body.amount);
-              }
-              expect(processor.livemode).toBe(false);
-              expect(processor.status).toBe(
-                target === "cancelled" ? "canceled" : "succeeded",
-              );
-              expect(processor.amount_received).toBe(
-                target === "cancelled" ? 0 : body.amount,
-              );
-              expect(processor.currency).toBe(body.currency.toLowerCase());
-              if (
-                requestVariant.profile
-                  ?.use_billing_as_payment_method_billing === true
-              ) {
-                const methodId =
-                  typeof processor.payment_method === "string"
-                    ? processor.payment_method
-                    : processor.payment_method?.id;
-                const method = await stripePaymentMethod(
-                  auth,
-                  methodId,
-                  connectedAccount,
+                let refundedAtProcessor: number | undefined;
+                if (refundedAmount !== undefined) {
+                  const chargeId =
+                    typeof processor.latest_charge === "string"
+                      ? processor.latest_charge
+                      : processor.latest_charge?.id;
+                  const charge = await stripeCharge(
+                    auth,
+                    chargeId,
+                    connectedAccount,
+                  );
+                  refundedAtProcessor = charge.amount_refunded;
+                  expect(
+                    charge.amount_refunded,
+                    "Stripe refunded amount matches the refund request",
+                  ).toBe(refundedAmount);
+                  expect(
+                    charge.refunded,
+                    "Stripe full-refund flag matches the refunded amount",
+                  ).toBe(refundedAmount === body.amount);
+                }
+                expect(processor.livemode, "Stripe confirms sandbox mode").toBe(
+                  false,
                 );
                 expect(
-                  method.billing_details?.address?.line1 ===
-                    body.billing.address.line1,
-                  "The profile billing option must forward the synthetic billing address to Stripe",
-                ).toBe(true);
-              }
-              if (body.description)
-                expect(processor.description).toBe(body.description);
-              if (body.billing_descriptor?.statement_descriptor_suffix)
-                expect(processor.statement_descriptor_suffix).toBe(
-                  body.billing_descriptor.statement_descriptor_suffix,
-                );
-              for (const [key, value] of Object.entries(body.metadata ?? {}))
-                expect(processor.metadata?.[key]).toBe(
-                  typeof value === "string" ? value : JSON.stringify(value),
-                );
-              if (body.shipping && !connectedAccount)
-                expect(processor.shipping?.address?.line1).toBe(
-                  body.shipping.address.line1,
-                );
-              if (connectedAccount)
-                expect(processor.application_fee_amount).toBe(
-                  body.split_payments.stripe_split_payment.application_fees,
-                );
+                  processor.status,
+                  "Stripe confirms the final payment status",
+                ).toBe(target === "cancelled" ? "canceled" : "succeeded");
+                expect(
+                  processor.amount_received,
+                  "Stripe received amount matches the payment outcome",
+                ).toBe(target === "cancelled" ? 0 : body.amount);
+                expect(
+                  processor.currency,
+                  "Stripe currency matches the payment",
+                ).toBe(body.currency.toLowerCase());
+                if (
+                  requestVariant.profile
+                    ?.use_billing_as_payment_method_billing === true
+                ) {
+                  const methodId =
+                    typeof processor.payment_method === "string"
+                      ? processor.payment_method
+                      : processor.payment_method?.id;
+                  const method = await stripePaymentMethod(
+                    auth,
+                    methodId,
+                    connectedAccount,
+                  );
+                  expect(
+                    method.billing_details?.address?.line1 ===
+                      body.billing.address.line1,
+                    "The profile billing option must forward the synthetic billing address to Stripe",
+                  ).toBe(true);
+                }
+                if (body.description)
+                  expect(
+                    processor.description,
+                    "Stripe description matches the request",
+                  ).toBe(body.description);
+                if (body.billing_descriptor?.statement_descriptor_suffix)
+                  expect(
+                    processor.statement_descriptor_suffix,
+                    "Stripe statement descriptor matches the request",
+                  ).toBe(body.billing_descriptor.statement_descriptor_suffix);
+                for (const [key, value] of Object.entries(body.metadata ?? {}))
+                  expect(
+                    processor.metadata?.[key],
+                    `Stripe metadata field ${key} matches the request`,
+                  ).toBe(
+                    typeof value === "string" ? value : JSON.stringify(value),
+                  );
+                if (body.shipping && !connectedAccount)
+                  expect(
+                    processor.shipping?.address?.line1,
+                    "Stripe shipping address matches the test fixture",
+                  ).toBe(body.shipping.address.line1);
+                if (connectedAccount)
+                  expect(
+                    processor.application_fee_amount,
+                    "Stripe application fee matches the request",
+                  ).toBe(
+                    body.split_payments.stripe_split_payment.application_fees,
+                  );
+                await info.attach("Stripe checks", {
+                  body: JSON.stringify(
+                    {
+                      livemode: { expected: false, actual: processor.livemode },
+                      status: {
+                        expected:
+                          target === "cancelled" ? "canceled" : "succeeded",
+                        actual: processor.status,
+                      },
+                      amount_received: {
+                        expected: target === "cancelled" ? 0 : body.amount,
+                        actual: processor.amount_received,
+                      },
+                      currency: {
+                        expected: body.currency.toLowerCase(),
+                        actual: processor.currency,
+                      },
+                      ...(connectedAccount
+                        ? {
+                            application_fee_amount: {
+                              expected:
+                                body.split_payments.stripe_split_payment
+                                  .application_fees,
+                              actual: processor.application_fee_amount,
+                            },
+                          }
+                        : {}),
+                      ...(refundedAmount !== undefined
+                        ? {
+                            amount_refunded: {
+                              expected: refundedAmount,
+                              actual: refundedAtProcessor,
+                            },
+                          }
+                        : {}),
+                    },
+                    null,
+                    2,
+                  ),
+                  contentType: "application/json",
+                });
+              });
             }
-            await info.attach("payment-evidence", {
+            await info.attach("Test summary", {
               body: JSON.stringify(
                 {
                   connector,

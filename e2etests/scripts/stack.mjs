@@ -188,7 +188,9 @@ if (action !== "down") {
               context: resolve(root, "docker"),
               dockerfile: "ucs.Dockerfile",
               args: { UCS_IMAGE: ucsImage },
-              pull: true,
+              // Explicit images may be local verification builds. Docker still
+              // fetches a missing base; refresh the default floating image only.
+              pull: !process.env.UCS_IMAGE,
             },
             environment: {
               CS__SERVER__HOST: "0.0.0.0",

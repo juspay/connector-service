@@ -88,6 +88,8 @@ To use an existing UCS, set `UCS_BASE_URL` before `stack:up`, for example `http:
 
 For an existing dedicated sandbox HS, configure UCS routing and set `HS_BASE_URL`, `HS_ADMIN_API_KEY`, and `HS_DATABASE_URL`, then skip `stack:up`.
 
+An explicit `UCS_IMAGE` may refer to a local Docker image. Startup reuses that image when present and fetches missing base images normally.
+
 For reproducible runs, select image digests/releases. `.runtime/versions.json` records selected images and the HS source revision. Test accounts remain in the dedicated database for debugging.
 
 ## Structure and extension
@@ -123,9 +125,9 @@ npm run list        # Test discovery
 npm test            # Live sandbox payment
 ```
 
-`npm test` generates terminal results, HTML at `playwright-report/`, and JUnit XML at `test-results/results.xml`. Open HTML with `npx playwright show-report`. API traces, screenshots, and videos are disabled. When matching events are available, each payment/refund API step attaches a `ucs-audit` JSON array containing the existing masked UCS `GrpcRequest` and `ConnectorCall` event objects unchanged, matched by the HS response request ID. All matching flows and repeated calls are retained in event-timestamp order (completion order, not guaranteed call-start order). Events are not re-masked or reduced by the test harness.
+`npm test` generates terminal results, HTML at `playwright-report/`, and JUnit XML at `test-results/results.xml`. Open HTML with `npx playwright show-report`. API traces, screenshots, and videos are disabled. For payment and refund API calls, matching masked UCS `GrpcRequest` and `ConnectorCall` events are attached unchanged as individual JSON files. Attachment names identify the API action, flow, and stage; matching uses the HS response request ID. All matching flows and repeated calls are retained in event-timestamp order (completion order, not guaranteed call-start order). Events are not re-masked or reduced by the test harness.
 
-Audit collection reads only the structured `ucs_event` field from JSON container logs. It does not scrape message text. The UCS image must include that field; older images report evidence as unavailable. Missing IDs, unavailable Docker logs, and collection limits are recorded as report annotations, not empty audit attachments. Audit attachments contain no collector status or additional metadata. Payment-status checks attach the expected and actual status values. Event collection does not determine payment success. Raw container logs are never attached. These local reports can contain sandbox identifiers; keep them out of version control.
+Audit collection reads only the structured `ucs_event` field from JSON container logs. It does not scrape message text. The UCS image must include that field; older images report evidence as unavailable. Missing IDs, unavailable Docker logs, and collection limits are recorded as report annotations, not empty audit attachments. Audit attachments contain no collector status or additional metadata. Named payment steps attach expected and actual status and field values. UCS routing checks show the observed gateway and recorded processor outcome. Event collection does not determine payment success. Raw container logs are never attached. These local reports can contain sandbox identifiers; keep them out of version control.
 
 The managed stack enables JSON console logging at INFO. By default, collection discovers the single running `ucs` service in Compose project `ucs-e2e`. Set `UCS_LOG_CONTAINER` explicitly for another Docker container. Remote log backends are not collected by this helper.
 
