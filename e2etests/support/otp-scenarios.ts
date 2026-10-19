@@ -262,66 +262,83 @@ export function otpSuite(
             let target = initialTarget;
             expect([initialTarget, "processing"]).toContain(confirmed.status);
             const sync = async (expected: string) => {
-              await expect
-                .poll(
-                  async () => {
-                    const payment = await hs.call(
-                      "GET",
-                      `/payments/${paymentId}?force_sync=true`,
-                      key,
-                    );
-                    expect(
-                      payment.connector,
-                      "Payment uses the selected connector",
-                    ).toBe(connector);
-                    expect(
-                      payment.authentication_type,
-                      "Payment uses No3DS authentication",
-                    ).toBe("no_three_ds");
-                    expect(
-                      payment.setup_future_usage == null,
-                      "Payment does not set up future usage",
-                    ).toBe(true);
-                    expect(
-                      payment.mandate_id == null,
-                      "Payment does not create a mandate",
-                    ).toBe(true);
-                    expect(
-                      payment.merchant_connector_id,
-                      "Payment uses the configured connector account",
-                    ).toBe(mca.merchant_connector_id);
-                    expect(
-                      payment.amount,
-                      "Payment amount matches the request",
-                    ).toBe(body.amount);
-                    expect(
-                      payment.currency,
-                      "Payment currency matches the request",
-                    ).toBe(body.currency);
-                    expect(
-                      payment.payment_id,
-                      "Retrieve returns the same payment",
-                    ).toBe(paymentId);
-                    if (payment.status === expected) {
+              let actual: string | null = null;
+              try {
+                await expect
+                  .poll(
+                    async () => {
+                      const payment = await hs.call(
+                        "GET",
+                        `/payments/${paymentId}?force_sync=true`,
+                        key,
+                      );
+                      actual =
+                        typeof payment.status === "string"
+                          ? payment.status
+                          : null;
                       expect(
-                        payment.amount_capturable,
-                        "Capturable amount matches the payment state",
-                      ).toBe(expected === "requires_capture" ? body.amount : 0);
-                      if (expected === "succeeded")
+                        payment.connector,
+                        "Payment uses the selected connector",
+                      ).toBe(connector);
+                      expect(
+                        payment.authentication_type,
+                        "Payment uses No3DS authentication",
+                      ).toBe("no_three_ds");
+                      expect(
+                        payment.setup_future_usage == null,
+                        "Payment does not set up future usage",
+                      ).toBe(true);
+                      expect(
+                        payment.mandate_id == null,
+                        "Payment does not create a mandate",
+                      ).toBe(true);
+                      expect(
+                        payment.merchant_connector_id,
+                        "Payment uses the configured connector account",
+                      ).toBe(mca.merchant_connector_id);
+                      expect(
+                        payment.amount,
+                        "Payment amount matches the request",
+                      ).toBe(body.amount);
+                      expect(
+                        payment.currency,
+                        "Payment currency matches the request",
+                      ).toBe(body.currency);
+                      expect(
+                        payment.payment_id,
+                        "Retrieve returns the same payment",
+                      ).toBe(paymentId);
+                      if (payment.status === expected) {
                         expect(
-                          payment.amount_received,
-                          "Captured amount matches the requested amount",
-                        ).toBe(body.amount);
-                    }
-                    return payment.status;
-                  },
+                          payment.amount_capturable,
+                          "Capturable amount matches the payment state",
+                        ).toBe(
+                          expected === "requires_capture" ? body.amount : 0,
+                        );
+                        if (expected === "succeeded")
+                          expect(
+                            payment.amount_received,
+                            "Captured amount matches the requested amount",
+                          ).toBe(body.amount);
+                      }
+                      return payment.status;
+                    },
+                    {
+                      intervals: [1000, 3000, 5000],
+                      timeout: 90_000,
+                      message: `Verify payment status: expected ${expected}`,
+                    },
+                  )
+                  .toBe(expected);
+              } finally {
+                await info.attach(
+                  `Payment status: expected ${expected}, actual ${actual ?? "unavailable"}`,
                   {
-                    intervals: [1000, 3000, 5000],
-                    timeout: 90_000,
-                    message: `Payment reaches ${expected}`,
+                    body: JSON.stringify({ expected, actual }, null, 2),
+                    contentType: "application/json",
                   },
-                )
-                .toBe(expected);
+                );
+              }
             };
             await sync(initialTarget);
             let attemptStatus = "charged";
@@ -477,22 +494,26 @@ export function otpSuite(
                 );
             }
             await info.attach("payment-evidence", {
-              body: JSON.stringify({
-                connector,
-                scenario: title,
-                gateway: "unified_connector_service",
-                processorReferenceVerified: true,
-                outcome: variant.endsWith("submission")
-                  ? "submission-accepted"
-                  : refundedAmount !== undefined
-                    ? "refund-succeeded"
-                    : target,
-                verification: variant.endsWith("submission")
-                  ? "submission-only"
-                  : "terminal",
-                fixture: "sandbox",
-                requestVariant: requestVariant.id,
-              }),
+              body: JSON.stringify(
+                {
+                  connector,
+                  scenario: title,
+                  gateway: "unified_connector_service",
+                  processorReferenceVerified: true,
+                  outcome: variant.endsWith("submission")
+                    ? "submission-accepted"
+                    : refundedAmount !== undefined
+                      ? "refund-succeeded"
+                      : target,
+                  verification: variant.endsWith("submission")
+                    ? "submission-only"
+                    : "terminal",
+                  fixture: "sandbox",
+                  requestVariant: requestVariant.id,
+                },
+                null,
+                2,
+              ),
               contentType: "application/json",
             });
           } finally {

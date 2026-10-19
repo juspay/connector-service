@@ -38,28 +38,23 @@ export class Hyperswitch {
       const response = await this.fetch(method, path, key, data);
       const requestId = response.headers()["x-request-id"];
       if (this.report && /^\/(payments|refunds)(\/|\?|$)/.test(path)) {
-        await test.step("Collect masked UCS audit events (diagnostic snapshot)", async () => {
+        await test.step("Collect masked UCS audit events", async () => {
           const audit = await collectAudit(
             requestId,
             since,
             this.readAuditLogs,
           );
-          await this.report!.attach("ucs-audit", {
-            body: JSON.stringify(
-              {
-                method,
-                path: path.split("?")[0],
-                requestId: requestId ?? null,
-                ...audit,
-                ordering:
-                  "event timestamp; completion order, not call-start order",
-                completeness: "not asserted; diagnostic snapshot only",
-              },
-              null,
-              2,
-            ),
-            contentType: "application/json",
-          });
+          if (audit.events.length) {
+            await this.report!.attach("ucs-audit", {
+              body: JSON.stringify(audit.events, null, 2),
+              contentType: "application/json",
+            });
+          } else {
+            this.report!.annotations.push({
+              type: "UCS audit unavailable",
+              description: `${method} ${path.split("?")[0]}: ${audit.reason}`,
+            });
+          }
         });
       }
       if (!response.ok()) {
