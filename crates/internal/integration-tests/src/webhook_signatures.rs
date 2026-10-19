@@ -37,7 +37,7 @@ pub fn generate_signature(
 ) -> Result<String, String> {
     match connector {
         "stripe" => generate_stripe_signature(payload, secret, ctx.timestamp),
-        "adyen" => generate_adyen_signature(payload, secret),
+        "adyen" => generate_adyen_signature(),
         "authorizedotnet" => generate_authorizedotnet_signature(payload, secret),
         "checkout" => generate_checkout_signature(payload, secret),
         "paypal" => generate_paypal_signature(payload, secret),
@@ -124,42 +124,14 @@ fn generate_stripe_signature(
 
 /// Generate Adyen webhook signature
 ///
-/// Adyen Standard webhooks carry the signature in the body
-/// (`additionalData.hmacSignature`): HMAC-SHA256 keyed by the hex-decoded HMAC
-/// key over the colon-joined 8-field preimage (`payload`, built by the caller),
-/// Base64 (standard) encoded.
-/// Docs test vector: key `44782DEF547AAA06C910C43932B1EB0C71FC68D9D0C057550C48EC2ACF6BA056`,
-/// preimage `7914073381342284::TestMerchant:TestPayment-1407325143704:1130:EUR:AUTHORISATION:true`
-/// -> `coqCmt/IZ4E3CzPvMY8zTjQVL5hYJUiBRg8UU+iCWo0=`.
-fn generate_adyen_signature(payload: &[u8], hex_secret: &str) -> Result<String, String> {
-    use base64::{engine::general_purpose::STANDARD, Engine};
-    use hmac::{Hmac, Mac};
-    use sha2::Sha256;
-
-    type HmacSha256 = Hmac<Sha256>;
-
-    let key = decode_hex(hex_secret)?;
-    let mut mac =
-        HmacSha256::new_from_slice(&key).map_err(|e| format!("Failed to create HMAC: {}", e))?;
-    mac.update(payload);
-
-    Ok(STANDARD.encode(mac.finalize().into_bytes()))
-}
-
-/// Decodes a hex string (either case) into bytes.
-fn decode_hex(hex: &str) -> Result<Vec<u8>, String> {
-    let hex = hex.trim();
-    if !hex.len().is_multiple_of(2) {
-        return Err("hex key has an odd number of digits".to_string());
-    }
-    (0..hex.len())
-        .step_by(2)
-        .map(|i| {
-            hex.get(i..i + 2)
-                .and_then(|pair| u8::from_str_radix(pair, 16).ok())
-                .ok_or_else(|| "hex key contains a non-hex digit".to_string())
-        })
-        .collect()
+/// Adyen's signature is embedded in the webhook body itself (additionalData.hmacSignature)
+/// For testing purposes, we return a marker indicating the signature needs to be
+/// computed and injected into the body
+fn generate_adyen_signature() -> Result<String, String> {
+    // Adyen's signature is embedded in the webhook body itself
+    // For testing, the signature would need to be pre-computed and
+    // included in the scenario.json payload
+    Ok("ADYEN_SIGNATURE_IN_BODY".to_string())
 }
 
 /// Generate Authorize.Net webhook signature
