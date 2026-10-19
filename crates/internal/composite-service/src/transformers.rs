@@ -193,7 +193,7 @@ impl ForeignFrom<&CompositeAuthorizeRequest> for CustomerServiceCreateRequest {
             customer_name: item
                 .customer_name
                 .clone()
-                .or_else(|| customer.and_then(|c| c.name.clone()).map(|n| n.expose())),
+                .or_else(|| customer.and_then(|c| c.name.clone())),
             email: item
                 .email
                 .clone()

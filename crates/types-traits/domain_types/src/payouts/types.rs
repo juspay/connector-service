@@ -1645,7 +1645,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Customer> for payouts::payouts_typ
             .transpose()?;
 
         Ok(Self {
-            name: customer.name.map(|n| n.expose()),
+            name: customer.name,
             email,
             merchant_customer_id: customer.id,
             connector_customer_id: customer.connector_customer_id,

@@ -4981,8 +4981,8 @@ pub struct EducationData {
 #[derive(Debug, Clone, Default)]
 pub struct StudentDetails {
     pub student_id: Option<String>,
-    pub student_first_name: Option<Secret<String>>,
-    pub student_last_name: Option<Secret<String>>,
+    pub student_first_name: Option<String>,
+    pub student_last_name: Option<String>,
     pub student_email: Option<Secret<String>>,
 }
 
@@ -4992,15 +4992,15 @@ pub struct StudentDetails {
 #[derive(Debug, Clone, Default)]
 pub struct AirlineData {
     // Booking / ticket level
-    pub pnr_code: Option<Secret<String>>,
+    pub pnr_code: Option<String>,
     pub booking_reference: Option<String>,
-    pub ticket_number: Option<Secret<String>>,
+    pub ticket_number: Option<String>,
     pub ticket_issue_date: Option<String>,
     pub booking_date_time: Option<String>,
     pub flight_date: Option<String>,
     pub issuing_carrier_code: Option<String>,
     pub airline_code: Option<String>,
-    pub passenger_name: Option<Secret<String>>,
+    pub passenger_name: Option<String>,
     pub number_of_passengers: Option<u32>,
     pub document_type: Option<String>,
     pub refundability: Option<common_enums::TicketRefundability>,
@@ -5041,7 +5041,7 @@ pub struct AirlineSegment {
     pub fee_amount: Option<common_utils::types::Money>,
     pub tax_amount: Option<common_utils::types::Money>,
     // Exchange / coupon details
-    pub exchange_ticket_number: Option<Secret<String>>,
+    pub exchange_ticket_number: Option<String>,
     pub conjunction_ticket: Option<String>,
     pub coupon_number: Option<String>,
     pub endorsements_restrictions: Option<String>,

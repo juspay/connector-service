@@ -5685,8 +5685,7 @@ impl<
             customer_name: value
                 .customer
                 .as_ref()
-                .and_then(|customer| customer.name.clone())
-                .map(|n| n.expose()),
+                .and_then(|customer| customer.name.clone()),
             billing_descriptor,
             router_return_url: value.return_url.clone(),
             complete_authorize_url: value.complete_authorize_url,
@@ -5898,8 +5897,7 @@ impl<
             customer_name: value
                 .customer
                 .as_ref()
-                .and_then(|customer| customer.name.clone())
-                .map(|n| n.expose()),
+                .and_then(|customer| customer.name.clone()),
             return_url: value.complete_authorize_url.clone(),
             payment_method_type: <Option<PaymentMethodType>>::foreign_try_from(
                 value.payment_method.clone().ok_or_else(|| {
@@ -13779,8 +13777,7 @@ impl<
             customer_name: value
                 .customer
                 .as_ref()
-                .and_then(|customer| customer.name.clone())
-                .map(|n| n.expose()),
+                .and_then(|customer| customer.name.clone()),
             return_url: value.return_url.clone(),
             payment_method_type: value
                 .payment_method
@@ -14140,9 +14137,9 @@ impl ForeignTryFrom<&grpc_api_types::payments::Customer> for CustomerInfo {
         Ok(Self {
             customer_id,
             customer_email,
-            customer_name: value.name.clone(),
-            first_name: value.first_name.clone(),
-            last_name: value.last_name.clone(),
+            customer_name: value.name.clone().map(Into::into),
+            first_name: value.first_name.clone().map(Into::into),
+            last_name: value.last_name.clone().map(Into::into),
             customer_phone_number: value.phone_number.clone(),
             customer_phone_country_code: value.phone_country_code.clone(),
             salutation: value.salutation.clone(),
@@ -14155,9 +14152,9 @@ impl ForeignFrom<connector_types::CustomerInfo> for grpc_api_types::payments::Cu
     fn foreign_from(info: connector_types::CustomerInfo) -> Self {
         Self {
             id: info.customer_id.map(|id| id.get_string_repr().to_string()),
-            name: info.customer_name,
-            first_name: info.first_name,
-            last_name: info.last_name,
+            name: info.customer_name.map(|n| n.expose()),
+            first_name: info.first_name.map(|f| f.expose()),
+            last_name: info.last_name.map(|l| l.expose()),
             email: info
                 .customer_email
                 .map(|e| Secret::new(e.expose().expose().to_string())),
@@ -15763,6 +15760,7 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for ConnectorCustomerData {
             .customer
             .clone()
             .and_then(|customer| customer.name)
+            .map(Secret::new)
             .or_else(|| {
                 value
                     .address
@@ -15926,7 +15924,7 @@ impl ForeignTryFrom<PaymentServiceSetupRecurringRequest> for ConnectorCustomerDa
                 Ok(Self {
                     customer_id: customer.id.map(Secret::new),
                     email: email.map(Secret::new),
-                    name: customer.name,
+                    name: customer.name.map(Secret::new),
                     description: None,
                     phone: None,
                     preprocessing_id: None,

@@ -79,8 +79,8 @@ enum PurchaseType {
 // Student details for education payments (e.g. Flywire recipient fields).
 message StudentDetails {
   optional string student_id = 1;
-  optional SecretString student_first_name = 2; // PII — student's first name
-  optional SecretString student_last_name = 3; // PII — student's last name
+  optional string student_first_name = 2; // PII — student's first name
+  optional string student_last_name = 3; // PII — student's last name
   optional SecretString student_email = 4; // PII — student's email address
 }
 
@@ -126,15 +126,15 @@ message TicketDeliveryContact {
 // processors disagree on format.
 message AirlineData {
   // ---- Booking / ticket level ----
-  optional SecretString pnr_code = 1;                 // PNR / reservation-system code
+  optional string pnr_code = 1;                 // PNR / reservation-system code
   optional string booking_reference = 2;        // Merchant booking / customer reference
-  optional SecretString ticket_number = 3;      // Airline ticket number
+  optional string ticket_number = 3;      // Airline ticket number
   optional string ticket_issue_date = 4;        // Date the ticket was issued
   optional string booking_date_time = 5;        // Booking timestamp (RFC 3339)
   optional string flight_date = 6;              // Departure date of the first leg
   optional string issuing_carrier_code = 7;     // IATA code of the ticket issuer
   optional string airline_code = 8;             // IATA numeric accounting code
-  optional SecretString passenger_name = 9;     // Primary passenger name
+  optional string passenger_name = 9;     // Primary passenger name
   optional uint32 number_of_passengers = 10;    // Passenger count on the ticket
   optional string document_type = 11;           // Travel document type code
   TicketRefundability refundability = 12;       // Refundable / non-refundable
@@ -179,7 +179,7 @@ message AirlineSegment {
   optional Money tax_amount = 12;               // Departure tax for this leg
 
   // Exchange / coupon details
-  optional SecretString exchange_ticket_number = 13; // New ticket number on exchange
+  optional string exchange_ticket_number = 13; // New ticket number on exchange
   optional string conjunction_ticket = 14;      // Conjunction ticket for >4 legs
   optional string coupon_number = 15;           // Coupon number for this leg
   optional string endorsements_restrictions = 16; // Endorsements / restrictions
