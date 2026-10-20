@@ -1,0 +1,372 @@
+{
+  "PaymentService/Authorize": {
+    "no3ds_auto_capture_credit_card": {
+      "grpc_req": {
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4477000000000006"
+            },
+            "card_exp_month": {
+              "value": "12"
+            },
+            "card_exp_year": {
+              "value": "2030"
+            },
+            "card_cvc": {
+              "value": "123"
+            }
+          }
+        },
+        "address": {
+          "billing_address": {
+            "phone_number": {
+              "value": "7700900123"
+            }
+          }
+        }
+      },
+      "assert": {
+        "status": {
+          "one_of": [
+            "PENDING",
+            "AUTHENTICATION_PENDING"
+          ]
+        }
+      }
+    },
+    "no3ds_manual_capture_credit_card": {
+      "grpc_req": {
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4477000000000006"
+            },
+            "card_exp_month": {
+              "value": "12"
+            },
+            "card_exp_year": {
+              "value": "2030"
+            },
+            "card_cvc": {
+              "value": "123"
+            }
+          }
+        }
+      },
+      "assert": {
+        "status": {
+          "one_of": [
+            "PENDING",
+            "AUTHENTICATION_PENDING"
+          ]
+        }
+      }
+    },
+    "threeds_manual_capture_credit_card": {
+      "grpc_req": {
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4314220000000056"
+            },
+            "card_exp_month": {
+              "value": "12"
+            },
+            "card_exp_year": {
+              "value": "2030"
+            },
+            "card_cvc": {
+              "value": "123"
+            }
+          }
+        }
+      },
+      "assert": {
+        "status": {
+          "one_of": [
+            "PENDING",
+            "AUTHENTICATION_PENDING"
+          ]
+        }
+      }
+    },
+    "no3ds_fail_payment": {
+      "grpc_req": {
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "5544330000000045"
+            },
+            "card_exp_month": {
+              "value": "12"
+            },
+            "card_exp_year": {
+              "value": "2030"
+            },
+            "card_cvc": {
+              "value": "123"
+            }
+          }
+        }
+      },
+      "assert": {
+        "status": {
+          "one_of": [
+            "PENDING",
+            "AUTHENTICATION_PENDING"
+          ]
+        },
+        "error": {
+          "must_not_exist": true
+        },
+        "error.connector_details.message": null
+      }
+    },
+    "no3ds_auto_capture_debit_card": {
+      "grpc_req": {
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "5126160000356675"
+            },
+            "card_exp_month": {
+              "value": "12"
+            },
+            "card_exp_year": {
+              "value": "2030"
+            },
+            "card_cvc": {
+              "value": "123"
+            }
+          }
+        }
+      },
+      "assert": {
+        "status": {
+          "one_of": [
+            "PENDING",
+            "AUTHENTICATION_PENDING"
+          ]
+        }
+      }
+    },
+    "no3ds_manual_capture_debit_card": {
+      "grpc_req": {
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "5126160000356675"
+            },
+            "card_exp_month": {
+              "value": "12"
+            },
+            "card_exp_year": {
+              "value": "2030"
+            },
+            "card_cvc": {
+              "value": "123"
+            }
+          }
+        }
+      },
+      "assert": {
+        "status": {
+          "one_of": [
+            "PENDING",
+            "AUTHENTICATION_PENDING"
+          ]
+        }
+      }
+    },
+    "no3ds_auto_capture_apple_pay_decrypted": {
+      "grpc_req": {},
+      "assert": {
+        "status": {
+          "one_of": [
+            "PENDING",
+            "AUTHENTICATION_PENDING"
+          ]
+        }
+      }
+    },
+    "no3ds_auto_capture_google_pay_decrypted": {
+      "grpc_req": {},
+      "assert": {
+        "status": {
+          "one_of": [
+            "PENDING",
+            "AUTHENTICATION_PENDING"
+          ]
+        }
+      }
+    },
+    "no3ds_auto_capture_google_pay_encrypted": {
+      "grpc_req": {},
+      "assert": {
+        "status": {
+          "one_of": [
+            "PENDING",
+            "AUTHENTICATION_PENDING"
+          ]
+        }
+      }
+    },
+    "no3ds_auto_capture_apple_pay_decrypted_cit": {
+      "grpc_req": {},
+      "assert": {
+        "status": {
+          "one_of": [
+            "PENDING",
+            "AUTHENTICATION_PENDING"
+          ]
+        }
+      }
+    },
+    "no3ds_auto_capture_google_pay_decrypted_cit": {
+      "grpc_req": {},
+      "assert": {
+        "status": {
+          "one_of": [
+            "PENDING",
+            "AUTHENTICATION_PENDING"
+          ]
+        }
+      }
+    }
+  },
+  "PaymentService/Get": {
+    "sync_payment": {
+      "grpc_req": {},
+      "assert": {
+        "status": {
+          "one_of": [
+            "CHARGED",
+            "AUTHORIZED",
+            "VOIDED",
+            "PENDING",
+            "AUTHENTICATION_PENDING"
+          ]
+        }
+      }
+    },
+    "sync_payment_with_handle_response": {
+      "grpc_req": {},
+      "assert": {
+        "status": {
+          "one_of": [
+            "CHARGED",
+            "AUTHORIZED",
+            "VOIDED",
+            "PENDING",
+            "AUTHENTICATION_PENDING"
+          ]
+        }
+      }
+    }
+  },
+  "PaymentService/SetupRecurring": {
+    "setup_recurring": {
+      "grpc_req": {
+        "return_url": "https://example.com/payment/return",
+        "complete_authorize_url": "https://example.com/payment/complete",
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4477000000000006"
+            },
+            "card_exp_month": {
+              "value": "12"
+            },
+            "card_exp_year": {
+              "value": "2030"
+            },
+            "card_cvc": {
+              "value": "123"
+            }
+          }
+        }
+      },
+      "assert": {
+        "status": {
+          "one_of": [
+            "PENDING",
+            "AUTHENTICATION_PENDING"
+          ]
+        },
+        "connector_transaction_id": {
+          "must_exist": true
+        },
+        "mandate_reference.connector_mandate_id.connector_mandate_id": null
+      }
+    },
+    "setup_recurring_with_order_context": {
+      "grpc_req": {
+        "return_url": "https://example.com/payment/return",
+        "complete_authorize_url": "https://example.com/payment/complete",
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4477000000000006"
+            },
+            "card_exp_month": {
+              "value": "12"
+            },
+            "card_exp_year": {
+              "value": "2030"
+            },
+            "card_cvc": {
+              "value": "123"
+            }
+          }
+        }
+      },
+      "assert": {
+        "status": {
+          "one_of": [
+            "PENDING",
+            "AUTHENTICATION_PENDING"
+          ]
+        },
+        "connector_transaction_id": {
+          "must_exist": true
+        },
+        "mandate_reference.connector_mandate_id.connector_mandate_id": null
+      }
+    },
+    "setup_recurring_with_webhook": {
+      "grpc_req": {
+        "return_url": "https://example.com/payment/return",
+        "complete_authorize_url": "https://example.com/payment/complete",
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4477000000000006"
+            },
+            "card_exp_month": {
+              "value": "12"
+            },
+            "card_exp_year": {
+              "value": "2030"
+            },
+            "card_cvc": {
+              "value": "123"
+            }
+          }
+        }
+      },
+      "assert": {
+        "status": {
+          "one_of": [
+            "PENDING",
+            "AUTHENTICATION_PENDING"
+          ]
+        },
+        "connector_transaction_id": {
+          "must_exist": true
+        },
+        "mandate_reference.connector_mandate_id.connector_mandate_id": null
+      }
+    }
+  }
+}
