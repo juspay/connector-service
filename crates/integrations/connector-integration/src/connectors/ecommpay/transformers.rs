@@ -3500,12 +3500,13 @@ pub struct EcommpayStatusResponse {
     pub avs_data: Option<EcommpayAvsResult>,
     pub last_failed_request: Option<EcommpayFailedRequest>,
     pub errors: Option<Vec<EcommpayErrorItem>>,
-    pub signature: String,
+    pub signature: Secret<String>,
 }
 
 /// The raw status body, kept as JSON until its signature has been verified.
-/// `Serialize` is used only by the connector event log, so it masks card/holder/token data (TH-01).
-#[derive(Debug, Clone, Deserialize)]
+/// `Serialize` (connector event log) and `Debug` (the shared macro's `response from connector` log
+/// line) both mask card/holder/token data (TH-01).
+#[derive(Clone, Deserialize)]
 #[serde(transparent)]
 pub struct EcommpayRawStatusResponse(pub Value);
 
@@ -3530,6 +3531,17 @@ fn mask_status_log_value(value: &mut Value) {
         }),
         Value::Array(items) => items.iter_mut().for_each(mask_status_log_value),
         _ => {}
+    }
+}
+
+impl fmt::Debug for EcommpayRawStatusResponse {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut masked = self.0.clone();
+        mask_status_log_value(&mut masked);
+        formatter
+            .debug_tuple("EcommpayRawStatusResponse")
+            .field(&masked)
+            .finish()
     }
 }
 
