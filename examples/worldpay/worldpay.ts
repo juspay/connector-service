@@ -77,7 +77,7 @@ function _buildIncrementalAuthorizationRequest(): types.IPaymentServiceIncrement
     return {
         "merchantAuthorizationId": "probe_auth_001",  // Identification.
         "connectorTransactionId": "probe_connector_txn_001",
-        "amount": {  // new amount to be authorized (in minor currency units).
+        "amount": {  // New total authorized amount, including this increase.
             "minorAmount": 1100,
             "currency": Currency.USD
         },

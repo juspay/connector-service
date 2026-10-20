@@ -148,7 +148,7 @@ pub fn build_incremental_authorization_request() -> PaymentServiceIncrementalAut
         merchant_authorization_id: Some("probe_auth_001".to_string()), // Identification.
         connector_transaction_id: "probe_connector_txn_001".to_string(),
         amount: Some(Money {
-            // new amount to be authorized (in minor currency units).
+            // New total authorized amount, including this increase.
             minor_amount: 1100,
             currency: Currency::Usd.into(),
         }),
