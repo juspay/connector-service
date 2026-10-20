@@ -23,8 +23,8 @@
   "sync_poll_until_terminal_seconds": 15,
   "unsupported_scenarios": {
     "PaymentService/Get": {
-      "sync_payment": "CONNECTOR_API_LACKS: technical_specification.md 'PSync (Payment status)' — the Checkout API has no payment-status lookup; /payments/details only completes a pending redirect, so a non-redirect card payment cannot be synced",
-      "sync_payment_with_handle_response": "CONNECTOR_API_LACKS: technical_specification.md 'PSync (Payment status)' — same as sync_payment, no status endpoint without a redirect payload",
+      "sync_payment": "CONNECTOR_API_LACKS: technical_specification.md 'PSync (Payment status)' — Adyen has no status-by-transaction-ID lookup for a non-redirect card payment; /payments/details only completes a pending redirect, so status is only available via webhook",
+      "sync_payment_with_handle_response": "CONNECTOR_API_LACKS: technical_specification.md 'PSync (Payment status)' — same reason as sync_payment: no status endpoint without a redirect payload",
       "sync_upi_collect": "PM_NOT_OFFERED: specs.json supported_payment_methods — UPI is not offered by this connector",
       "sync_upi_intent": "PM_NOT_OFFERED: specs.json supported_payment_methods — UPI is not offered by this connector",
       "sync_upi_qr": "PM_NOT_OFFERED: specs.json supported_payment_methods — UPI is not offered by this connector"
@@ -34,6 +34,17 @@
     },
     "PaymentService/IncrementalAuthorization": {
       "incremental_auth_fail_invalid_transaction_id": "Adyen's /amountUpdates endpoint is asynchronous: it always returns a 'received' acknowledgement synchronously, regardless of whether the referenced transaction is valid. Whether the update actually succeeds is only reported later, via webhook. Confirmed against Adyen's documented behavior for its other async endpoints (e.g. refund/capture, which use the same accept-then-notify pattern) and against a live call with a fabricated connector_transaction_id, which returned AUTHORIZATION_SUCCESS instead of an error. This cannot be observed synchronously through this endpoint."
+    },
+    "EventService/HandleEvent": {
+      "payment_succeeded": "the global scenario asserts a top-level event_status field the response does not have; the real status lives nested at eventContent.paymentsResponse.status. Not verified working; needs the global scenario or assertion fixed.",
+      "refund_succeeded": "same as payment_succeeded.",
+      "payment_failed": "adyen has no test fixture for this scenario in webhook_payload.json, so it sends an empty body and fails to decode.",
+      "invalid_signature": "adyen's webhook_payload.json fixture for this scenario omits required fields (amount, merchantAccountCode, merchantReference), so it fails to decode before signature verification is ever reached."
+    },
+    "PaymentService/Authorize": {
+      "no3ds_auto_capture_apple_pay_decrypted_cit": "SANDBOX_NOT_PROVISIONED / OPERATOR_GAP: implemented, live verification blocked — there is no device-minted Apple Pay token and no Apple Pay payment-processing certificate in the creds file for this merchant account, and a fabricated token would make the row prove nothing. This variant additionally needs a connector_mandate_id, which the sandbox cannot return without a real token.",
+      "no3ds_auto_capture_google_pay_decrypted": "SANDBOX_NOT_PROVISIONED / OPERATOR_GAP: implemented, live verification blocked — the scenario token is a placeholder rather than a Google-minted token for a gateway merchant id registered with Adyen (GPAY_HOSTED_URL is not configured), so the sandbox cannot produce a CHARGED outcome.",
+      "no3ds_auto_capture_google_pay_decrypted_cit": "SANDBOX_NOT_PROVISIONED / OPERATOR_GAP: implemented, live verification blocked — the scenario token is a placeholder rather than a Google-minted token for a gateway merchant id registered with Adyen (GPAY_HOSTED_URL is not configured), so the sandbox cannot produce a CHARGED outcome. This variant additionally needs a connector_mandate_id, which the sandbox cannot return without a real token."
     }
   }
 }
