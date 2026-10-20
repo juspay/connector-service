@@ -900,7 +900,8 @@ On every terminal exit (success, skip, abort, failure, any stop), under R12: `ki
 `. "$R/env/.vars.sh"` and `own_stop "$R/env/ucs.pid" "$(jq -r .ucs.binary "$R/env/env.json")" 20` (`2.6a_test_env.md`
 Phase 0), the same for `env/hs.pid` with `.hs.binary` and 30 when `.hs.pid` is non-null (run-owned), and `docker stop`
 each `.hs.db_containers[]` (2.6a REPAIR restarts them on Resume); after S7 returned, also `docker rm` them and
-`rm -f ~/.local/state/grace/<run_id>/secrets.env` (earlier stops keep both for Resume);
+delete `~/.local/state/grace/<run_id>/secrets.env` with the `2.0_preflight.md` Rule 4 heredoc form
+(`bash -s "$f" <<'SH'` / `rm -f -- "$1"` / `SH`) (earlier stops keep both for Resume);
 `rj --arg s <STATUS> '.ended_at = (now | todate) | .status = $s'` (STATUS from the table below); write `summary.md`
 (`.tmp` + `mv`) from files only — this return block, the per-unit table of `pr/status.json` (else `test/final.json`),
 the `run.json` rows (id, result, attempt, started, ended), the `events.log` `SKIP` and `LOOPBACK` lines, and `flags`.
