@@ -282,7 +282,10 @@
     "no3ds_auto_capture_credit_card_with_setup_future_usage": {
       "extends": "no3ds_auto_capture_credit_card",
       "grpc_req": {
-        "setup_future_usage": "OFF_SESSION"
+        "setup_future_usage": "OFF_SESSION",
+        "customer": {
+          "connector_customer_id": "auto_generate"
+        }
       }
     }
   },

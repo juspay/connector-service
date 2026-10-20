@@ -6607,6 +6607,12 @@ grpc-status: 0
                 }
                 if scenario.ends_with("with_setup_future_usage") {
                     expected["setup_future_usage"] = Value::String("OFF_SESSION".to_string());
+                    // Adyen uses a merchant-supplied shopperReference and does
+                    // not run CustomerService/Create as a prerequisite.
+                    if connector == "adyen" {
+                        expected["customer"]["connector_customer_id"] =
+                            Value::String("auto_generate".to_string());
+                    }
                 }
                 let actual = get_the_grpc_req_for_connector(suite, scenario, &connector).unwrap();
                 assert_eq!(actual, expected, "{connector}/{scenario}");
