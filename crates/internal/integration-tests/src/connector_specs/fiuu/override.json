@@ -205,25 +205,12 @@
       }
     },
     "no3ds_auto_capture_credit_card_without_optional_address": {
+      "extends": "no3ds_auto_capture_credit_card",
       "grpc_req": {
-        "amount": {
-          "currency": "MYR"
-        },
-        "payment_method": {
-          "card": {
-            "card_exp_month": {
-              "value": "12"
-            },
-            "card_exp_year": {
-              "value": "2050"
-            },
-            "card_cvc": {
-              "value": "123"
-            }
-          }
-        },
-        "return_url": "https://example.com/return",
-        "webhook_url": "https://example.com/webhook"
+        "address": {
+          "shipping_address": null,
+          "billing_address": null
+        }
       },
       "assert": {
         "status": {
@@ -232,26 +219,7 @@
       }
     },
     "no3ds_auto_capture_credit_card_four_digit_expiry": {
-      "grpc_req": {
-        "amount": {
-          "currency": "MYR"
-        },
-        "payment_method": {
-          "card": {
-            "card_exp_month": {
-              "value": "12"
-            },
-            "card_exp_year": {
-              "value": "2050"
-            },
-            "card_cvc": {
-              "value": "123"
-            }
-          }
-        },
-        "return_url": "https://example.com/return",
-        "webhook_url": "https://example.com/webhook"
-      },
+      "extends": "no3ds_auto_capture_credit_card",
       "assert": {
         "status": {
           "equals": "CHARGED"
@@ -259,25 +227,15 @@
       }
     },
     "no3ds_auto_capture_credit_card_two_digit_expiry": {
+      "extends": "no3ds_auto_capture_credit_card",
       "grpc_req": {
-        "amount": {
-          "currency": "MYR"
-        },
         "payment_method": {
           "card": {
-            "card_exp_month": {
-              "value": "12"
-            },
             "card_exp_year": {
               "value": "50"
-            },
-            "card_cvc": {
-              "value": "123"
             }
           }
-        },
-        "return_url": "https://example.com/return",
-        "webhook_url": "https://example.com/webhook"
+        }
       },
       "assert": {
         "status": {
@@ -286,25 +244,12 @@
       }
     },
     "no3ds_manual_capture_credit_card_without_optional_address": {
+      "extends": "no3ds_manual_capture_credit_card",
       "grpc_req": {
-        "amount": {
-          "currency": "MYR"
-        },
-        "payment_method": {
-          "card": {
-            "card_exp_month": {
-              "value": "12"
-            },
-            "card_exp_year": {
-              "value": "2050"
-            },
-            "card_cvc": {
-              "value": "123"
-            }
-          }
-        },
-        "return_url": "https://example.com/return",
-        "webhook_url": "https://example.com/webhook"
+        "address": {
+          "shipping_address": null,
+          "billing_address": null
+        }
       },
       "assert": {
         "status": {
@@ -313,25 +258,9 @@
       }
     },
     "no3ds_auto_capture_credit_card_with_setup_future_usage": {
+      "extends": "no3ds_auto_capture_credit_card",
       "grpc_req": {
-        "amount": {
-          "currency": "MYR"
-        },
-        "payment_method": {
-          "card": {
-            "card_exp_month": {
-              "value": "12"
-            },
-            "card_exp_year": {
-              "value": "2050"
-            },
-            "card_cvc": {
-              "value": "123"
-            }
-          }
-        },
-        "return_url": "https://example.com/return",
-        "webhook_url": "https://example.com/webhook"
+        "setup_future_usage": "OFF_SESSION"
       }
     },
     "no3ds_auto_capture_duitnow_qr": {
@@ -347,9 +276,14 @@
       }
     },
     "no3ds_auto_capture_fpx_cimb": {
+      "extends": "no3ds_auto_capture_fpx_maybank",
       "grpc_req": {
-        "return_url": "https://example.com/return",
-        "webhook_url": "https://example.com/webhook"
+        "payment_method": {
+          "online_banking_fpx": {
+            "issuer": "CimbBank"
+          }
+        },
+        "description": "FPX CIMB payment"
       }
     }
   },
@@ -657,6 +591,68 @@
         "event_status": null,
         "event_ack_response.status_code": {
           "equals": 200
+        }
+      }
+    },
+    "fiuu_authorization_succeeded": {
+      "extends": "payment_succeeded",
+      "grpc_req": {
+        "request_details": {
+          "uri": null,
+          "body": "eyJhbW91bnQiOiIxMC4wMCIsImFwcGNvZGUiOiJyZWdyZXNzaW9uX2FwcCIsImNoYW5uZWwiOiJDcmVkaXQiLCJjdXJyZW5jeSI6Ik1ZUiIsImRvbWFpbiI6InJlZ3Jlc3Npb25fbWVyY2hhbnQiLCJvcmRlcmlkIjoicmVncmVzc2lvbl9vcmRlciIsInBheWRhdGUiOiIyMDI2LTAxLTAxIDEyOjAwOjAwIiwic2tleSI6IjIzZTQ5NWIxMTMwNmRjNWZkNzJlMzcwMDE0MzYwOWM5Iiwic3RhdHVzIjoiMDAiLCJ0cmFuSUQiOiJyZWdyZXNzaW9uX3R4biJ9"
+        },
+        "webhook_secrets": {
+          "secret": "public-regression-fixture-secret"
+        },
+        "merchant_event_id": "auto_generate",
+        "event_context": {
+          "payment": {
+            "capture_method": "MANUAL"
+          }
+        }
+      },
+      "assert": {
+        "event_type": {
+          "equals": "PAYMENT_INTENT_SUCCESS"
+        },
+        "event_content.payments_response.status": {
+          "equals": "AUTHORIZED"
+        }
+      }
+    },
+    "fiuu_payment_pending": {
+      "extends": "payment_succeeded",
+      "grpc_req": {
+        "request_details": {
+          "uri": null,
+          "body": "eyJhbW91bnQiOiIxMC4wMCIsImFwcGNvZGUiOiJyZWdyZXNzaW9uX2FwcCIsImNoYW5uZWwiOiJDcmVkaXQiLCJjdXJyZW5jeSI6Ik1ZUiIsImRvbWFpbiI6InJlZ3Jlc3Npb25fbWVyY2hhbnQiLCJvcmRlcmlkIjoicmVncmVzc2lvbl9vcmRlciIsInBheWRhdGUiOiIyMDI2LTAxLTAxIDEyOjAwOjAwIiwic2tleSI6ImY3MmZmYmIzZDcyYzE3MzE3ZDczNWUzMjNlNjkwY2E1Iiwic3RhdHVzIjoiMjIiLCJ0cmFuSUQiOiJyZWdyZXNzaW9uX3R4biJ9"
+        },
+        "webhook_secrets": {
+          "secret": "public-regression-fixture-secret"
+        },
+        "merchant_event_id": "auto_generate"
+      },
+      "assert": {
+        "event_type": {
+          "equals": "PAYMENT_INTENT_PROCESSING"
+        }
+      }
+    },
+    "fiuu_refund_failed": {
+      "extends": "refund_succeeded",
+      "grpc_req": {
+        "request_details": {
+          "uri": null,
+          "body": "eyJBbW91bnQiOiIxMC4wMCIsIk1lcmNoYW50SUQiOiJyZWdyZXNzaW9uX21lcmNoYW50IiwiUmVmSUQiOiJyZWdyZXNzaW9uX3JlZiIsIlJlZnVuZElEIjoicmVncmVzc2lvbl9yZWZ1bmQiLCJSZWZ1bmRUeXBlIjoiUCIsIlNpZ25hdHVyZSI6IjMxODBhNTg5OTRkMTI2NjAxMDY5MjI5ZWMwODNlNDYwIiwiU3RhdHVzIjoiMTEiLCJUeG5JRCI6InJlZ3Jlc3Npb25fdHhuIn0="
+        },
+        "webhook_secrets": {
+          "secret": "public-regression-fixture-secret"
+        },
+        "merchant_event_id": "auto_generate"
+      },
+      "assert": {
+        "event_type": {
+          "equals": "WEBHOOK_REFUND_FAILURE"
         }
       }
     }

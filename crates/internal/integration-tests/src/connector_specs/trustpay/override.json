@@ -90,56 +90,42 @@
       }
     },
     "no3ds_auto_capture_credit_card_without_optional_address": {
+      "extends": "no3ds_auto_capture_credit_card",
       "grpc_req": {
-        "customer": {
-          "email": {
-            "value": "test@example.com"
-          }
+        "address": {
+          "shipping_address": null,
+          "billing_address": null
         }
       }
     },
     "no3ds_auto_capture_credit_card_four_digit_expiry": {
+      "extends": "no3ds_auto_capture_credit_card",
       "grpc_req": {
-        "customer": {
-          "email": {
-            "value": "test@example.com"
+        "payment_method": {
+          "card": {
+            "card_exp_year": {
+              "value": "2030"
+            }
           }
         }
       }
     },
     "no3ds_auto_capture_credit_card_two_digit_expiry": {
-      "grpc_req": {
-        "customer": {
-          "email": {
-            "value": "test@example.com"
-          }
-        }
-      }
+      "extends": "no3ds_auto_capture_credit_card"
     },
     "no3ds_manual_capture_credit_card_without_optional_address": {
+      "extends": "no3ds_manual_capture_credit_card",
       "grpc_req": {
-        "customer": {
-          "email": {
-            "value": "test@example.com"
-          }
-        }
-      },
-      "assert": {
-        "status": {
-          "one_of": [
-            "AUTHORIZED",
-            "CHARGED"
-          ]
+        "address": {
+          "shipping_address": null,
+          "billing_address": null
         }
       }
     },
     "no3ds_auto_capture_credit_card_with_setup_future_usage": {
+      "extends": "no3ds_auto_capture_credit_card",
       "grpc_req": {
-        "customer": {
-          "email": {
-            "value": "test@example.com"
-          }
-        }
+        "setup_future_usage": "OFF_SESSION"
       }
     }
   },

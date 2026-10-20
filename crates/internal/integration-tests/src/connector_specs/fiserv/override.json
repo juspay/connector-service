@@ -101,22 +101,11 @@
       }
     },
     "no3ds_auto_capture_credit_card_without_optional_address": {
+      "extends": "no3ds_auto_capture_credit_card",
       "grpc_req": {
-        "payment_method": {
-          "card": {
-            "card_number": {
-              "value": "4005550000000019"
-            },
-            "card_exp_month": {
-              "value": "12"
-            },
-            "card_exp_year": {
-              "value": "2050"
-            },
-            "card_cvc": {
-              "value": "123"
-            }
-          }
+        "address": {
+          "shipping_address": null,
+          "billing_address": null
         }
       },
       "assert": {
@@ -126,24 +115,7 @@
       }
     },
     "no3ds_auto_capture_credit_card_four_digit_expiry": {
-      "grpc_req": {
-        "payment_method": {
-          "card": {
-            "card_number": {
-              "value": "4005550000000019"
-            },
-            "card_exp_month": {
-              "value": "12"
-            },
-            "card_exp_year": {
-              "value": "2050"
-            },
-            "card_cvc": {
-              "value": "123"
-            }
-          }
-        }
-      },
+      "extends": "no3ds_auto_capture_credit_card",
       "assert": {
         "status": {
           "equals": "CHARGED"
@@ -151,20 +123,12 @@
       }
     },
     "no3ds_auto_capture_credit_card_two_digit_expiry": {
+      "extends": "no3ds_auto_capture_credit_card",
       "grpc_req": {
         "payment_method": {
           "card": {
-            "card_number": {
-              "value": "4005550000000019"
-            },
-            "card_exp_month": {
-              "value": "12"
-            },
             "card_exp_year": {
               "value": "50"
-            },
-            "card_cvc": {
-              "value": "123"
             }
           }
         }
@@ -176,22 +140,11 @@
       }
     },
     "no3ds_manual_capture_credit_card_without_optional_address": {
+      "extends": "no3ds_manual_capture_credit_card",
       "grpc_req": {
-        "payment_method": {
-          "card": {
-            "card_number": {
-              "value": "4005550000000019"
-            },
-            "card_exp_month": {
-              "value": "12"
-            },
-            "card_exp_year": {
-              "value": "2050"
-            },
-            "card_cvc": {
-              "value": "123"
-            }
-          }
+        "address": {
+          "shipping_address": null,
+          "billing_address": null
         }
       },
       "assert": {
@@ -201,23 +154,9 @@
       }
     },
     "no3ds_auto_capture_credit_card_with_setup_future_usage": {
+      "extends": "no3ds_auto_capture_credit_card",
       "grpc_req": {
-        "payment_method": {
-          "card": {
-            "card_number": {
-              "value": "4005550000000019"
-            },
-            "card_exp_month": {
-              "value": "12"
-            },
-            "card_exp_year": {
-              "value": "2050"
-            },
-            "card_cvc": {
-              "value": "123"
-            }
-          }
-        }
+        "setup_future_usage": "OFF_SESSION"
       }
     }
   }

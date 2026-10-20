@@ -7,18 +7,20 @@
   ],
   "request_id_source_field": "merchant_transaction_id",
   "suite_dependencies": {
-    "PaymentService/Get": [
-      {
-        "suite": "PaymentService/Authorize",
-        "scenario": "no3ds_auto_capture_crypto",
-        "context_map": {
-          "connector_transaction_id": "res.connector_transaction_id",
-          "merchant_transaction_id": "req.merchant_transaction_id",
-          "amount.minor_amount": "req.amount.minor_amount",
-          "amount.currency": "req.amount.currency"
+    "PaymentService/Get": {
+      "replace": [
+        {
+          "suite": "PaymentService/Authorize",
+          "scenario": "no3ds_auto_capture_crypto",
+          "context_map": {
+            "connector_transaction_id": "res.connector_transaction_id",
+            "merchant_transaction_id": "req.merchant_transaction_id",
+            "amount.minor_amount": "req.amount.minor_amount",
+            "amount.currency": "req.amount.currency"
+          }
         }
-      }
-    ]
+      ]
+    }
   },
   "supported_payment_methods": [
     "crypto"

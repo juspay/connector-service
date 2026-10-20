@@ -88,5 +88,29 @@
         }
       }
     }
+  },
+  "PaymentService/Authorize": {
+    "no3ds_auto_capture_crypto_with_metadata": {
+      "extends": "no3ds_auto_capture_crypto",
+      "grpc_req": {
+        "metadata": {
+          "value": "{\"order_id\":\"regression-order\"}"
+        }
+      }
+    },
+    "no3ds_auto_capture_crypto_with_return_url": {
+      "extends": "no3ds_auto_capture_crypto",
+      "grpc_req": {
+        "return_url": "https://example.com/return"
+      }
+    },
+    "no3ds_auto_capture_crypto_small_amount": {
+      "extends": "no3ds_auto_capture_crypto",
+      "grpc_req": {
+        "amount": {
+          "minor_amount": 1000
+        }
+      }
+    }
   }
 }

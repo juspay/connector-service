@@ -114,29 +114,6 @@ pub fn load_scenario(suite: &str, scenario: &str) -> Result<ScenarioDef, Scenari
         })
 }
 
-/// Loads one named scenario as `connector` sees it: the global suite first, then
-/// the connector's `connector_specific_scenarios.json`. Suite runs already merge
-/// that file; this is the same lookup for the single-scenario paths (request
-/// building, `--scenario` runs and the schema check), which otherwise report a
-/// private scenario as not found.
-pub fn load_scenario_for_connector(
-    suite: &str,
-    scenario: &str,
-    connector: &str,
-) -> Result<ScenarioDef, ScenarioError> {
-    match load_scenario(suite, scenario) {
-        Err(ScenarioError::ScenarioNotFound { .. }) => {
-            load_connector_specific_scenarios(connector, suite)?
-                .remove(scenario)
-                .ok_or_else(|| ScenarioError::ScenarioNotFound {
-                    suite: suite.to_string(),
-                    scenario: scenario.to_string(),
-                })
-        }
-        other => other,
-    }
-}
-
 /// Loads suite execution metadata including dependency graph and scope.
 pub fn load_suite_spec(suite: &str) -> Result<SuiteSpec, ScenarioError> {
     let path = suite_spec_file_path(suite);
@@ -151,46 +128,6 @@ pub fn load_suite_spec(suite: &str) -> Result<SuiteSpec, ScenarioError> {
 
     serde_json::from_str::<SuiteSpec>(&content)
         .map_err(|source| ScenarioError::SuiteSpecParse { path, source })
-}
-
-/// Loads suite execution metadata as `connector` runs it: the global
-/// `suite_spec.json` plus the connector's `specs.json` `suite_dependencies`
-/// entry for `suite`, if any (`depends_on` becomes `before ++ global ++ after`,
-/// and `dependency_scope` is replaced when the entry sets one).
-///
-/// A connector without an entry gets exactly [`load_suite_spec`]. Every named
-/// dependency scenario must resolve for this connector, so a typo fails the run
-/// instead of silently dropping the prerequisite.
-pub fn load_suite_spec_for_connector(
-    suite: &str,
-    connector: &str,
-) -> Result<SuiteSpec, ScenarioError> {
-    let mut spec = load_suite_spec(suite)?;
-
-    let Some(extra) = load_connector_spec(connector)
-        .and_then(|connector_spec| connector_spec.suite_dependencies.get(suite).cloned())
-    else {
-        return Ok(spec);
-    };
-
-    for dependency in extra.before.iter().chain(extra.after.iter()) {
-        if let Some(scenario) = dependency.scenario() {
-            load_scenario_for_connector(dependency.suite(), scenario, connector)?;
-        }
-    }
-
-    let global = std::mem::take(&mut spec.depends_on);
-    spec.depends_on = extra
-        .before
-        .into_iter()
-        .chain(global)
-        .chain(extra.after)
-        .collect();
-    if let Some(scope) = extra.dependency_scope {
-        spec.dependency_scope = scope;
-    }
-
-    Ok(spec)
 }
 
 /// Loads a scenario from the combined global and connector-private definitions.
@@ -210,7 +147,8 @@ pub fn load_scenario_for_connector(
         })
 }
 
-/// Resolves a connector's prerequisite chain without changing dispatch or scope.
+/// Resolves `before + (replace or global) + after` and the optional connector
+/// dependency scope, without changing the suite's RPC dispatch.
 pub fn load_suite_spec_for_connector(
     suite: &str,
     connector: &str,
@@ -240,13 +178,31 @@ pub fn load_suite_spec_for_connector(
             load_suite_spec(configured_suite)?;
         }
         if let Some(dependencies) = spec.suite_dependencies.get(suite) {
-            for dependency in dependencies {
+            for dependency in dependencies
+                .before
+                .iter()
+                .chain(dependencies.replace.iter().flatten())
+                .chain(dependencies.after.iter())
+            {
                 load_suite_spec(dependency.suite())?;
                 if let Some(scenario) = dependency.scenario() {
                     load_scenario_for_connector(dependency.suite(), scenario, connector)?;
                 }
             }
-            suite_spec.depends_on = dependencies.clone();
+            let inherited = dependencies
+                .replace
+                .clone()
+                .unwrap_or_else(|| std::mem::take(&mut suite_spec.depends_on));
+            suite_spec.depends_on = dependencies
+                .before
+                .iter()
+                .cloned()
+                .chain(inherited)
+                .chain(dependencies.after.iter().cloned())
+                .collect();
+            if let Some(scope) = dependencies.dependency_scope {
+                suite_spec.dependency_scope = scope;
+            }
         }
     }
     Ok(suite_spec)
@@ -418,7 +374,11 @@ pub fn merge_connector_specific_scenarios(
     suite: &str,
     baseline: &mut ScenarioFile,
 ) -> Result<usize, ScenarioError> {
-    merge_connector_specific_scenarios_in(&connector_specs_root(), connector, suite, baseline)
+    let private =
+        merge_connector_specific_scenarios_in(&connector_specs_root(), connector, suite, baseline)?;
+    let variants =
+        crate::harness::connector_override::merge_scenario_variants(connector, suite, baseline)?;
+    Ok(private + variants)
 }
 
 /// Same, against an explicit specs root.
@@ -750,6 +710,8 @@ mod tests {
             is_default: false,
             display_name: None,
             required_payment_method: None,
+            depends_on: None,
+            dependency_scope: None,
         }
     }
 
