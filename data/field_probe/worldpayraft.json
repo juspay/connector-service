@@ -41,8 +41,56 @@
         "error": "Stuck on field: payment_method_token — Failed to parse Apple Pay wallet token. Worldpay RAFT requires the decrypted DPAN, expiry, and cryptogram"
       },
       "ApplePayDecrypted": {
-        "status": "error",
-        "error": "Stuck on field: billing.address.zip and billing.address.line1. Worldpay RAFT requires a billing postal code and address line 1 for Visa wallets or when enable_avs_check is true — Missing required field: billing.address.zip and billing.address.line1. Worldpay RAFT requires a billing postal code and address line 1 for Visa wallets or when enable_avs_check is true"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "apple_pay_sdk": {
+              "payment_data": {
+                "decrypted_data": {
+                  "application_primary_account_number": "4111111111111111",
+                  "application_expiration_month": "03",
+                  "application_expiration_year": "2030",
+                  "payment_data": {
+                    "online_payment_cryptogram": "AAAAAA==",
+                    "eci_indicator": "05"
+                  },
+                  "merchant_token_identifier": "probe_merchant_token_id",
+                  "device_manufacturer_identifier": "040010030273"
+                }
+              },
+              "payment_method": {
+                "display_name": "Visa 1111",
+                "network": "Visa",
+                "type": "debit"
+              },
+              "transaction_identifier": "probe_txn_id"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {
+              "line1": "123 Main St",
+              "zip_code": "98101"
+            }
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
+        },
+        "sample": {
+          "url": "https://ws-cert.vantiv.com/merchant/servicing/apitransactions/NativeRaftApi/v1/credit/purchase",
+          "method": "Post",
+          "headers": {
+            "authorization": "VANTIV license=\"probe_key\"",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"creditpurchase\":{\"MiscAmountsBalances\":{\"TransactionAmount\":\"10.00\"},\"AccountCodesAndData\":{\"FromAccountSelected\":\"CC\"},\"CardInfo\":{\"PAN\":\"4111111111111111\",\"ExpirationDate\":\"3003\"},\"AddressVerificationData\":{\"AVSZIPCode\":\"98101\",\"AVSAddress\":\"123 Main St\"},\"TerminalData\":{\"EntryMode\":\"E-COMM\",\"POSConditionCode\":\"59\",\"TerminalEntryCap\":\"0\"},\"E-commerceData\":{\"E-commerceIndicator\":\"05\",\"3dSecureData\":\"AAAAAA==\"},\"WorldPayMerchantID\":\"probe_key\",\"APITransactionID\":\"probe_txn_001\",\"LocalDateTime\":\"2020-01-01T00:00:00+00:00\"}}"
+        }
       },
       "ApplePayThirdPartySdk": {
         "status": "not_supported",
@@ -208,8 +256,52 @@
         "error": "Stuck on field: payment_method_token — Failed to parse Google Pay wallet token. Worldpay RAFT requires the decrypted DPAN, expiry, and cryptogram"
       },
       "GooglePayDecrypted": {
-        "status": "error",
-        "error": "Stuck on field: billing.address.zip and billing.address.line1. Worldpay RAFT requires a billing postal code and address line 1 for Visa wallets or when enable_avs_check is true — Missing required field: billing.address.zip and billing.address.line1. Worldpay RAFT requires a billing postal code and address line 1 for Visa wallets or when enable_avs_check is true"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "google_pay_sdk": {
+              "type": "CARD",
+              "description": "Visa 1111",
+              "info": {
+                "card_network": "VISA",
+                "card_details": "1111"
+              },
+              "tokenization_data": {
+                "decrypted_data": {
+                  "card_exp_month": "03",
+                  "card_exp_year": "2030",
+                  "application_primary_account_number": "4111111111111111",
+                  "cryptogram": "AAAAAA==",
+                  "eci_indicator": "05"
+                }
+              }
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {
+              "line1": "123 Main St",
+              "zip_code": "98101"
+            }
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
+        },
+        "sample": {
+          "url": "https://ws-cert.vantiv.com/merchant/servicing/apitransactions/NativeRaftApi/v1/credit/purchase",
+          "method": "Post",
+          "headers": {
+            "authorization": "VANTIV license=\"probe_key\"",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"creditpurchase\":{\"MiscAmountsBalances\":{\"TransactionAmount\":\"10.00\"},\"AccountCodesAndData\":{\"FromAccountSelected\":\"CC\"},\"CardInfo\":{\"PAN\":\"4111111111111111\",\"ExpirationDate\":\"3003\"},\"AddressVerificationData\":{\"AVSZIPCode\":\"98101\",\"AVSAddress\":\"123 Main St\"},\"TerminalData\":{\"EntryMode\":\"E-COMM\",\"POSConditionCode\":\"59\",\"TerminalEntryCap\":\"0\"},\"E-commerceData\":{\"E-commerceIndicator\":\"05\",\"3dSecureData\":\"AAAAAA==\"},\"WorldPayMerchantID\":\"probe_key\",\"APITransactionID\":\"probe_txn_001\",\"LocalDateTime\":\"2020-01-01T00:00:00+00:00\"}}"
+        }
       },
       "GooglePayThirdPartySdk": {
         "status": "not_supported",
