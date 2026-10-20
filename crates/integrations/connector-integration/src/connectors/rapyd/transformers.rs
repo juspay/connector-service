@@ -74,9 +74,9 @@ pub enum RapydCardFunding {
     Prepaid,
 }
 
-impl TryFrom<&str> for RapydCardFunding {
-    type Error = error_stack::Report<IntegrationError>;
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+impl core::str::FromStr for RapydCardFunding {
+    type Err = error_stack::Report<IntegrationError>;
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value.to_lowercase().as_str() {
             "credit" => Ok(Self::Credit),
             "debit" => Ok(Self::Debit),
@@ -770,9 +770,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                                             network: parse_card_network(
                                                 &data.payment_method.network,
                                             )?,
-                                            card_type: RapydCardFunding::try_from(
-                                                data.payment_method.pm_type.as_str(),
-                                            )?,
+                                            card_type: data
+                                                .payment_method
+                                                .pm_type
+                                                .as_str()
+                                                .parse::<RapydCardFunding>()?,
                                         },
                                     },
                                 ))

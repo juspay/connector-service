@@ -412,10 +412,10 @@ pub enum StorePaymentMethod {
     MerchantInitiated,
 }
 
-impl TryFrom<&str> for MonerisCardBrand {
-    type Error = Report<IntegrationError>;
+impl core::str::FromStr for MonerisCardBrand {
+    type Err = Report<IntegrationError>;
 
-    fn try_from(network: &str) -> Result<Self, Self::Error> {
+    fn from_str(network: &str) -> Result<Self, Self::Err> {
         // Uppercase normalises Apple Pay ("masterCard", "amex") and Google Pay ("MASTERCARD")
         // to match the SCREAMING_SNAKE_CASE serde aliases on common_enums::CardNetwork.
         let card_network: common_enums::CardNetwork =
@@ -647,9 +647,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let payment_method = match wallet_data {
                     WalletData::ApplePay(apple_pay_data) => match &apple_pay_data.payment_data {
                         ApplePayPaymentData::Decrypted(decrypt_data) => {
-                            let card_brand = MonerisCardBrand::try_from(
-                                apple_pay_data.payment_method.network.as_str(),
-                            )?;
+                            let card_brand = apple_pay_data
+                                .payment_method
+                                .network
+                                .as_str()
+                                .parse::<MonerisCardBrand>()?;
                             let expiry_month = decrypt_data
                                 .application_expiration_month
                                 .peek()
@@ -731,7 +733,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     },
                     WalletData::GooglePay(gpay_data) => {
                         let card_brand =
-                            MonerisCardBrand::try_from(gpay_data.info.card_network.as_str())?;
+                            gpay_data.info.card_network.as_str().parse::<MonerisCardBrand>()?;
                         match &gpay_data.tokenization_data {
                             GpayTokenizationData::Decrypted(decrypt_data) => {
                                 let expiry_month = decrypt_data
