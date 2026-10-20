@@ -34,6 +34,8 @@ pub struct JpmorganPaymentsRequest<T: PaymentMethodDataTypes> {
     pub account_on_file: Option<JpmorganAccountOnFile>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_amount_final: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recurring: Option<JpmorganRecurring>,
 }
 
 #[derive(Debug, Serialize)]
@@ -63,7 +65,7 @@ pub struct JpmorganCard<T: PaymentMethodDataTypes> {
     pub authentication: Option<JpmorganWalletAuthentication>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum JpmorganAccountNumberType {
     Pan,
@@ -71,7 +73,7 @@ pub enum JpmorganAccountNumberType {
     NetworkToken,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum JpmorganWalletProvider {
     ApplePay,
@@ -205,19 +207,20 @@ pub enum JpmorganAccountOnFile {
 }
 
 /// JPMorgan recurring sequence
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum JpmorganRecurringSequence {
     First,
     Subsequent,
 }
 
-/// JPMorgan recurring object for MIT transactions
-#[derive(Debug, Serialize)]
+/// JPMorgan recurring agreement details.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganRecurring {
     pub recurring_sequence: JpmorganRecurringSequence,
-    pub agreement_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agreement_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_variable_amount: Option<bool>,
 }
@@ -244,14 +247,6 @@ pub struct JpmorganMitCardByNti<T: PaymentMethodDataTypes> {
     pub original_network_transaction_id: String,
 }
 
-/// JPMorgan stored-credential reference used by RepeatPayment when the
-/// upstream mandate is JPMorgan's own `transactionId` from the prior auth.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct JpmorganTransactionReference {
-    pub transaction_reference_id: String,
-}
-
 /// SetupMandate's payment method type — always carries `card`.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -259,16 +254,12 @@ pub struct JpmorganSetupMandatePaymentMethodType<T: PaymentMethodDataTypes> {
     pub card: JpmorganSetupMandateCard<T>,
 }
 
-/// RepeatPayment's payment method type — exactly one of `card` (PAN + expiry +
-/// NTI) or `transaction_reference` is set, depending on which mandate handle
-/// the upstream gave us.
+/// RepeatPayment carries card credentials and the original network transaction ID.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganRepeatPaymentMethodType<T: PaymentMethodDataTypes> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub card: Option<JpmorganMitCardByNti<T>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub transaction_reference: Option<JpmorganTransactionReference>,
 }
 
 /// SetupMandate request (initial CIT with credential storage)
@@ -280,7 +271,8 @@ pub struct JpmorganSetupMandateRequest<T: PaymentMethodDataTypes> {
     pub currency: common_enums::Currency,
     pub merchant: JpmorganMerchant,
     pub payment_method_type: JpmorganSetupMandatePaymentMethodType<T>,
-    pub recurring: JpmorganRecurring,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recurring: Option<JpmorganRecurring>,
     pub initiator_type: JpmorganInitiatorType,
     pub account_on_file: JpmorganAccountOnFile,
     pub is_amount_final: bool,

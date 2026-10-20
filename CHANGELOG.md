@@ -19,6 +19,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.10.20.0
+
+### Features
+
+- **connector:** [Cybersource] guard the 3DS authorization outcome and make webhook status capture-aware ([#2516](https://github.com/juspay/connector-service/pull/2516)) ([`bf871e2`](https://github.com/juspay/connector-service/commit/bf871e2311f37274c6f95ab9cbbd24e039031682))
+- **jpmorgan:** Support stored cardholder payments ([#2529](https://github.com/juspay/connector-service/pull/2529)) ([`ba06ea5`](https://github.com/juspay/connector-service/commit/ba06ea59420728d3c6bab87d813b833ce367100f))
+
+**Full Changelog:** [`2026.10.19.0...2026.10.20.0`](https://github.com/juspay/connector-service/compare/2026.10.19.0...2026.10.20.0)
+
+- - -
+
 ## 2026.10.19.0
 
 ### Features
