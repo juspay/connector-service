@@ -2,6 +2,25 @@
   "PaymentService/Authorize": {
     "no3ds_auto_capture_google_pay_encrypted": {
       "grpc_req": {}
+    },
+    "no3ds_fail_payment": {
+      "grpc_req": {
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4544249167673670"
+            }
+          }
+        }
+      },
+      "assert": {
+        "error": {
+          "must_exist": true
+        },
+        "error.connector_details.code": {
+          "equals": "20051"
+        }
+      }
     }
   }
 }
