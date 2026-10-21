@@ -130,7 +130,7 @@
           "headers": {
             "via": "HyperSwitch"
           },
-          "body": "{\"mid\":\"probe_key\",\"api_mode\":\"redirection_sop\",\"payment_type\":\"S\",\"order_id\":\"0000000000000000\",\"amount\":\"10.00\",\"ccy\":\"USD\",\"card_no\":\"4111111111111111\",\"exp_date\":\"032030\",\"cvv2\":\"737\",\"payer_name\":\"John Doe\",\"payer_email\":\"test@example.com\",\"redirect_url\":\"https://example.com/return\",\"notify_url\":\"https://example.com/webhook\",\"merchant_reference\":\"probe_txn_001\",\"signature\":\"a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3\"}"
+          "body": "{\"mid\":\"probe_key\",\"api_mode\":\"redirection_sop\",\"payment_type\":\"S\",\"order_id\":\"253c94847d8dc977d123\",\"amount\":\"10.00\",\"ccy\":\"USD\",\"card_no\":\"4111111111111111\",\"exp_date\":\"032030\",\"cvv2\":\"737\",\"payer_name\":\"John Doe\",\"payer_email\":\"test@example.com\",\"redirect_url\":\"https://example.com/return\",\"notify_url\":\"https://example.com/webhook\",\"merchant_reference\":\"probe_txn_001\",\"signature\":\"a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3\"}"
         }
       },
       "CashappQr": {
@@ -674,7 +674,7 @@
           "headers": {
             "via": "HyperSwitch"
           },
-          "body": "{\"mid\":\"probe_key\",\"api_mode\":\"redirection_sop\",\"payment_type\":\"S\",\"order_id\":\"0000000000000000\",\"amount\":\"10.00\",\"ccy\":\"USD\",\"card_no\":\"{{$card_number}}\",\"exp_date\":\"032030\",\"cvv2\":\"{{$card_cvc}}\",\"payer_name\":\"John Doe\",\"payer_email\":\"test@example.com\",\"redirect_url\":\"https://example.com/return\",\"notify_url\":\"https://example.com/webhook\",\"merchant_reference\":\"probe_proxy_txn_001\",\"signature\":\"a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3\"}"
+          "body": "{\"mid\":\"probe_key\",\"api_mode\":\"redirection_sop\",\"payment_type\":\"S\",\"order_id\":\"ecd37d61972334e9d93c\",\"amount\":\"10.00\",\"ccy\":\"USD\",\"card_no\":\"{{$card_number}}\",\"exp_date\":\"032030\",\"cvv2\":\"{{$card_cvc}}\",\"payer_name\":\"John Doe\",\"payer_email\":\"test@example.com\",\"redirect_url\":\"https://example.com/return\",\"notify_url\":\"https://example.com/webhook\",\"merchant_reference\":\"probe_proxy_txn_001\",\"signature\":\"a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3\"}"
         }
       }
     },
@@ -704,7 +704,7 @@
     "refund": {
       "default": {
         "status": "error",
-        "error": "Stuck on field: connector_feature_data.reddot_order_id. reddot_order_id missing from second_factor.gateway_auth_req_params. — Missing required field: connector_feature_data.reddot_order_id. reddot_order_id missing from second_factor.gateway_auth_req_params."
+        "error": "Stuck on field: connector_feature_data.reddot_order_id. Original payment order ID missing from connector_feature_data. \u2014 Missing required field: connector_feature_data.reddot_order_id. Original payment order ID missing from connector_feature_data."
       }
     },
     "refund_get": {

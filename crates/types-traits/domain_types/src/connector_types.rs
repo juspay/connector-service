@@ -3740,9 +3740,6 @@ pub struct RefundsData {
     pub split_settlement_refund: Option<Box<SplitSettlementRefund>>,
     /// Connector-side identifier for the original payment that this refund targets.
     pub connector_order_id: Option<String>,
-    /// Connector-configured metadata (`PaymentServiceRefundRequest.metadata`,
-    /// proto field 9) passed through verbatim for connector-specific needs.
-    pub metadata: Option<SecretSerdeValue>,
     pub payment_method_data:
         Option<payment_method_data::PaymentMethodData<payment_method_data::DefaultPCIHolder>>,
 }

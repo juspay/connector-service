@@ -98,8 +98,8 @@ let config = ConnectorConfig {
             config: Some(connector_specific_config::Config::Reddot(ReddotConfig {
                 mid: Some(hyperswitch_masking::Secret::new("YOUR_MID".to_string())),  // Authentication credential
                 secret: Some(hyperswitch_masking::Secret::new("YOUR_SECRET".to_string())),  // Authentication credential
-                acquirer_cybersource: Some("https://sandbox.example.com".to_string()),  // Base URL for API calls
-                base_url: Some("https://sandbox.example.com".to_string()),  // Base URL for API calls
+                acquirer_cybersource: "false".to_string(),
+                base_url: Some("https://sandbox.example.com".to_string()),
                 ..Default::default()
             })),
         }),

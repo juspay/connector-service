@@ -4296,15 +4296,19 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorVariant)>
                     }),
                     _ => Err(err().into()),
                 },
-                ConnectorEnum::Reddot => match auth {
-                    ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::Reddot {
-                        mid: api_key.clone(),
-                        secret: key1.clone(),
-                        acquirer_cybersource: "false".to_string(),
-                        base_url: None,
-                    }),
-                    _ => Err(err().into()),
-                },
+                ConnectorEnum::Reddot => Err(errors::IntegrationError::FailedToObtainAuthType {
+                    context: crate::errors::IntegrationErrorContext {
+                        additional_context: Some(
+                            "Legacy RedDot auth cannot specify acquirer_cybersource".to_string(),
+                        ),
+                        suggested_action: Some(
+                            "Use typed RedDot config with mid, secret, and acquirer_cybersource"
+                                .to_string(),
+                        ),
+                        ..Default::default()
+                    },
+                }
+                .into()),
                 ConnectorEnum::PinelabsOnline => match auth {
                     ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::PinelabsOnline {
                         client_id: api_key.clone(),

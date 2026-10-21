@@ -6173,11 +6173,12 @@ message PayhereConfig {
 }
 
 message ReddotConfig {
+  // RDP merchant ID.
   SecretString mid = 1;
   // RDP merchant secret key, used to build request signatures.
   SecretString secret = 2;
-  // MGA account detail, string-typed as stored in account_details:
-  // when "true" (CyberSource-acquired MID), bill_to_* fields are sent to RDP.
+  // Required true/false string (case-insensitive); invalid values are rejected.
+  // When true (CyberSource-acquired MID), bill_to_* fields are sent to RDP.
   string acquirer_cybersource = 3;
   optional string base_url = 50;
 }

@@ -14,9 +14,9 @@ use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund},
     connector_types::{
         ConnectorWebhookSecrets, EventContext, EventType, PaymentFlowData, PaymentWebhookReference,
-        PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, RequestDetails, ResponseId,
-        WebhookDetailsResponse, WebhookResourceReference,
+        PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RedirectDetailsResponse,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RequestDetails,
+        ResponseId, WebhookDetailsResponse, WebhookResourceReference,
     },
     errors::{self, IntegrationError},
     payment_method_data::PaymentMethodDataTypes,
@@ -207,11 +207,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // RDP notify_url callbacks are neither encrypted nor verifiable in this
-// integration (no documented/usable signature scheme for callbacks), so the
-// webhook is treated as an UNVERIFIED trigger — the caller (Euler) must follow
-// up with a mandatory PSync for authoritative status. This deliberately
-// mirrors maya/glomopay; euler routes RDP through EventService/parse-only via
-// `ucsParseEventOnlyGateways` and consumes only the event type + references.
+// integration. Treat webhooks as unverified triggers; callers must perform
+// payment sync before accepting their reported payment status.
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Reddot<T>
 {
@@ -271,19 +268,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         // Same response_code semantics as the PSync transform: RDP sale txns
         // are auto-captured, so success is Charged; `-01` is still in-flight;
-        // `-7995`/`-7997` are 3DS-auth failures → AUTHENTICATION_FAILED;
-        // everything else → AUTHORIZATION_FAILED.
+        // every other code is an authentication failure.
         let (status, error_code, error_message, error_reason) = match body.response_code.as_str() {
             "0" => (AttemptStatus::Charged, None, None, None),
             "-01" => (AttemptStatus::Pending, None, None, None),
-            "-7995" | "-7997" => (
-                AttemptStatus::AuthenticationFailed,
-                Some(body.response_code.clone()),
-                Some(body.response_msg.clone().unwrap_or_default()),
-                body.response_msg.clone(),
-            ),
             error_code => (
-                AttemptStatus::AuthorizationFailed,
+                AttemptStatus::AuthenticationFailed,
                 Some(error_code.to_string()),
                 Some(body.response_msg.clone().unwrap_or_default()),
                 body.response_msg.clone(),
@@ -298,10 +288,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         Ok(WebhookDetailsResponse {
             resource_id: Some(resource_id),
             status,
-            // merchant_reference = full Juspay txnId echoed by RDP; order_id
-            // (our random 16-hex id) is the last-resort reference.
+            // Use the same caller reference as authorization and payment sync.
             connector_response_reference_id: body.merchant_reference.clone(),
-            connector_request_reference_id: body.merchant_reference.or(body.order_id),
+            connector_request_reference_id: body.merchant_reference,
             mandate_reference: None,
             error_code,
             error_message,
@@ -322,6 +311,42 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::VerifyRedirectResponse for Reddot<T>
 {
+    fn decode_redirect_response_body(
+        &self,
+        request: &RequestDetails,
+        _secrets: Option<interfaces::verification::ConnectorSourceVerificationSecrets>,
+    ) -> CustomResult<Vec<u8>, IntegrationError> {
+        Ok(request.body.clone())
+    }
+
+    fn verify_redirect_response_source(
+        &self,
+        _request: &RequestDetails,
+        _secrets: Option<interfaces::verification::ConnectorSourceVerificationSecrets>,
+    ) -> CustomResult<bool, IntegrationError> {
+        // A browser-supplied transaction ID does not authenticate the payment.
+        Ok(false)
+    }
+
+    fn process_redirect_response(
+        &self,
+        _request: &RequestDetails,
+        _connector_feature_data: Option<&Secret<String>>,
+    ) -> CustomResult<RedirectDetailsResponse, IntegrationError> {
+        // Let the caller sync using the payment ID saved at authorization.
+        // The unsigned redirect must not replace that ID or establish status.
+        Ok(RedirectDetailsResponse {
+            resource_id: None,
+            status: None,
+            response_amount: None,
+            connector_response_reference_id: None,
+            error_code: None,
+            error_message: None,
+            error_reason: None,
+            raw_connector_response: None,
+            connector_feature_data: None,
+        })
+    }
 }
 
 // ===== SOURCE VERIFICATION IMPLEMENTATION =====
@@ -352,16 +377,6 @@ crate::connectors::macros::macro_connector_payout_implementation!(
 // flow listed. Each stub's get_url returns
 // IntegrationError::connector_flow_not_implemented(...).
 //
-// To implement a flow:
-//   1. Remove that flow's name from the `not_implemented` list below.
-//   2. Add a manual marker-trait impl, e.g.
-//        impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-//            connector_types::PaymentAuthorizeV2<T> for Reddot<T> {}
-//   3. Add a `macros::macro_connector_implementation!(...)` block with the
-//      flow's request/response types, HTTP method, and `get_url`/`get_headers`.
-//
-// See crates/integrations/connector-integration/src/connectors/xendit.rs for a
-// reference implementation that follows this pattern.
 // RDP serves two host families per environment (mirrors RDP's own docs):
 //   base_url            — the Redirect/Payment family (`secure-dev` /
 //                         `secure`): /service/payment-api +
@@ -537,7 +552,7 @@ macros::macro_connector_implementation!(
 );
 
 // =============================================================================
-// REFUND SYNC FLOW (RDP Enquiry API — same endpoint/signature scheme as psync)
+// REFUND SYNC FLOW (RDP Enquiry API on the secondary host, generic signature)
 // =============================================================================
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -556,7 +571,7 @@ macros::macro_connector_implementation!(
             &self,
             _req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
-            Ok(vec![])
+            Ok(vec![("Content-Type".to_string(), "application/json".to_string().into())])
         }
         fn get_url(
             &self,

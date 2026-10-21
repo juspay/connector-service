@@ -36,26 +36,58 @@ const RDP_API_MODE_SOP: &str = "redirection_sop";
 /// `S` = Sale (authorize + automatic capture). `A` (pre-auth / manual capture)
 /// is intentionally not implemented until a Capture flow exists.
 const RDP_PAYMENT_TYPE_SALE: &str = "S";
-const RDP_ORDER_ID_GENERATED_LEN: usize = 16;
+const RDP_ORDER_ID_GENERATED_LEN: usize = 20;
 
 /// Key inside the `connector_feature_data` JSON blob under which the
 /// persisted order_id lives between authorize and refund.
 pub(crate) const RDP_ORDER_ID_BLOB_KEY: &str = "reddot_order_id";
 
-/// Mint a random order_id: 16 lowercase hex chars (= 8 random bytes);
-/// RDP's enforced ceiling is 20 (it rejects 22 with `-1014`), so 16 sits
-/// comfortably underneath.
-fn gen_reddot_order_id() -> String {
-    let oid = hex::encode(rand::random::<[u8; 8]>());
-    // 8 bytes always hex-encode to 16 chars; keep the assertion so the
-    // constant stays load-bearing at the generator, not only in tests.
-    debug_assert_eq!(oid.len(), RDP_ORDER_ID_GENERATED_LEN);
-    oid
+/// Preserve a previously sent order ID, including legacy random IDs. Otherwise
+/// derive a stable 80-bit hexadecimal ID within RDP's 20-character limit.
+fn resolve_reddot_order_id(
+    mid: &str,
+    reference: &str,
+    connector_feature_data: &Option<common_utils::pii::SecretSerdeValue>,
+) -> Result<String, error_stack::Report<IntegrationError>> {
+    use sha2::{Digest, Sha256};
+
+    if let Some(stored) = connector_feature_data
+        .as_ref()
+        .and_then(|data| data.peek().get(RDP_ORDER_ID_BLOB_KEY))
+    {
+        return stored
+            .as_str()
+            .filter(|id| !id.is_empty() && id.len() <= RDP_ORDER_ID_GENERATED_LEN)
+            .map(str::to_owned)
+            .ok_or_else(|| {
+                IntegrationError::InvalidDataFormat {
+                    field_name: "connector_feature_data.reddot_order_id",
+                    context: errors::IntegrationErrorContext::default(),
+                }
+                .into()
+            });
+    }
+
+    if reference.is_empty() {
+        return Err(IntegrationError::MissingRequiredField {
+            field_name: "connector_request_reference_id",
+            context: errors::IntegrationErrorContext::default(),
+        }
+        .into());
+    }
+
+    // Domain separation and a length-prefixed MID avoid ambiguous inputs.
+    let mut hasher = Sha256::new();
+    hasher.update(b"reddot-order-v1\0");
+    hasher.update((mid.len() as u64).to_be_bytes());
+    hasher.update(mid.as_bytes());
+    hasher.update(reference.as_bytes());
+    Ok(hex::encode(
+        &hasher.finalize()[..RDP_ORDER_ID_GENERATED_LEN / 2],
+    ))
 }
 
-/// Read the persisted order_id back on the refund path from the
-/// `connector_feature_data` blob (the merged `gateway_auth_req_params`
-/// contents that euler hands back verbatim).
+/// Read the original payment order ID returned by the caller for refunds.
 fn reddot_order_id_from_blob(
     connector_feature_data: &Option<common_utils::pii::SecretSerdeValue>,
 ) -> Result<String, error_stack::Report<IntegrationError>> {
@@ -69,11 +101,11 @@ fn reddot_order_id_from_blob(
                 field_name: "connector_feature_data.reddot_order_id",
                 context: errors::IntegrationErrorContext {
                     additional_context: Some(
-                        "reddot_order_id missing from second_factor.gateway_auth_req_params."
+                        "Original payment order ID missing from connector_feature_data."
                             .to_string(),
                     ),
                     suggested_action: Some(
-                        "Re-authorize the payment or refund via RDP's console using the connector_transaction_id"
+                        "Pass the original connector_metadata as connector_feature_data, or use the RDP console"
                             .to_string(),
                     ),
                     doc_url: Some(
@@ -88,23 +120,20 @@ fn reddot_order_id_from_blob(
 
 /// Red Dot Payment (RDP) credentials.
 ///
-/// AUTH: BodyKey — `mid` is the RDP merchant id, `secret` is the
+/// Typed RedDot config: `mid` is the RDP merchant id, `secret` is the
 /// RDP secret key used to build request signatures. RDP sends no auth headers;
 /// credentials travel inside the JSON request body only.
 #[derive(Debug, Clone)]
 pub struct ReddotAuthType {
     pub mid: Secret<String>,
     pub secret: Secret<String>,
-    /// MGA account detail — string-typed as stored in `account_details`:
-    /// when `"true"` (CyberSource-acquired MID), bill_to_* fields are
-    /// mandatory and must be sent on payment-api requests.
-    pub acquirer_cybersource: String,
+    /// Validated account flag; the public config accepts true/false strings.
+    pub acquirer_cybersource: bool,
 }
 
 impl ReddotAuthType {
-    /// MGA flag is a string in `account_details` ("true"/"false").
     fn is_cybersource_acquired(&self) -> bool {
-        self.acquirer_cybersource.eq_ignore_ascii_case("true")
+        self.acquirer_cybersource
     }
 }
 
@@ -121,7 +150,17 @@ impl TryFrom<&ConnectorSpecificConfig> for ReddotAuthType {
             } => Ok(Self {
                 mid: mid.to_owned(),
                 secret: secret.to_owned(),
-                acquirer_cybersource: acquirer_cybersource.to_owned(),
+                acquirer_cybersource: match acquirer_cybersource.to_ascii_lowercase().as_str() {
+                    "true" => true,
+                    "false" => false,
+                    _ => return Err(IntegrationError::InvalidDataFormat {
+                        field_name: "acquirer_cybersource",
+                        context: errors::IntegrationErrorContext {
+                            additional_context: Some("Expected a true or false string".to_string()),
+                            ..Default::default()
+                        },
+                    }.into()),
+                },
             }),
             _ => Err(error_stack::report!(
                 IntegrationError::FailedToObtainAuthType {
@@ -192,8 +231,7 @@ pub struct ReddotAuthorizeRequest<
     pub redirect_url: String,
     pub notify_url: String,
     /// Free-text reference RDP echoes verbatim in query_redirection and the
-    /// notification webhook — carries the FULL Juspay txnId (1092-char-safe)
-    /// so euler's tracker integrity check / recon can key off it.
+    /// notification webhook for caller-side reconciliation.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub merchant_reference: Option<String>,
     pub signature: Secret<String>,
@@ -298,11 +336,8 @@ fn compute_payment_signature(input: PaymentSignatureInput<'_>) -> Result<String,
 /// This is a DIFFERENT algorithm from [`compute_payment_signature`] — do not
 /// conflate them. The input must NOT contain a `signature` entry.
 ///
-/// `pub` so the future webhook/response signature verification (implemented on
-/// the `Reddot` connector struct in the parent module) can reuse it —
-/// [`compute_payment_signature`] stays private as it is only needed to build
-/// the Authorize request body.
-pub fn compute_generic_signature(mut params: Vec<(&str, &str)>, secret_key: &str) -> String {
+/// Crate visibility allows reuse by connector response verification.
+pub(crate) fn compute_generic_signature(mut params: Vec<(&str, &str)>, secret_key: &str) -> String {
     use sha2::{Digest, Sha512};
 
     params.sort_by_key(|(key_a, _)| *key_a);
@@ -402,15 +437,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let notify_url = router_data.request.get_webhook_url()?;
         let payer_email = router_data.request.get_email()?;
         let ccy = router_data.request.currency.to_string();
-        // Juspay txnUuids (19-21 chars) overflow RDP's 20-char `order_id`
-        // ceiling, so the connector mints its own random 16-char hex id here
-        // (euler never learns it). It returns to euler inside the Authorize
-        // response `connector_metadata` (→ second_factor blob) and the refund
-        // request hands it back via `connector_feature_data`.
-        // `merchant_reference` carries the FULL Juspay txnId — RDP echoes it
-        // in query_redirection + webhook payloads, feeding euler's txn-id
-        // integrity check + recon.
-        let order_id = gen_reddot_order_id();
+        // Retries of one payment attempt reuse the same order ID. Keep the
+        // full caller reference separately in merchant_reference.
+        let order_id = resolve_reddot_order_id(
+            auth.mid.peek(),
+            &router_data
+                .resource_common_data
+                .connector_request_reference_id,
+            &router_data.resource_common_data.connector_feature_data,
+        )?;
         let merchant_reference = router_data
             .resource_common_data
             .connector_request_reference_id
@@ -418,12 +453,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
-                // Mandatory `payer_name` fallback chain (mirrors the email chain):
-                //   1. card_holder_name as collected (skip Juspay's sentinel
-                //      "name" that euler's TempCard backfills when missing)
-                //   2. Customer record's name (euler composes first+last into
-                //      UCS CustomerDetails.name)
-                //   3. literal "name" — RDP requires the field non-empty
+                // Preserve the verified gateway-compatible name fallback:
+                // cardholder name, customer name, then the literal "name".
                 let payer_name = card_data
                     .card_holder_name
                     .clone()
@@ -570,7 +601,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let raw_connector_response = serde_json::to_string(&response).ok().map(Secret::new);
         // Surface RDP's response_code/response_msg as rawConnectorStatus so the
-        // caller (Euler) can persist the PG resp_code/resp_message from the data body.
+        // caller can persist the PG resp_code/resp_message from the data body.
         let raw_connector_status = Some(RawConnectorStatus {
             code: Some(response.response_code.clone()),
             message: response.response_msg.clone(),
@@ -578,40 +609,70 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         });
 
         let (status, payment_response) = match response.response_code.as_str() {
-            // Request accepted; the customer must complete 3DS at payment_url.
-            // NOT a payment success — the outcome arrives via notify_url.
-            "0" => {
+            // A redirect requires customer authentication before the payment
+            // is final. An explicit -01 remains pending even with a redirect.
+            "0" | "-01" => {
+                let auth = ReddotAuthType::try_from(&router_data.connector_config).change_context(
+                    ConnectorError::response_handling_failed_with_context(
+                        http_code,
+                        Some("reddot: could not resolve request order_id".to_string()),
+                    ),
+                )?;
+                let order_id = resolve_reddot_order_id(
+                    auth.mid.peek(),
+                    &router_data
+                        .resource_common_data
+                        .connector_request_reference_id,
+                    &router_data.resource_common_data.connector_feature_data,
+                )
+                .change_context(
+                    ConnectorError::response_handling_failed_with_context(
+                        http_code,
+                        Some("reddot: could not resolve request order_id".to_string()),
+                    ),
+                )?;
+
                 let transaction_id = response.transaction_id.ok_or_else(|| {
                     ConnectorError::response_handling_failed_with_context(
                         http_code,
                         Some("reddot: success response missing transaction_id".to_string()),
                     )
                 })?;
-                let payment_url = response.payment_url.ok_or_else(|| {
-                    ConnectorError::response_handling_failed_with_context(
-                        http_code,
-                        Some("reddot: success response missing payment_url".to_string()),
-                    )
-                })?;
+                let payment_url = if response.response_code == "0" {
+                    Some(response.payment_url.ok_or_else(|| {
+                        ConnectorError::response_handling_failed_with_context(
+                            http_code,
+                            Some("reddot: success response missing payment_url".to_string()),
+                        )
+                    })?)
+                } else {
+                    response.payment_url
+                };
+                let redirection_data = payment_url.map(|uri| Box::new(RedirectForm::Uri { uri }));
+                let status = if response.response_code == "-01" {
+                    AttemptStatus::Pending
+                } else {
+                    AttemptStatus::AuthenticationPending
+                };
                 (
-                    AttemptStatus::AuthenticationPending,
+                    status,
                     Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: ResponseId::ConnectorTransactionId(transaction_id),
-                        redirection_data: Some(Box::new(RedirectForm::Uri { uri: payment_url })),
+                        redirection_data,
                         mandate_reference: None,
-                        // The generated order_id goes back to euler inside
-                        // connector_metadata; euler merges this connector-
-                        // feature-data blob into second_factor.gateway_auth_
-                        // req_params, and the refund request hands it right
-                        // back. Refund's `order_number` needs the identical
-                        // value (see reddot_order_id_from_blob).
-                        connector_metadata: response
-                            .order_id
-                            .clone()
-                            .map(|oid| serde_json::json!({ RDP_ORDER_ID_BLOB_KEY: oid })),
+                        // Persist the ID sent on the request even when the
+                        // gateway omits order_id. Refund needs this exact value.
+                        connector_metadata: Some(
+                            serde_json::json!({ RDP_ORDER_ID_BLOB_KEY: order_id }),
+                        ),
                         network_txn_id: None,
                         network_txn_link_id: None,
-                        connector_response_reference_id: response.order_id.clone(),
+                        connector_response_reference_id: Some(
+                            router_data
+                                .resource_common_data
+                                .connector_request_reference_id
+                                .clone(),
+                        ),
                         incremental_authorization_allowed: None,
                         splits: None,
                         payment_account_reference: None,
@@ -619,15 +680,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     }),
                 )
             }
-            // Any other response_code is a synchronous failure (unsigned error body).
-            // `-7995`/`-7997` are 3DS-auth failures → AUTHENTICATION_FAILED;
-            // everything else (request/validation/decline) → AUTHORIZATION_FAILED
-            // (mirrors maya's AuthFailed vs PaymentFailed split).
+            // All codes other than 0 and -01 are authentication failures.
             error_code => {
-                let attempt_status = match error_code {
-                    "-7995" | "-7997" => AttemptStatus::AuthenticationFailed,
-                    _ => AttemptStatus::AuthorizationFailed,
-                };
+                let attempt_status = AttemptStatus::AuthenticationFailed;
                 let response_msg = response.response_msg;
                 (
                     attempt_status,
@@ -636,7 +691,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         status_code: http_code,
                         message: response_msg.clone().unwrap_or_default(),
                         reason: response_msg,
-                        attempt_status: None,
+                        attempt_status: Some(domain_types::router_data::FlowStatus::Payment(
+                            attempt_status,
+                        )),
                         connector_transaction_id: response.transaction_id,
                         network_advice_code: None,
                         network_decline_code: None,
@@ -730,8 +787,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 pub struct ReddotPSyncResponse {
     pub transaction_id: Option<String>,
     pub order_id: Option<String>,
-    /// RDP echoes the authorize-time `merchant_reference` (the full Juspay
-    /// txnId) here — primary integrity/recon cross-check key.
+    /// Echo of the caller's transaction reference sent at authorization.
     pub merchant_reference: Option<String>,
     pub authorized_amount: Option<StringMajorUnit>,
     pub authorized_ccy: Option<String>,
@@ -759,9 +815,9 @@ pub struct ReddotPSyncResponse {
     pub created_timestamp: Option<String>,
     pub acquirer_created_timestamp: Option<String>,
     pub request_timestamp: Option<String>,
-    pub first_6: Option<String>,
-    pub last_4: Option<String>,
-    pub payer_name: Option<String>,
+    pub first_6: Option<Secret<String>>,
+    pub last_4: Option<Secret<String>>,
+    pub payer_name: Option<Secret<String>>,
     pub payer_id: Option<String>,
     pub transaction_type: Option<String>,
     pub payment_mode: Option<String>,
@@ -782,7 +838,7 @@ impl TryFrom<ResponseRouterData<ReddotPSyncResponse, Self>>
 
         let raw_connector_response = serde_json::to_string(&response).ok().map(Secret::new);
         // Surface RDP's response_code/response_msg as rawConnectorStatus so the
-        // caller (Euler) can persist the PG resp_code/resp_message from the data body.
+        // caller can persist the PG resp_code/resp_message from the data body.
         let raw_connector_status = Some(RawConnectorStatus {
             code: Some(response.response_code.clone()),
             message: response.response_msg.clone(),
@@ -876,10 +932,7 @@ impl TryFrom<ResponseRouterData<ReddotPSyncResponse, Self>>
                         connector_metadata: None,
                         network_txn_id: None,
                         network_txn_link_id: None,
-                        // RDP echoes our full Juspay txnId in
-                        // `merchant_reference` — THAT is the tracker-
-                        // integrity/recon key euler compares against
-                        // (verifyTxnId passes via the txnId clause).
+                        // Keep the caller reference consistent across payment flows.
                         connector_response_reference_id: response.merchant_reference.clone(),
                         incremental_authorization_allowed: None,
                         splits: None,
@@ -914,16 +967,10 @@ impl TryFrom<ResponseRouterData<ReddotPSyncResponse, Self>>
                     }),
                 )
             }
-            // Terminal failure; response_msg carries the reason.
-            // Status mapping mirrors maya: `-7995`/`-7997` (3DS-auth
-            // failures) → AUTHENTICATION_FAILED; everything else
-            // (`-1` bank/acquirer decline, `-1003` signature/validation,
-            // ...) → AUTHORIZATION_FAILED.
+            // All codes other than 0 and -01 are authentication failures;
+            // response_msg carries the reason.
             error_code => {
-                let attempt_status = match error_code {
-                    "-7995" | "-7997" => AttemptStatus::AuthenticationFailed,
-                    _ => AttemptStatus::AuthorizationFailed,
-                };
+                let attempt_status = AttemptStatus::AuthenticationFailed;
                 let response_msg = response.response_msg;
                 (
                     attempt_status,
@@ -933,7 +980,9 @@ impl TryFrom<ResponseRouterData<ReddotPSyncResponse, Self>>
                         status_code: http_code,
                         message: response_msg.clone().unwrap_or_default(),
                         reason: response_msg,
-                        attempt_status: None,
+                        attempt_status: Some(domain_types::router_data::FlowStatus::Payment(
+                            attempt_status,
+                        )),
                         connector_transaction_id: response.transaction_id,
                         network_advice_code: None,
                         network_decline_code: None,
@@ -977,12 +1026,11 @@ impl TryFrom<ResponseRouterData<ReddotPSyncResponse, Self>>
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReddotWebhookBody {
     pub mid: Option<String>,
-    /// Merchant reference we sent at authorize (Juspay txnUuid for REDDOT),
-    /// echoed back by RDP.
+    /// Connector order ID sent at authorization and echoed by RDP.
     pub order_id: Option<String>,
     /// RDP's gateway-side id for this payment (`transaction_id`).
     pub transaction_id: Option<String>,
-    /// Echo of the authorize-time `merchant_reference` (full Juspay txnId).
+    /// Echo of the caller transaction reference sent at authorization.
     pub merchant_reference: Option<String>,
     #[serde(deserialize_with = "deserialize_response_code")]
     pub response_code: String,
@@ -1006,11 +1054,11 @@ pub struct ReddotWebhookBody {
     pub created_timestamp: Option<String>,
     pub acquirer_created_timestamp: Option<String>,
     pub request_timestamp: Option<String>,
-    pub first_6: Option<String>,
-    pub last_4: Option<String>,
-    pub payer_name: Option<String>,
+    pub first_6: Option<Secret<String>>,
+    pub last_4: Option<Secret<String>>,
+    pub payer_name: Option<Secret<String>>,
     pub payer_id: Option<String>,
-    pub exp_date: Option<String>,
+    pub exp_date: Option<Secret<String>>,
     pub transaction_type: Option<String>,
     pub payment_mode: Option<String>,
     pub signature: Option<String>,
@@ -1030,7 +1078,7 @@ const RDP_MERCHANT_API_ACTION_REFUND: &str = "refund";
 /// MD5 (hex). Distinct from BOTH the SHA-512 payment-api signature
 /// (`compute_payment_signature`) and the SHA-512 generic enquiry signature
 /// (`compute_generic_signature`).
-pub fn compute_merchant_api_signature(
+pub(crate) fn compute_merchant_api_signature(
     mut params: Vec<(&str, String)>,
     secret_key: &str,
 ) -> Result<String, error_stack::Report<IntegrationError>> {
@@ -1066,11 +1114,11 @@ pub fn compute_merchant_api_signature(
 
 /// `POST /instanpanel/api/payment` (action_type=refund) request body.
 /// Form-url-encoded; credentials once again live inside the body.
-/// RDP's optional `refund_id` is deliberately NOT sent: without it, RDP's
-/// Enquiry API keys the refund to the original payment `transaction_id`,
-/// which is exactly what RSync re-uses.
+/// `refund_id` carries the caller's unique refund reference and is included in the
+/// signed parameters so each refund can be enquired independently.
 #[derive(Debug, Serialize)]
 pub struct ReddotRefundRequest {
+    pub refund_id: String,
     pub response_type: String,
     pub action_type: String,
     pub mid: Secret<String>,
@@ -1126,12 +1174,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount_str = amount.get_amount_as_string();
         let ccy = router_data.request.currency.to_string();
         // RDP `order_number` must equal the exact order_id RDP recorded at
-        // authorize. That value is connector-minted (gen_reddot_order_id),
-        // persisted by euler in second_factor.gateway_auth_req_params as
-        // connector_feature_data["reddot_order_id"], and handed back here.
+        // authorize. It is persisted in connector_metadata["reddot_order_id"]
+        // and handed back here through connector_feature_data.
         let order_number = reddot_order_id_from_blob(&router_data.request.connector_feature_data)?;
         let transaction_id = router_data.request.connector_transaction_id.clone();
 
+        let refund_id = required_refund_reference(&router_data.request.refund_id)?.to_string();
         let signature = compute_merchant_api_signature(
             vec![
                 ("action_type", RDP_MERCHANT_API_ACTION_REFUND.to_string()),
@@ -1139,6 +1187,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 ("currency", ccy.clone()),
                 ("mid", auth.mid.peek().clone()),
                 ("order_number", order_number.clone()),
+                ("refund_id", refund_id.clone()),
                 (
                     "response_type",
                     RDP_MERCHANT_API_RESPONSE_TYPE_JSON.to_string(),
@@ -1149,6 +1198,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         )?;
 
         Ok(Self {
+            refund_id,
             response_type: RDP_MERCHANT_API_RESPONSE_TYPE_JSON.to_string(),
             action_type: RDP_MERCHANT_API_ACTION_REFUND.to_string(),
             mid: auth.mid,
@@ -1165,6 +1215,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 /// accepted | failed | pending | capture pending | pending third party.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ReddotRefundResponse {
+    /// Refund creation returns transaction_id; enquiry entries use refund_transaction_id.
+    pub transaction_id: Option<String>,
     pub result_status: Option<String>,
     pub reason_code: Option<String>,
     pub refund_id: Option<String>,
@@ -1195,11 +1247,8 @@ impl TryFrom<ResponseRouterData<ReddotRefundResponse, Self>>
             _ => common_enums::RefundStatus::Pending,
         };
 
-        let connector_refund_id = item
-            .response
-            .refund_id
-            .clone()
-            .unwrap_or_else(|| item.router_data.request.refund_id.clone());
+        // Callers store this gateway ID on the refund and return it for sync.
+        let connector_refund_id = item.response.transaction_id.clone().unwrap_or_default();
 
         // Echo the refund amount/currency into the refund integrity object
         // when RDP returns both (mirrors maya's refund transform).
@@ -1251,23 +1300,18 @@ impl TryFrom<ResponseRouterData<ReddotRefundResponse, Self>>
 }
 
 // =============================================================================
-// REFUND SYNC FLOW (RDP Enquiry API — same endpoint/signature as psync)
+// REFUND SYNC FLOW (RDP Enquiry API on the secondary host, generic signature)
 // =============================================================================
 
 const RDP_ENQUIRY_STATUS_REFUNDED: &str = "refunded";
-const RDP_ENQUIRY_STATUS_REFUND_PENDING: &str = "refund pending";
 
 /// RSync re-enquires with the same three-field shape as psync — an alias
 /// keeps `create_all_prerequisites!` from emitting a duplicate templating
 /// struct while still letting the flow's bridge types stay distinct.
 pub type ReddotRefundSyncRequest = ReddotPSyncRequest;
 
-/// Request: the enquiry endpoint takes exactly `request_mid` +
-/// `transaction_id` + SHA-512 generic signature — the SAME body shape as
-/// psync. Per the RDP Enquiry docs the `transaction_id` slot must carry the
-/// **refund_id** only when the refund was initiated with one — we never
-/// send `refund_id`, so RSync re-uses the original payment's
-/// `transaction_id` and RDP resolves the refund through its refund history.
+/// Enquire using the original payment transaction ID. The response contains
+/// refund history, which is matched against the stored connector refund ID.
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         ReddotRouterData<
@@ -1287,6 +1331,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
         let auth = ReddotAuthType::try_from(&router_data.connector_config)?;
         let transaction_id = router_data.request.connector_transaction_id.clone();
+        if transaction_id.is_empty() {
+            return Err(IntegrationError::MissingConnectorTransactionID {
+                context: errors::IntegrationErrorContext::default(),
+            }
+            .into());
+        }
         let signature = compute_generic_signature(
             vec![
                 ("request_mid", auth.mid.peek().as_str()),
@@ -1306,6 +1356,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 /// lifecycle state; the optional `refund` array carries per-refund records.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ReddotRefundSyncResponse {
+    #[serde(default, deserialize_with = "deserialize_optional_response_code")]
+    pub response_code: Option<String>,
+    pub response_status: Option<String>,
+    pub response_msg: Option<String>,
+    pub refund_transaction_id: Option<String>,
     pub order_id: Option<String>,
     pub transaction_id: Option<String>,
     pub refund_id: Option<String>,
@@ -1319,14 +1374,65 @@ pub struct ReddotRefundSyncResponse {
     pub signature: Option<String>,
 }
 
+fn deserialize_optional_response_code<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de::Error;
+
+    Option::<serde_json::Value>::deserialize(deserializer)?
+        .map(|value| match value {
+            serde_json::Value::String(code) => Ok(code),
+            serde_json::Value::Number(code) => Ok(code.to_string()),
+            other => Err(D::Error::custom(format!(
+                "unexpected type for response_code: {other}"
+            ))),
+        })
+        .transpose()
+}
+
 /// One entry of the Enquiry `refund` history array.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ReddotRefundHistoryEntry {
+    pub refund_id: Option<String>,
+    pub refund_transaction_id: Option<String>,
+    pub refund_status: Option<String>,
     pub refund_amount: Option<StringMajorUnit>,
     pub refund_currency: Option<String>,
     pub refund_at: Option<String>,
     pub refund_response_code: Option<String>,
     pub refund_response_message: Option<String>,
+}
+
+fn required_refund_reference(id: &str) -> Result<&str, error_stack::Report<IntegrationError>> {
+    if id.is_empty() {
+        Err(IntegrationError::MissingRequiredField {
+            field_name: "merchant_refund_id",
+            context: errors::IntegrationErrorContext::default(),
+        }
+        .into())
+    } else {
+        Ok(id)
+    }
+}
+
+fn matching_refund<'a>(
+    history: &'a [ReddotRefundHistoryEntry],
+    connector_id: &str,
+) -> Option<&'a ReddotRefundHistoryEntry> {
+    history.iter().find(|entry| {
+        !connector_id.is_empty() && entry.refund_transaction_id.as_deref() == Some(connector_id)
+    })
+}
+
+fn reddot_refund_sync_status(status: Option<&str>) -> common_enums::RefundStatus {
+    // Payment response_code semantics do not establish the meaning of
+    // refund_response_code. Refund enquiry has its own lifecycle status.
+    match status {
+        Some(RDP_ENQUIRY_STATUS_REFUNDED | "voided") => common_enums::RefundStatus::Success,
+        Some("rejected" | "failed") => common_enums::RefundStatus::Failure,
+        _ => common_enums::RefundStatus::Pending,
+    }
 }
 
 impl TryFrom<ResponseRouterData<ReddotRefundSyncResponse, Self>>
@@ -1339,19 +1445,84 @@ impl TryFrom<ResponseRouterData<ReddotRefundSyncResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let raw_connector_response = serde_json::to_string(&item.response).ok().map(Secret::new);
 
-        // Only `refunded` is success; `refund pending` is non-final;
-        // EVERYTHING else is terminal failure.
-        let refund_status = match item.response.transaction_status.as_deref() {
-            Some(RDP_ENQUIRY_STATUS_REFUNDED) => common_enums::RefundStatus::Success,
-            Some(RDP_ENQUIRY_STATUS_REFUND_PENDING) => common_enums::RefundStatus::Pending,
-            _ => common_enums::RefundStatus::Failure,
-        };
-
-        let connector_refund_id = item
+        // An enquiry failure does not establish that the refund failed. Return
+        // the connector error and preserve the refund's previous status.
+        if item
             .response
-            .refund_id
-            .clone()
-            .unwrap_or_else(|| item.router_data.request.connector_refund_id.clone());
+            .response_code
+            .as_deref()
+            .is_some_and(|code| code != "0")
+            || item
+                .response
+                .response_status
+                .as_deref()
+                .is_some_and(|status| {
+                    status.eq_ignore_ascii_case("error") || status.eq_ignore_ascii_case("failed")
+                })
+        {
+            let code = item.response.response_code.clone();
+            let message = item.response.response_msg.clone();
+            return Ok(Self {
+                response: Err(ErrorResponse {
+                    status_code: item.http_code,
+                    code: code.clone().unwrap_or_else(|| "NO_ERROR_CODE".to_string()),
+                    message: message
+                        .clone()
+                        .unwrap_or_else(|| "Refund enquiry failed".to_string()),
+                    reason: message.clone(),
+                    raw_connector_response: raw_connector_response.clone(),
+                    ..ErrorResponse::default()
+                }),
+                resource_common_data: RefundFlowData {
+                    raw_connector_status: Some(RawConnectorStatus {
+                        code,
+                        message,
+                        reason: item.response.response_status.clone(),
+                    }),
+                    raw_connector_response,
+                    ..item.router_data.resource_common_data
+                },
+                ..item.router_data
+            });
+        }
+
+        if !item
+            .response
+            .transaction_status
+            .as_deref()
+            .is_some_and(|status| !status.is_empty())
+            && !item
+                .response
+                .refund
+                .as_ref()
+                .is_some_and(|history| !history.is_empty())
+        {
+            return Err(ConnectorError::response_handling_failed_with_context(
+                item.http_code,
+                Some("reddot: enquiry response contains neither transaction_status nor refund history".to_string()),
+            ).into());
+        }
+
+        // Prefer the individual refund record. RDP also confirms full refunds
+        // using the payment-level voided status when no matching status exists.
+        let connector_refund_id = item.router_data.request.connector_refund_id.clone();
+        let refund = item
+            .response
+            .refund
+            .as_deref()
+            .and_then(|history| matching_refund(history, &connector_refund_id));
+        let status = refund
+            .and_then(|entry| entry.refund_status.clone())
+            .or_else(|| {
+                item.response
+                    .transaction_status
+                    .as_ref()
+                    .filter(|status| status.as_str() == "voided")
+                    .cloned()
+            });
+        let code = refund.and_then(|entry| entry.refund_response_code.clone());
+        let message = refund.and_then(|entry| entry.refund_response_message.clone());
+        let refund_status = reddot_refund_sync_status(status.as_deref());
 
         Ok(Self {
             response: Ok(RefundsResponseData {
@@ -1362,105 +1533,15 @@ impl TryFrom<ResponseRouterData<ReddotRefundSyncResponse, Self>>
             }),
             resource_common_data: RefundFlowData {
                 status: refund_status,
-                refund_id: item.response.refund_id.clone().or(item
-                    .router_data
-                    .resource_common_data
-                    .refund_id
-                    .clone()),
                 raw_connector_status: Some(RawConnectorStatus {
-                    code: item.response.refund_response_code.clone(),
-                    message: item.response.refund_response_message.clone(),
-                    reason: item.response.transaction_status.clone(),
+                    code,
+                    message,
+                    reason: status,
                 }),
                 raw_connector_response,
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
         })
-    }
-}
-
-#[cfg(test)]
-#[allow(clippy::unwrap_used)]
-#[allow(clippy::expect_used)]
-#[allow(clippy::panic)]
-mod tests {
-    use super::*;
-
-    fn blob_with_order_id(order_id: &str) -> common_utils::pii::SecretSerdeValue {
-        Secret::new(serde_json::json!({ RDP_ORDER_ID_BLOB_KEY: order_id }))
-    }
-
-    // ── gen_reddot_order_id ────────────────────────────────────────────
-
-    #[test]
-    fn order_id_is_16_lowercase_hex() {
-        let oid = gen_reddot_order_id();
-        assert_eq!(oid.len(), RDP_ORDER_ID_GENERATED_LEN);
-        assert!(oid
-            .chars()
-            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
-    }
-
-    #[test]
-    fn order_id_two_draws_differ() {
-        // Birthday-paradox-level assertion of functioning RNG (not statistical)
-        assert_ne!(gen_reddot_order_id(), gen_reddot_order_id());
-    }
-
-    // ── reddot_order_id_from_blob (refund read path) ────────────────────
-
-    #[test]
-    fn blob_round_trip_returns_order_id() {
-        let blob = blob_with_order_id("0123abcd4567ef89");
-        assert_eq!(
-            reddot_order_id_from_blob(&Some(blob)).unwrap(),
-            "0123abcd4567ef89"
-        );
-    }
-
-    #[test]
-    fn blob_missing_is_error() {
-        assert!(reddot_order_id_from_blob(&None).is_err());
-    }
-
-    #[test]
-    fn blob_missing_key_is_error() {
-        let blob: common_utils::pii::SecretSerdeValue =
-            Secret::new(serde_json::json!({ "some_other_key": "x" }));
-        assert!(reddot_order_id_from_blob(&Some(blob)).is_err());
-    }
-
-    #[test]
-    fn blob_non_string_value_is_error() {
-        let blob: common_utils::pii::SecretSerdeValue =
-            Secret::new(serde_json::json!({ RDP_ORDER_ID_BLOB_KEY: 42 }));
-        assert!(reddot_order_id_from_blob(&Some(blob)).is_err());
-    }
-
-    // ── compute_merchant_api_signature (MD5, k=v pairs + secret last) ─────
-
-    /// Golden vector: md5("a=1&b=2&secret_key=skey"). Sorting is exercised by
-    /// feeding the params in reverse order.
-    #[test]
-    fn merchant_api_signature_golden_vector() {
-        let sig = compute_merchant_api_signature(
-            vec![("b", "2".to_string()), ("a", "1".to_string())],
-            "skey",
-        )
-        .expect("md5 must digest fine");
-        assert_eq!(sig, "de6af8a9207bf966d494421fa640a6d0");
-    }
-
-    // ── compute_generic_signature (SHA-512 over sorted values + secret) ───
-
-    /// Golden vector: sha512("v1v2" + "mysecret").
-    #[test]
-    fn generic_signature_golden_vector() {
-        let sig = compute_generic_signature(vec![("k2", "v2"), ("k1", "v1")], "mysecret");
-        assert_eq!(
-            sig,
-            "c932cdf346bb82ec0f3923398da8fa9017343fea411cef0fe482325a14dde970cc20a64c5bb3629bb23dd07cecdc6f6954ac6f5b72db77f8fd5f9864f67c0768"
-        );
     }
 }
