@@ -905,7 +905,7 @@
           "setup_future_usage": "OFF_SESSION"
         },
         "sample": {
-          "url": "https://api-ms-test.payments.jpmorgan.com/api/v2/payments",
+          "url": "https://api-ms-test.payments.jpmorgan.com/api/v2/verifications",
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_access_token",
@@ -1043,7 +1043,7 @@
           }
         },
         "sample": {
-          "url": "https://api-ms-test.payments.jpmorgan.com/api/v2/payments",
+          "url": "https://api-ms-test.payments.jpmorgan.com/api/v2/verifications",
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_access_token",
