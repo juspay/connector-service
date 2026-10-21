@@ -1,4 +1,9 @@
+import { randomUUID } from "node:crypto";
 import type { Json } from "../../../framework/config.js";
+
+export function orderReference(): string {
+  return `order_${randomUUID().replaceAll("-", "").slice(0, 15)}`;
+}
 
 // Complete payment requests. The runner does not add its common payment defaults.
 const card = {
@@ -53,7 +58,7 @@ export function checkoutPayment(): Json {
     ...basicCardPayment(),
     confirm: true,
     description: "Test checkout",
-    merchant_order_reference_id: "test-order",
+    merchant_order_reference_id: orderReference(),
     payment_channel: "ecommerce",
     customer: {
       name: "Test Buyer",
@@ -118,7 +123,7 @@ export function connectDirectPayment(): Json {
       email: "ucs-e2e@example.com",
     },
     description: "Test checkout",
-    merchant_order_reference_id: "test-order",
+    merchant_order_reference_id: orderReference(),
     metadata: Object.fromEntries(
       Array.from({ length: 15 }, (_, i) => [
         `fixture_field_${i + 1}`,

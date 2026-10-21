@@ -2,7 +2,7 @@ import { test } from "@playwright/test";
 import type { OtpScenario } from "../../../framework/scenario.js";
 import { runOtpScenario } from "../../../framework/runner.js";
 import { otpSupersetCases } from "../../../framework/scenario.js";
-import { basicCardPayment } from "./requests.js";
+import { basicCardPayment, orderReference } from "./requests.js";
 
 const scenario: OtpScenario = {
   id: "inline-customer",
@@ -24,7 +24,7 @@ const scenario: OtpScenario = {
       phone_country_code: "+1",
     },
     metadata: { fixture_case: "customer" },
-    merchant_order_reference_id: "test-order",
+    merchant_order_reference_id: orderReference(),
   },
   scenarios: ["automatic"],
 };
