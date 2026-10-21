@@ -110,7 +110,7 @@ test("one superset case expands across connectors and preserves terminal versus 
     scenarios: ["manual-capture"],
   };
   const cases = otpSupersetCases(definition);
-  assert.equal(cases.length, 5);
+  assert.equal(cases.length, 6);
   const stripe = cases.find((c) => c.connector === "stripe")!.scenario;
   const adyen = cases.find((c) => c.connector === "adyen")!.scenario;
   assert.deepEqual(stripe.scenarios, ["manual-capture"]);
@@ -133,7 +133,7 @@ test("shared direct-charge requests retain their field structure without connect
     request: connectDirectPayment(),
     scenarios: ["automatic"],
   });
-  assert.equal(cases.length, 1);
+  assert.equal(cases.length, 6);
   const selected = cases[0].scenario;
 
   assert.equal("setup_future_usage" in selected.request, false);
@@ -218,4 +218,59 @@ test("malformed private configuration cannot leak its contents into reports", ()
   } finally {
     rmSync(folder, { recursive: true, force: true });
   }
+});
+
+test("new shared scenarios run for every connector without opt-in entries", () => {
+  const cases = otpSupersetCases({
+    id: "new-shared-case",
+    description: "Shared payment",
+    verifies: "Succeeds",
+    sequence: ["Confirm"],
+    request: basicCardPayment(),
+    scenarios: ["automatic"],
+  });
+  assert.equal(cases.length, 6);
+  assert.ok(cases.every((item) => !item.skipReason));
+});
+
+test("capability requirements and explicit exclusions remain visible with reasons", () => {
+  const definition: OtpScenario = {
+    id: "direct-charge",
+    description: "Direct charge",
+    verifies: "Succeeds",
+    sequence: ["Confirm"],
+    request: connectDirectPayment(),
+    scenarios: ["automatic"],
+    requires: "stripe-connect",
+  };
+  const cases = otpSupersetCases(definition);
+  assert.equal(cases.length, 6);
+  assert.equal(cases.filter((item) => !item.skipReason).length, 1);
+  assert.equal(cases.find((item) => !item.skipReason)?.connector, "stripe");
+  assert.ok(
+    cases
+      .filter((item) => item.skipReason)
+      .every((item) => item.skipReason!.includes("stripe-connect")),
+  );
+  const refunds = otpSupersetCases({
+    ...definition,
+    id: "refund-full",
+    requires: undefined,
+    scenarios: ["refund-full"],
+  });
+  assert.match(
+    refunds.find((item) => item.connector === "authorizedotnet")!.skipReason!,
+    /settled payment/,
+  );
+  const partial = otpSupersetCases({
+    ...definition,
+    id: "refund-partial",
+    requires: undefined,
+    scenarios: ["refund-partial"],
+  });
+  assert.deepEqual(
+    partial.find((item) => item.connector === "cybersource")!.scenario
+      .scenarios,
+    ["refund-partial-submission"],
+  );
 });

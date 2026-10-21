@@ -315,14 +315,20 @@ export async function runOtpScenario(
     }
     let refundedAmount: number | undefined;
     if (
-      ["refund-full", "refund-partial", "refund-submission"].includes(variant)
+      [
+        "refund-full",
+        "refund-partial",
+        "refund-submission",
+        "refund-partial-submission",
+      ].includes(variant)
     ) {
-      refundedAmount =
-        variant === "refund-partial"
-          ? Math.floor(body.amount / 2)
-          : body.amount;
+      refundedAmount = ["refund-partial", "refund-partial-submission"].includes(
+        variant,
+      )
+        ? Math.floor(body.amount / 2)
+        : body.amount;
       await test.step(
-        variant === "refund-submission"
+        variant.endsWith("submission")
           ? "Verify refund submission"
           : "Verify refund status: succeeded",
         async () => {
@@ -350,7 +356,7 @@ export async function runOtpScenario(
             ),
           });
           try {
-            if (variant !== "refund-submission")
+            if (!variant.endsWith("submission"))
               await expect
                 .poll(
                   async () => {
@@ -379,7 +385,7 @@ export async function runOtpScenario(
             await recordChecks(
               info,
               "Refund checks",
-              refundChecks(observedRefund, variant !== "refund-submission"),
+              refundChecks(observedRefund, !variant.endsWith("submission")),
             );
           }
           await verifyChecks(info, "Refund routing checks", {

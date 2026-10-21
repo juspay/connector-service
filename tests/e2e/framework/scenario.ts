@@ -18,6 +18,7 @@ export const scenarios = [
   "capture-submission",
   "void-submission",
   "refund-submission",
+  "refund-partial-submission",
 ] as const;
 export type Scenario = (typeof scenarios)[number];
 export type RequestVariant = {
@@ -42,6 +43,7 @@ export type OtpScenario = RequestVariant & {
   sequence: readonly string[];
 
   request: Json;
+  requires?: "stripe-connect";
 };
 
 export type ConnectorCaseOverride = Pick<
@@ -53,7 +55,9 @@ export type ConnectorCaseOverride = Pick<
 };
 export type ConnectorScenarioConfig = {
   payment?: Json;
-  cases: Record<
+  capabilities?: readonly "stripe-connect"[];
+  exclude?: Record<string, string>;
+  overrides?: Record<
     string,
     ConnectorCaseOverride | readonly ConnectorCaseOverride[]
   >;
@@ -80,7 +84,7 @@ const configurations: Record<
   checkout,
 };
 
-// A connector opts into shared cases and supplies only request/configuration differences.
+// Every connector inherits shared scenarios; only differences and exclusions are configured.
 export function otpSupersetCases(scenario: OtpScenario) {
   if (!scenario.id || !/^[a-z][a-z0-9-]{0,47}$/.test(scenario.id))
     throw new Error("Each scenario requires a stable scenario identifier");
@@ -105,11 +109,21 @@ export function otpSupersetCases(scenario: OtpScenario) {
   const cases: {
     connector: (typeof connectors)[number];
     scenario: OtpScenario;
+    skipReason?: string;
   }[] = [];
   for (const connector of connectors) {
     const config = configurations[connector];
-    const configured = config.cases[scenario.id];
-    if (!configured) continue;
+    const excluded = config.exclude?.[scenario.id];
+    if (excluded !== undefined && !excluded.trim())
+      throw new Error(
+        `Scenario exclusion requires a reason: ${connector}/${scenario.id}`,
+      );
+    const skipReason =
+      excluded ??
+      (scenario.requires && !config.capabilities?.includes(scenario.requires)
+        ? `Requires ${scenario.requires}; not configured for ${connector}`
+        : undefined);
+    const configured = config.overrides?.[scenario.id] ?? {};
     const overrides = Array.isArray(configured) ? configured : [configured];
     for (const override of overrides) {
       const { completion, ...patch } = override;
@@ -118,6 +132,7 @@ export function otpSupersetCases(scenario: OtpScenario) {
         "manual-capture": "capture-submission",
         "manual-void": "void-submission",
         "refund-full": "refund-submission",
+        "refund-partial": "refund-partial-submission",
       };
       if (completion && !submission[lifecycle])
         throw new Error(
@@ -140,10 +155,13 @@ export function otpSupersetCases(scenario: OtpScenario) {
         continue;
       if (completion)
         selected.sequence = [
-          ...scenario.sequence.slice(0, lifecycle === "refund-full" ? -2 : -1),
+          ...scenario.sequence.slice(
+            0,
+            lifecycle.startsWith("refund-") ? -2 : -1,
+          ),
           "Verify submission acceptance and processor reference",
         ];
-      cases.push({ connector, scenario: selected });
+      cases.push({ connector, scenario: selected, skipReason });
     }
   }
   return cases;

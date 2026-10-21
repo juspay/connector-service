@@ -6,18 +6,11 @@ Each case creates an isolated HS merchant, profile, connector account, and routi
 
 ## Coverage
 
-| Connector     | Cases | Coverage                                                                                                                                                                                           |
-| ------------- | ----: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Stripe        |    12 | Separate and inline confirmation, publishable-key confirmation, customer/shipping/metadata/descriptor fields, billing-profile override, Connect direct charges, capture, void, full/partial refund |
-| Adyen         |     9 | Automatic capture, merchant-supplied references, customer acceptance without future usage, AUD/EUR/GBP/CHF/SGD, capture/void/refund submissions                                                    |
-| PayPal        |     8 | Automatic capture, publishable-key authorize/capture or void, USD/CAD/GBP/AUD, full/partial refund                                                                                                 |
-| Authorize.net |     6 | Automatic capture, inline customer details, merchant-key and publishable-key capture/void                                                                                                          |
-| Checkout      |     6 | Automatic capture, inline customer details, capture/void, full/partial refund                                                                                                                      |
-| Cybersource   |     5 | Automatic capture, inline customer details, void, capture/refund submissions                                                                                                                       |
+The shared superset includes 17 scenarios: separate and inline confirmation, client confirmation, request/profile variations, direct platform charges, capture/void, and full/partial refunds. All applicable scenarios run by default across six connectors: Stripe, Adyen, PayPal, Authorize.net, Checkout, and Cybersource. Additional currency overrides expand individual scenarios.
 
-**Submission checks are distinct from terminal checks.** The five scenarios named `capture-submission`, `void-submission`, or `refund-submission` verify processor acceptance and saved references. They do not establish webhook/settlement completion. Terminal capture, cancellation, and refund scenarios require their final API status; a pending response does not satisfy those cases. Terminal Authorize.net refunds require a settled-payment fixture and are not covered. A forced retrieve can return a stored terminal result; it does not prove a new processor sync call occurred.
+Connector exclusions declare a reason and appear as skipped tests. Authorize.net fresh-payment refunds are excluded because they require settlement. Direct-charge scenarios declare the `stripe-connect` capability and require an existing sandbox account through `STRIPE_CONNECTED_ACCOUNT_ID` or a payment override; accounts are not discovered or created.
 
-All payment operations use the HS API. Checks use HS responses, recorded UCS routing, and processor references. The framework does not make direct processor API calls. Connect direct-charge cases require an existing sandbox account through `STRIPE_CONNECTED_ACCOUNT_ID` or a payment override; accounts are not discovered or created.
+Submission checks are distinct from terminal checks. A connector's `completion: "submission"` override checks processor acceptance and saved references rather than final settlement. Other cases require their terminal API status. A forced retrieve can return a stored terminal result; it does not prove a fresh processor sync occurred. All payment operations use HS APIs; the framework makes no direct processor API calls.
 
 ## Local execution
 
@@ -127,11 +120,11 @@ tests/e2e/
   overrides.example.json
 ```
 
-Each superset spec contains its explanation, expected behavior, request data, API sequence, and test declaration. Explanations also appear in the HTML report. Scenarios are defined once and expanded across connectors that enable them.
+Each superset spec contains its explanation, expected behavior, request data, API sequence, and test declaration. Explanations also appear in the HTML report. Scenarios are defined once and run across all applicable connectors by default.
 
-Connector `config.ts` files select supported cases and supply differences such as test cards, currencies, profile options, and metadata. An empty case configuration uses the shared scenario unchanged. `completion: "submission"` explicitly checks acceptance rather than terminal completion. Currency variants expand a shared scenario without copying execution code.
+Connector `config.ts` files supply differences such as test cards, currencies, profile options, and metadata. An empty connector config runs shared scenarios unchanged. `exclude` records scenarios that cannot run and their reasons. Scenarios can declare a required capability, such as `stripe-connect`; connectors declare that capability, and inapplicable cases are reported as skipped. `completion: "submission"` explicitly checks acceptance rather than terminal completion. Currency variants expand a shared scenario without copying execution code.
 
-Add scenarios in `otp/superset/card-no3ds/` and enable them in applicable connector configs. Register new connectors in `framework/scenario.ts` and the UCS stack configuration. `npm run list` shows enabled connector/scenario combinations. `npm test -- --grep @stripe` selects Stripe; `npm test -- otp/superset/card-no3ds/manual-capture.spec.ts` runs capture across enabled connectors.
+Add scenarios in `otp/superset/card-no3ds/` ; they run for every applicable connector automatically. Register new connectors in `framework/scenario.ts` and the UCS stack configuration. `npm run list` shows enabled connector/scenario combinations. `npm test -- --grep @stripe` selects Stripe; `npm test -- otp/superset/card-no3ds/manual-capture.spec.ts` runs capture across applicable connectors.
 
 Complete request definitions do not inherit shared optional payment fields. Runtime identifiers and client secrets are obtained during execution.
 

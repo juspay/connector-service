@@ -6,8 +6,10 @@ export const config: ConnectorScenarioConfig = {
       card: { card_number: "4111111111111111", card_cvc: "737" },
     },
   },
-  cases: {
-    baseline: {},
+  overrides: {
+    "client-void": { completion: "submission" },
+    "client-capture": { completion: "submission" },
+    "refund-partial": { completion: "submission" },
     "manual-capture": { completion: "submission" },
     "manual-void": { completion: "submission" },
     "refund-full": { completion: "submission" },

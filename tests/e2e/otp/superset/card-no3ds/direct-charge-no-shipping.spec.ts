@@ -5,6 +5,7 @@ import { otpSupersetCases } from "../../../framework/scenario.js";
 import { connectDirectPayment } from "./requests.js";
 
 const scenario: OtpScenario = {
+  requires: "stripe-connect",
   id: "direct-charge-no-shipping",
   description:
     "Confirm a platform direct charge with shipping explicitly null.",
@@ -21,9 +22,12 @@ const scenario: OtpScenario = {
   scenarios: ["automatic"],
 };
 
-for (const { connector, scenario: selected } of otpSupersetCases(scenario)) {
+for (const { connector, scenario: selected, skipReason } of otpSupersetCases(
+  scenario,
+)) {
   test.describe(`${connector}/${selected.id}`, () => {
     test(`${selected.scenarios[0]} @otp @no3ds @${connector}`, async ({}, info) => {
+      test.skip(!!skipReason, skipReason);
       await runOtpScenario(connector, selected, info);
     });
   });

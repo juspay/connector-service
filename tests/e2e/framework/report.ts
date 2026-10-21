@@ -7,6 +7,8 @@ export async function reportScenario(info: TestInfo, scenario: OtpScenario) {
     { type: "Verifies", description: scenario.verifies },
     { type: "execution", description: "live sandbox: HS → UCS → processor" },
   );
+  if (scenario.requires)
+    info.annotations.push({ type: "Requires", description: scenario.requires });
   if (scenario.scenarios[0].endsWith("submission"))
     info.annotations.push({
       type: "coverage-limit",

@@ -4,10 +4,7 @@ export const config: ConnectorScenarioConfig = {
   payment: {
     payment_method_data: { card: { card_number: "4012000033330026" } },
   },
-  cases: {
-    baseline: {},
-    "refund-full": {},
-    "refund-partial": {},
+  overrides: {
     "client-capture": [
       { id: "client-capture" },
       ...["CAD", "GBP", "AUD"].map((currency) => ({
@@ -15,6 +12,5 @@ export const config: ConnectorScenarioConfig = {
         payment: { currency },
       })),
     ],
-    "client-void": {},
   },
 };
