@@ -2,6 +2,61 @@
   "PaymentService/Authorize": {
     "no3ds_auto_capture_google_pay_encrypted": {
       "grpc_req": {}
+    },
+    "no3ds_fail_payment": {
+      "grpc_req": {
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4734868958733862"
+            }
+          }
+        }
+      },
+      "assert": {
+        "error": {
+          "must_exist": true
+        },
+        "error.connector_details.code": {
+          "equals": "200N7"
+        }
+      }
+    },
+    "no3ds_auto_capture_apple_pay_decrypted_cit": {
+      "grpc_req": {
+        "customer_acceptance": {
+          "acceptance_type": "OFFLINE"
+        }
+      }
+    },
+    "no3ds_auto_capture_google_pay_decrypted_cit": {
+      "grpc_req": {
+        "customer_acceptance": {
+          "acceptance_type": "OFFLINE"
+        }
+      }
+    }
+  },
+  "EventService/HandleEvent": {
+    "payment_succeeded": {
+      "assert": {
+        "event_status": null
+      }
+    },
+    "payment_failed": {
+      "assert": {
+        "event_status": null
+      }
+    },
+    "refund_succeeded": {
+      "assert": {
+        "event_status": null
+      }
+    },
+    "invalid_signature": {
+      "assert": {
+        "event_status": null
+      }
     }
   }
 }
