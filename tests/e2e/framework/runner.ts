@@ -114,8 +114,11 @@ export async function runOtpScenario(
         });
         return { account, key, profileId, mca };
       });
-    const body = requestVariant.confirmRequest
-      ? merge(createRequest, requestVariant.confirmRequest)
+    const confirmationRequest = requestVariant.confirmRequest
+      ? merge(requestVariant.confirmRequest, overrides.payment)
+      : undefined;
+    const body = confirmationRequest
+      ? merge(createRequest, confirmationRequest)
       : createRequest;
     if (requestVariant.fixture === "merchant-reference") {
       body.payment_id = `test_${randomUUID().replaceAll("-", "")}`;
@@ -194,7 +197,7 @@ export async function runOtpScenario(
           `/payments/${paymentId}/confirm`,
           requestVariant.clientConfirmation ? account.publishable_key : key,
           {
-            ...(requestVariant.confirmRequest ?? body),
+            ...(confirmationRequest ?? body),
             ...(requestVariant.clientConfirmation
               ? { client_secret: intent.client_secret }
               : {}),
