@@ -8,7 +8,7 @@
         "payment_method": {
           "card": {
             "card_number": {
-              "value": "4544249167673670"
+              "value": "4734868958733862"
             }
           }
         }
@@ -18,8 +18,44 @@
           "must_exist": true
         },
         "error.connector_details.code": {
-          "equals": "20051"
+          "equals": "200N7"
         }
+      }
+    },
+    "no3ds_auto_capture_apple_pay_decrypted_cit": {
+      "grpc_req": {
+        "customer_acceptance": {
+          "acceptance_type": "OFFLINE"
+        }
+      }
+    },
+    "no3ds_auto_capture_google_pay_decrypted_cit": {
+      "grpc_req": {
+        "customer_acceptance": {
+          "acceptance_type": "OFFLINE"
+        }
+      }
+    }
+  },
+  "EventService/HandleEvent": {
+    "payment_succeeded": {
+      "assert": {
+        "event_status": null
+      }
+    },
+    "payment_failed": {
+      "assert": {
+        "event_status": null
+      }
+    },
+    "refund_succeeded": {
+      "assert": {
+        "event_status": null
+      }
+    },
+    "invalid_signature": {
+      "assert": {
+        "event_status": null
       }
     }
   }

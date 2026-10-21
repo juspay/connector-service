@@ -26,6 +26,9 @@
       "sync_upi_collect": "PM_NOT_OFFERED: spec Complete Endpoint Inventory (source variants card/token/network_token/id/customer) - UPI is not a Checkout payment method",
       "sync_upi_intent": "PM_NOT_OFFERED: spec Complete Endpoint Inventory (source variants card/token/network_token/id/customer) - UPI is not a Checkout payment method",
       "sync_upi_qr": "PM_NOT_OFFERED: spec Complete Endpoint Inventory (source variants card/token/network_token/id/customer) - UPI is not a Checkout payment method"
+    },
+    "PaymentMethodService/Tokenize": {
+      "tokenize_fail_expired_card": "CONNECTOR_BEHAVIOUR: Checkout POST /tokens does not validate card expiry. The live sandbox answered 201 with a tok_ for card 4242424242424242 expiring 01/2020 (2026-10-21); the expired card is refused only when the token is used in POST /payments. There is no tokenization-time refusal to assert."
     }
   }
 }
