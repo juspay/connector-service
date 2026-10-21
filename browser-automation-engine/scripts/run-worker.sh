@@ -21,7 +21,10 @@ cleanup() {
   trap - EXIT INT TERM
   if [[ -n "$watchdog_pid" ]]; then
     kill "$watchdog_pid" 2>/dev/null || true
-    wait "$watchdog_pid" 2>/dev/null || true
+    # The watchdog can send TERM and exit while Bash is already in wait.
+    # A nested wait for it in this exit trap can block until the worker exits,
+    # preventing the container removal that would terminate that worker.
+    # Bash reaps the watchdog; never wait for it before removing the container.
   fi
   timeout --kill-after=1s 5s "$container_runtime" rm --force "$container_name" >/dev/null 2>&1 || true
   if [[ -n "$worker_pid" ]]; then

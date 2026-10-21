@@ -181,38 +181,42 @@ test("deadline and cancellation remove the whole job container", async () => {
   }
 });
 
-test("loss of the harness removes an already-running browser job", async () => {
-  const name = `prism-worker-parent-loss-${process.pid}`;
-  const job = {
-    url: "https://callback.invalid/complete",
-    callbackUrl: "https://callback.invalid/complete",
-    rules: [{ action: "waitFor", selector: "#never-created", timeoutMs: 60000 }]
-  };
-  const parent = spawn(process.execPath, ["-e", `
-    const { spawn } = require('node:child_process');
-    const worker = spawn('bash', ['scripts/run-worker.sh'], { stdio: ['pipe', 'ignore', 'ignore'] });
-    worker.stdin.end(${JSON.stringify(JSON.stringify(job))});
-    setInterval(() => {}, 1000);
-  `], { cwd: root, stdio: "ignore", env: { ...process.env, UCS_BROWSER_CONTAINER_NAME: name } });
-  const parentClosed = once(parent, "close");
-  try {
-    let browserRunning = false;
-    for (let attempt = 0; attempt < 60; attempt++) {
-      const processes = spawnSync(runtime, ["top", name, "-eo", "pid,args"], { encoding: "utf8" });
-      if (/chromium_headless_shell/.test(processes.stdout)) { browserRunning = true; break; }
-      await new Promise(resolve => setTimeout(resolve, 100));
+test("loss of the harness removes already-running browser jobs", { concurrency: 4 }, async t => {
+  // Concurrent harness deaths exercise the race between the watchdog exiting
+  // and the launcher's signal handler running while it waits for the worker.
+  await Promise.all(Array.from({ length: 4 }, (_, attempt) => t.test(`crashed harness ${attempt + 1}`, async () => {
+    const name = `prism-worker-parent-loss-${process.pid}-${attempt}`;
+    const job = {
+      url: "https://callback.invalid/complete",
+      callbackUrl: "https://callback.invalid/complete",
+      rules: [{ action: "waitFor", selector: "#never-created", timeoutMs: 60000 }]
+    };
+    const parent = spawn(process.execPath, ["-e", `
+      const { spawn } = require('node:child_process');
+      const worker = spawn('bash', ['scripts/run-worker.sh'], { stdio: ['pipe', 'ignore', 'ignore'] });
+      worker.stdin.end(${JSON.stringify(JSON.stringify(job))});
+      setInterval(() => {}, 1000);
+    `], { cwd: root, stdio: "ignore", env: { ...process.env, UCS_BROWSER_CONTAINER_NAME: name } });
+    const parentClosed = once(parent, "close");
+    try {
+      let browserRunning = false;
+      for (let attempt = 0; attempt < 60; attempt++) {
+        const processes = spawnSync(runtime, ["top", name, "-eo", "pid,args"], { encoding: "utf8" });
+        if (/chromium_headless_shell/.test(processes.stdout)) { browserRunning = true; break; }
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      assert.equal(browserRunning, true, "browser did not start");
+      parent.kill("SIGKILL");
+      await parentClosed;
+      let removed = false;
+      for (let attempt = 0; attempt < 60; attempt++) {
+        if (spawnSync(runtime, ["inspect", name], { encoding: "utf8" }).status !== 0) { removed = true; break; }
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      assert.equal(removed, true, "container survived its harness");
+    } finally {
+      parent.kill("SIGKILL");
+      spawnSync(runtime, ["rm", "--force", name], { stdio: "ignore" });
     }
-    assert.equal(browserRunning, true, "browser did not start");
-    parent.kill("SIGKILL");
-    await parentClosed;
-    let removed = false;
-    for (let attempt = 0; attempt < 60; attempt++) {
-      if (spawnSync(runtime, ["inspect", name], { encoding: "utf8" }).status !== 0) { removed = true; break; }
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    assert.equal(removed, true, "container survived its harness");
-  } finally {
-    parent.kill("SIGKILL");
-    spawnSync(runtime, ["rm", "--force", name], { stdio: "ignore" });
-  }
+  })));
 });
