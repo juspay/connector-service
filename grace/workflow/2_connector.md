@@ -282,7 +282,13 @@ init ─ S0 ─┬─ S1 wave (links common | links × unit | hs_scout) ─ S1m 
 
 There is no test lane. Test *data* is written by S4 itself (`2.3b_codegen_unit.md` Phase 2t) into the
 connector's committed `connector_specs/` JSON, from plan §8. Nothing in this run designs a case, renders a
-request or stages a harness root — the repo's harness owns all three, and the data it runs is in the diff.
+request or stages a harness root — the repo's harness owns all three, and the data it runs is
+in the diff. **Hard rule: a run never edits shared test infrastructure.** Never stage, and never edit,
+anything under `crates/internal/integration-tests/src/harness/`, nor `src/bin/check_connector_specs.rs`,
+nor `src/webhook_signatures.rs`, nor any `global_suites/` file; and never create
+`connector_specs/<connector>/connector_specific_scenarios.json`. A connector run that changes how every
+connector's tests load has escaped its scope — raise it as a finding and let it be reviewed as
+infrastructure, in its own PR.
 ```
 
 ### S0 — `2.0_preflight.md` (foreground)
