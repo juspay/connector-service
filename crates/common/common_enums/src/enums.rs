@@ -30,6 +30,8 @@ pub enum CurrencyError {
 #[serde(rename_all = "UPPERCASE")]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum Currency {
+    #[default]
+    Unspecified,
     AED,
     AFN,
     ALL,
@@ -175,7 +177,6 @@ pub enum Currency {
     TZS,
     UAH,
     UGX,
-    #[default]
     USD,
     UYU,
     UZS,
@@ -885,6 +886,96 @@ pub enum BankNames {
     Seb,
     Swedbank,
     MockUkPayments,
+    Abanca,
+    AlmBrand,
+    AlphaFx,
+    ArbejdernesLandsbank,
+    ArbuthnotLatham,
+    BancoPopular,
+    BankPocztowy,
+    Bankia,
+    BnBank,
+    CaterAllen,
+    ChelseaBuildingSociety,
+    Citadele,
+    CoopPank,
+    CooperativeBank,
+    Cumberland,
+    DabBank,
+    DjurslandsBank,
+    Dnb,
+    EtneSparebank,
+    FanaSparebank,
+    FidorBank,
+    FlekkefjordSparebank,
+    ForexBank,
+    HaugesundSparebank,
+    HoareAndCo,
+    IcaBanken,
+    JyskeBank,
+    KleinwortHambros,
+    KlpBanken,
+    Kreditbanken,
+    LandkredittBank,
+    Lansforsakringar,
+    LhvPank,
+    LillesandsSparebank,
+    Luminor,
+    LusterSparebank,
+    MetroBank,
+    NordfynsBank,
+    NordjyskeBank,
+    Norisbank,
+    NykreditBank,
+    ObosBanken,
+    OrangeFinanse,
+    ParetoBank,
+    PkoBankPolski,
+    RingkjobingLandbobank,
+    Sbanken,
+    SiauliuBankas,
+    SiliconValleyBank,
+    Skandiabanken,
+    SkjernBank,
+    SkudenesOgAakraSparebank,
+    SogneOgGreipstadSparebank,
+    SparNordBank,
+    SparbankenSyd,
+    SpardaBank,
+    SpareBank1,
+    SparebankenMore,
+    SparebankenOst,
+    SparebankenSognOgFjordane,
+    SparebankenSor,
+    SparebankenVest,
+    SparekassenDanmark,
+    SparekassenSjaellandFyn,
+    Spareskillingsbanken,
+    Sydbank,
+    VanquisBank,
+    VestjyskBank,
+    VossSparebank,
+    YorkshireBuildingSociety,
+    SpareBank1Gudbrandsdal,
+    SpareBank1HallingdalValdres,
+    SpareBank1LomOgSkjak,
+    SpareBank1Modum,
+    SpareBank1Nordmore,
+    SpareBank1RingerikeHadeland,
+    SpareBank1Smn,
+    SpareBank1SrBank,
+    SpareBank1SoreSunnmore,
+    SpareBank1SorostNorgeBv,
+    SpareBank1SorostNorgeTelemark,
+    SpareBank1OstfoldAkershus,
+    SpareBank1Ostlandet,
+    CitiHandlowy,
+    DeutscheBankPolska,
+    IngBankSlaski,
+    IngDiba,
+    NordeaDirect,
+    SantanderUk,
+    SwedbankSparbankerna,
 }
 
 /// Specifies the regulated name for a card network, primarily used for US debit card routing regulations.
@@ -953,6 +1044,7 @@ impl Currency {
 
     pub fn iso_4217(self) -> &'static str {
         match self {
+            Self::Unspecified => "000",
             Self::AED => "784",
             Self::AFN => "971",
             Self::ALL => "008",
@@ -1549,6 +1641,7 @@ pub enum PaymentMethodType {
     Paymaya,
     Payhere,
     QwikcilverWallet,
+    Ted,
 }
 
 impl PaymentMethodType {
@@ -2814,6 +2907,9 @@ pub enum TransactionStatus {
     /// Informational Only; 3DS Requestor challenge preference acknowledged.
     #[serde(rename = "I")]
     InformationOnly,
+    /// Challenge using Secure Payment Confirmation (SPC); Available for supporting EMV 3DS 2.3.1 and later versions.
+    #[serde(rename = "S")]
+    SecurePaymentConfirmationRequired,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, ToSchema)]
@@ -3172,10 +3268,12 @@ pub enum MitCategory {
     Installment,
     /// Merchant-initiated transaction using stored credentials, but not tied to a fixed schedule
     Unscheduled,
-    /// Merchant-initiated payments that happen at regular intervals (usually the same amount each time).
+    /// Merchant-initiated payments at regular intervals with a variable amount, such as utility bills (standing orders).
     Recurring,
     /// A retried MIT after a previous transaction failed or was declined.
     Resubmission,
+    /// Merchant-initiated payments of a fixed amount at a fixed interval, such as a subscription or membership.
+    Subscription,
 }
 
 /// Padding schemes used for cryptographic operations

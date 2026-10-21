@@ -12,12 +12,14 @@ use domain_types::{
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{
         ApplePayPaymentData, ApplePayWalletData, Card, CardDetailsForNetworkTransactionId,
-        GooglePayWalletData, GpayTokenizationData, PaymentMethodData, PaymentMethodDataTypes,
-        RawCardNumber, WalletData,
+        DecryptedWalletTokenDetailsForNetworkTransactionId, GooglePayWalletData,
+        GpayTokenizationData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        TokenSource, WalletData,
     },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_request_types::AuthenticationData,
+    utils::CardIssuer,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -237,8 +239,8 @@ pub struct Revolv3ApplePayDecryptedPackage {
     application_primary_account_number: Secret<String>,
     application_expiration_date: Secret<String>,
     electronic_commerce_indicator: Option<String>,
-    online_payment_cryptogram: Secret<String>,
-    device_manufacturer_identifier: Secret<String>,
+    online_payment_cryptogram: Option<Secret<String>>,
+    device_manufacturer_identifier: Option<Secret<String>>,
     card_brand: Option<Revolv3CardBrand>,
 }
 
@@ -251,7 +253,6 @@ pub struct GooglePayPaymentMethodData {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Revolv3GooglePayData {
-    google_pay_payment_data_response: Option<Secret<String>>,
     google_pay_decrypted_package: Revolv3GooglePayDecryptedPackage,
 }
 
@@ -291,6 +292,21 @@ impl Revolv3CardBrand {
             _ => None,
         }
     }
+
+    fn from_card_issuer(card_issuer: CardIssuer) -> Option<Self> {
+        match card_issuer {
+            CardIssuer::Visa => Some(Self::Visa),
+            CardIssuer::Master => Some(Self::Mastercard),
+            CardIssuer::AmericanExpress => Some(Self::Amex),
+            CardIssuer::Discover => Some(Self::Discover),
+            CardIssuer::JCB => Some(Self::Jcb),
+            CardIssuer::DinersClub => Some(Self::Diners),
+            CardIssuer::Maestro
+            | CardIssuer::CarteBlanche
+            | CardIssuer::CartesBancaires
+            | CardIssuer::UnionPay => None,
+        }
+    }
 }
 
 impl TryFrom<&ApplePayWalletData> for Revolv3ApplePayDecryptedPackage {
@@ -321,17 +337,21 @@ impl TryFrom<&ApplePayWalletData> for Revolv3ApplePayDecryptedPackage {
             ),
             application_expiration_date,
             electronic_commerce_indicator: decrypted_data.payment_data.eci_indicator.clone(),
-            online_payment_cryptogram: decrypted_data
-                .payment_data
-                .online_payment_cryptogram
-                .clone(),
-            device_manufacturer_identifier: decrypted_data
-                .get_device_manufacturer_identifier()
-                .change_context(IntegrationError::MissingRequiredField {
-                    field_name:
-                        "payment_method_data.wallet.apple_pay.device_manufacturer_identifier",
-                    context: Default::default(),
-                })?,
+            online_payment_cryptogram: Some(
+                decrypted_data
+                    .payment_data
+                    .online_payment_cryptogram
+                    .clone(),
+            ),
+            device_manufacturer_identifier: Some(
+                decrypted_data
+                    .get_device_manufacturer_identifier()
+                    .change_context(IntegrationError::MissingRequiredField {
+                        field_name:
+                            "payment_method_data.wallet.apple_pay.device_manufacturer_identifier",
+                        context: Default::default(),
+                    })?,
+            ),
             card_brand: Revolv3CardBrand::from_wallet_network(
                 &apple_pay_data.payment_method.network,
             ),
@@ -369,6 +389,63 @@ impl TryFrom<&GooglePayWalletData> for Revolv3GooglePayDecryptedPackage {
             electronic_commerce_indicator: decrypted_data.eci_indicator.clone(),
             online_payment_cryptogram: decrypted_data.cryptogram.clone(),
             card_brand: Revolv3CardBrand::from_wallet_network(&google_pay_data.info.card_network),
+        })
+    }
+}
+
+impl TryFrom<&DecryptedWalletTokenDetailsForNetworkTransactionId>
+    for Revolv3ApplePayDecryptedPackage
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        token: &DecryptedWalletTokenDetailsForNetworkTransactionId,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            application_primary_account_number: Secret::new(token.decrypted_token.get_card_no()),
+            application_expiration_date: token
+                .get_card_expiry_month_year_2_digit_with_delimiter(String::new())?,
+            electronic_commerce_indicator: token.eci.clone(),
+            online_payment_cryptogram: None,
+            device_manufacturer_identifier: token.device_manufacturer_identifier.clone(),
+            card_brand: token
+                .card_network
+                .as_ref()
+                .and_then(|network| Revolv3CardBrand::from_wallet_network(&network.to_string()))
+                .or_else(|| {
+                    token
+                        .get_card_issuer()
+                        .ok()
+                        .and_then(Revolv3CardBrand::from_card_issuer)
+                }),
+        })
+    }
+}
+
+impl TryFrom<&DecryptedWalletTokenDetailsForNetworkTransactionId>
+    for Revolv3GooglePayDecryptedPackage
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        token: &DecryptedWalletTokenDetailsForNetworkTransactionId,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            application_primary_account_number: Secret::new(token.decrypted_token.get_card_no()),
+            application_expiration_date: token
+                .get_card_expiry_month_year_2_digit_with_delimiter(String::new())?,
+            electronic_commerce_indicator: None,
+            online_payment_cryptogram: None,
+            card_brand: token
+                .card_network
+                .as_ref()
+                .and_then(|network| Revolv3CardBrand::from_wallet_network(&network.to_string()))
+                .or_else(|| {
+                    token
+                        .get_card_issuer()
+                        .ok()
+                        .and_then(Revolv3CardBrand::from_card_issuer)
+                }),
         })
     }
 }
@@ -485,7 +562,6 @@ impl<T: PaymentMethodDataTypes> PaymentMethodSpecificRequest<T> {
             billing: Revolv3BillingDetails::from_payment_flow_data(common_data),
             method: Revolv3PaymentMethodDetails::GooglePay(GooglePayPaymentMethodData {
                 google_pay: Revolv3GooglePayData {
-                    google_pay_payment_data_response: None,
                     google_pay_decrypted_package: Revolv3GooglePayDecryptedPackage::try_from(
                         google_pay_data,
                     )?,
@@ -603,7 +679,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .connector
                 .amount_converter
                 .convert(
-                    item.router_data.request.minor_amount,
+                    item.router_data.request.amount.amount,
                     item.router_data.request.currency,
                 )
                 .change_context(IntegrationError::AmountConversionFailed {
@@ -672,6 +748,8 @@ pub struct Revolv3AuthorizeResponse {
     pub response_code: Option<String>,
     pub processor_transaction_id: Option<String>,
     pub auth_code: Option<String>,
+    pub revolv3_response_code: Option<String>,
+    pub revolv3_response_message: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -687,6 +765,8 @@ pub struct Revolv3SaleResponse {
     pub response_code: Option<String>,
     pub processor_transaction_id: Option<String>,
     pub auth_code: Option<String>,
+    pub revolv3_response_code: Option<String>,
+    pub revolv3_response_message: Option<String>,
 }
 
 pub struct DerivedPaymentResponse {
@@ -703,14 +783,19 @@ impl Revolv3SaleResponse {
         let response = if domain_types::utils::is_payment_failure(status) {
             Err(domain_types::router_data::ErrorResponse {
                 code: self
-                    .response_code
+                    .revolv3_response_code
                     .clone()
+                    .or_else(|| self.response_code.clone())
                     .unwrap_or(common_utils::consts::NO_ERROR_CODE.to_string()),
                 message: self
-                    .response_message
+                    .revolv3_response_message
                     .clone()
+                    .or_else(|| self.response_message.clone())
                     .unwrap_or(common_utils::consts::NO_ERROR_MESSAGE.to_string()),
-                reason: self.response_message.clone(),
+                reason: self
+                    .revolv3_response_message
+                    .clone()
+                    .or_else(|| self.response_message.clone()),
                 status_code,
                 attempt_status: None,
                 connector_transaction_id: Some(self.invoice_id.to_string()),
@@ -795,14 +880,19 @@ impl Revolv3AuthorizeResponse {
                 status: AttemptStatus::Failure,
                 response: Err(domain_types::router_data::ErrorResponse {
                     code: self
-                        .response_code
+                        .revolv3_response_code
                         .clone()
+                        .or_else(|| self.response_code.clone())
                         .unwrap_or(common_utils::consts::NO_ERROR_CODE.to_string()),
                     message: self
-                        .response_message
+                        .revolv3_response_message
                         .clone()
+                        .or_else(|| self.response_message.clone())
                         .unwrap_or(common_utils::consts::NO_ERROR_MESSAGE.to_string()),
-                    reason: self.response_message.clone(),
+                    reason: self
+                        .revolv3_response_message
+                        .clone()
+                        .or_else(|| self.response_message.clone()),
                     status_code,
                     attempt_status: None,
                     connector_transaction_id: None,
@@ -894,6 +984,8 @@ pub struct Revolv3InvoiceAttempt {
     pub invoice_attempt_date: String,
     pub response_code: Option<String>,
     pub response_message: Option<String>,
+    pub revolv3_response_code: Option<String>,
+    pub revolv3_response_message: Option<String>,
 }
 
 fn get_latest_attempt(
@@ -922,11 +1014,21 @@ impl TryFrom<ResponseRouterData<Revolv3PaymentSyncResponse, Self>>
         let status = AttemptStatus::from(&item.response.invoice_status);
         let response = if domain_types::utils::is_payment_failure(status) {
             let latest_attempt = get_latest_attempt(&item.response.invoice_attempts);
-            let error_message = latest_attempt.and_then(|attempt| attempt.response_message.clone());
+            let error_message = latest_attempt.and_then(|attempt| {
+                attempt
+                    .revolv3_response_message
+                    .clone()
+                    .or_else(|| attempt.response_message.clone())
+            });
 
             Err(domain_types::router_data::ErrorResponse {
                 code: latest_attempt
-                    .and_then(|attempt| attempt.response_code.clone())
+                    .and_then(|attempt| {
+                        attempt
+                            .revolv3_response_code
+                            .clone()
+                            .or_else(|| attempt.response_code.clone())
+                    })
                     .unwrap_or(common_utils::consts::NO_ERROR_CODE.to_string()),
                 message: error_message
                     .clone()
@@ -1012,7 +1114,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .connector
                 .amount_converter
                 .convert(
-                    item.router_data.request.minor_refund_amount,
+                    item.router_data.request.refund_amount.amount,
                     item.router_data.request.currency,
                 )
                 .change_context(IntegrationError::AmountConversionFailed {
@@ -1070,13 +1172,21 @@ impl TryFrom<ResponseRouterData<Revolv3RefundResponse, Self>>
         let refund_status = RefundStatus::from(&item.response.invoice.invoice_status);
         let response = if is_refund_failure(refund_status) {
             let latest_attempt = get_latest_attempt(&item.response.refunds);
-            let error_message = latest_attempt
-                .as_ref()
-                .and_then(|attempt| attempt.response_message.clone());
+            let error_message = latest_attempt.as_ref().and_then(|attempt| {
+                attempt
+                    .revolv3_response_message
+                    .clone()
+                    .or_else(|| attempt.response_message.clone())
+            });
             Err(domain_types::router_data::ErrorResponse {
                 code: latest_attempt
                     .as_ref()
-                    .and_then(|attempt| attempt.response_code.clone())
+                    .and_then(|attempt| {
+                        attempt
+                            .revolv3_response_code
+                            .clone()
+                            .or_else(|| attempt.response_code.clone())
+                    })
                     .unwrap_or(common_utils::consts::NO_ERROR_CODE.to_string()),
                 message: error_message
                     .clone()
@@ -1131,13 +1241,21 @@ impl TryFrom<ResponseRouterData<Revolv3RefundSyncResponse, Self>>
         let refund_status = RefundStatus::from(&item.response.invoice_status);
         let response = if is_refund_failure(refund_status) {
             let latest_attempt = get_latest_attempt(&item.response.invoice_attempts);
-            let error_message = latest_attempt
-                .as_ref()
-                .and_then(|attempt| attempt.response_message.clone());
+            let error_message = latest_attempt.as_ref().and_then(|attempt| {
+                attempt
+                    .revolv3_response_message
+                    .clone()
+                    .or_else(|| attempt.response_message.clone())
+            });
             Err(domain_types::router_data::ErrorResponse {
                 code: latest_attempt
                     .as_ref()
-                    .and_then(|attempt| attempt.response_code.clone())
+                    .and_then(|attempt| {
+                        attempt
+                            .revolv3_response_code
+                            .clone()
+                            .or_else(|| attempt.response_code.clone())
+                    })
                     .unwrap_or(common_utils::consts::NO_ERROR_CODE.to_string()),
                 message: error_message
                     .clone()
@@ -1199,7 +1317,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .connector
                     .amount_converter
                     .convert(
-                        item.router_data.request.minor_amount_to_capture,
+                        item.router_data.request.amount_to_capture.amount,
                         item.router_data.request.currency,
                     )
                     .change_context(IntegrationError::AmountConversionFailed {
@@ -1268,7 +1386,7 @@ where
             .map(|(minor_amount, currency)| {
                 item.connector
                     .amount_converter
-                    .convert(minor_amount, currency)
+                    .convert(minor_amount.amount, currency)
             })
             .transpose()
             .change_context(IntegrationError::AmountConversionFailed {
@@ -1349,7 +1467,7 @@ pub struct Revolv3RepeatAuthorizeRequest<T: PaymentMethodDataTypes> {
 
 impl<T: PaymentMethodDataTypes> Revolv3PaymentMethodData<T> {
     pub fn set_credit_card_data_for_ntid(
-        card: CardDetailsForNetworkTransactionId,
+        card: CardDetailsForNetworkTransactionId<T>,
         common_data: &PaymentFlowData,
     ) -> Result<Self, error_stack::Report<IntegrationError>> {
         Ok(Self {
@@ -1357,10 +1475,46 @@ impl<T: PaymentMethodDataTypes> Revolv3PaymentMethodData<T> {
                 .with_required_full_name(card.card_holder_name.clone())?,
             method: Revolv3PaymentMethodDetails::Ntid(NtidCreditCardPaymentMethodData {
                 credit_card: Revolv3NtidCreditCardData {
-                    payment_account_number: card.card_number.clone(),
+                    payment_account_number: card.card_number.try_card_number("revolv3")?,
                     expiration_date: card.get_expiry_date_as_mmyy()?,
                 },
             }),
+        })
+    }
+
+    pub fn set_wallet_token_data_for_ntid(
+        token: &DecryptedWalletTokenDetailsForNetworkTransactionId,
+        common_data: &PaymentFlowData,
+    ) -> Result<Self, error_stack::Report<IntegrationError>> {
+        let method = match token.token_source {
+            Some(TokenSource::ApplePay) => {
+                Revolv3PaymentMethodDetails::ApplePay(ApplePayPaymentMethodData {
+                    apple_pay: Revolv3ApplePayData {
+                        apple_pay_decrypted_package: Revolv3ApplePayDecryptedPackage::try_from(
+                            token,
+                        )?,
+                    },
+                })
+            }
+            Some(TokenSource::GooglePay) => {
+                Revolv3PaymentMethodDetails::GooglePay(GooglePayPaymentMethodData {
+                    google_pay: Revolv3GooglePayData {
+                        google_pay_decrypted_package: Revolv3GooglePayDecryptedPackage::try_from(
+                            token,
+                        )?,
+                    },
+                })
+            }
+            None => Err(IntegrationError::MissingRequiredField {
+                field_name: "payment_method_data.decrypted_wallet_token.token_source",
+                context: Default::default(),
+            })?,
+        };
+
+        Ok(Self {
+            billing: Revolv3BillingDetails::from_payment_flow_data(common_data)
+                .with_required_full_name(token.card_holder_name.clone())?,
+            method,
         })
     }
 }
@@ -1409,6 +1563,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     &item.router_data.resource_common_data,
                 )?)
             }
+            PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(
+                ref wallet_token,
+            ) => Some(Revolv3PaymentMethodData::set_wallet_token_data_for_ntid(
+                wallet_token,
+                &item.router_data.resource_common_data,
+            )?),
             // The stored payment method is addressed by the id in the URL path.
             PaymentMethodData::MandatePayment => None,
             _ => Err(IntegrationError::NotImplemented(
@@ -1422,7 +1582,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .connector
                 .amount_converter
                 .convert(
-                    item.router_data.request.minor_amount,
+                    item.router_data.request.amount.amount,
                     item.router_data.request.currency,
                 )
                 .change_context(IntegrationError::AmountConversionFailed {
@@ -1544,6 +1704,41 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         },
                     }),
                 }
+            }
+            PaymentMethodData::Wallet(wallet_data) => {
+                let common_data = &item.router_data.resource_common_data;
+                let billing = Revolv3BillingDetails::from_payment_flow_data(common_data);
+
+                let method = match wallet_data {
+                    WalletData::ApplePay(apple_pay_data) => {
+                        Revolv3PaymentMethodDetails::ApplePay(ApplePayPaymentMethodData {
+                            apple_pay: Revolv3ApplePayData {
+                                apple_pay_decrypted_package:
+                                    Revolv3ApplePayDecryptedPackage::try_from(
+                                        apple_pay_data.as_ref(),
+                                    )?,
+                            },
+                        })
+                    }
+                    WalletData::GooglePay(google_pay_data) => {
+                        Revolv3PaymentMethodDetails::GooglePay(GooglePayPaymentMethodData {
+                            google_pay: Revolv3GooglePayData {
+                                google_pay_decrypted_package:
+                                    Revolv3GooglePayDecryptedPackage::try_from(
+                                        google_pay_data.as_ref(),
+                                    )?,
+                            },
+                        })
+                    }
+                    _ => Err(IntegrationError::NotImplemented(
+                        domain_types::utils::get_unimplemented_payment_method_error_message(
+                            "revolv3",
+                        ),
+                        Default::default(),
+                    ))?,
+                };
+
+                Revolv3PaymentMethodData { billing, method }
             }
             _ => Err(IntegrationError::NotImplemented(
                 domain_types::utils::get_unimplemented_payment_method_error_message("revolv3"),

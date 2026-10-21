@@ -1,12 +1,12 @@
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
-use super::requests::CapMethod;
+use crate::connectors::jpmorgan::requests;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct JpmorganAuthUpdateResponse {
     pub access_token: Secret<String>,
-    pub scope: String,
+    pub scope: Option<String>,
     pub token_type: String,
     pub expires_in: i64,
 }
@@ -17,6 +17,19 @@ pub struct JpmorganErrorResponse {
     pub response_status: JpmorganTransactionStatus,
     pub response_code: String,
     pub response_message: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct JpmorganOAuthErrorResponse {
+    pub error: String,
+    pub error_description: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum JpmorganApiErrorResponse {
+    Payment(JpmorganErrorResponse),
+    OAuth(JpmorganOAuthErrorResponse),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -57,7 +70,7 @@ pub struct JpmorganPaymentsResponse {
     pub response_code: String,
     pub response_message: Option<String>,
     pub payment_method_type: Option<PaymentMethodType>,
-    pub capture_method: Option<CapMethod>,
+    pub capture_method: Option<requests::CapMethod>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -93,6 +106,7 @@ pub struct NetworkResponse {
     pub address_verification_result_code: Option<Secret<String>>,
     pub card_verification_result_code: Option<Secret<String>>,
     pub network_transaction_id: Option<String>,
+    pub transaction_link_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -107,7 +121,7 @@ pub struct ExpiryResponse {
 pub struct CardTypeIndicators {
     pub issuance_country_code: Option<Secret<String>>,
     pub is_durbin_regulated: Option<bool>,
-    pub card_product_types: Secret<Vec<String>>,
+    pub card_product_types: Option<Secret<Vec<String>>>,
 }
 
 #[derive(Debug, Serialize, Default, Deserialize, Clone)]
@@ -165,7 +179,7 @@ pub struct JpmorganRefundResponse {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct JpmorganClientAuthResponse {
     pub access_token: Secret<String>,
-    pub scope: String,
+    pub scope: Option<String>,
     pub token_type: String,
     pub expires_in: i64,
 }

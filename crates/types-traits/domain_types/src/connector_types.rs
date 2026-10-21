@@ -161,7 +161,6 @@ pub enum ConnectorEnum {
     Qwikcilver,
     Flywire,
     Affirm,
-    Kount,
     Reddot,
     Givepayments,
     Grabpay,
@@ -256,16 +255,20 @@ pub enum AuthenticatorConnectorEnum {
 )]
 #[strum(serialize_all = "snake_case")]
 pub enum PayoutConnectorEnum {
+    Nuvei,
     Loonio,
     Paypal,
     Itaubank,
+    Stripe,
     Deutschebank,
     Worldpayxml,
     Cybersource,
+    Gigadat,
     Santander,
     Truelayer,
     Trustly,
     GotymeSanlam,
+    Mifinity,
 }
 
 impl TryFrom<ConnectorEnum> for PayoutConnectorEnum {
@@ -273,13 +276,17 @@ impl TryFrom<ConnectorEnum> for PayoutConnectorEnum {
 
     fn try_from(value: ConnectorEnum) -> Result<Self, Self::Error> {
         match value {
+            ConnectorEnum::Nuvei => Ok(Self::Nuvei),
             ConnectorEnum::Loonio => Ok(Self::Loonio),
             ConnectorEnum::Paypal => Ok(Self::Paypal),
             ConnectorEnum::Itaubank => Ok(Self::Itaubank),
+            ConnectorEnum::Stripe => Ok(Self::Stripe),
             ConnectorEnum::Worldpayxml => Ok(Self::Worldpayxml),
             ConnectorEnum::Cybersource => Ok(Self::Cybersource),
+            ConnectorEnum::Gigadat => Ok(Self::Gigadat),
             ConnectorEnum::Truelayer => Ok(Self::Truelayer),
             ConnectorEnum::Trustly => Ok(Self::Trustly),
+            ConnectorEnum::Mifinity => Ok(Self::Mifinity),
             _ => Err(IntegrationError::InvalidDataFormat {
                 field_name: "connector",
                 context: IntegrationErrorContext::default(),
@@ -314,16 +321,20 @@ impl ForeignTryFrom<AuthType> for PayoutConnectorEnum {
 
     fn foreign_try_from(config: AuthType) -> Result<Self, error_stack::Report<Self::Error>> {
         match config {
+            AuthType::Nuvei(_) => Ok(Self::Nuvei),
             AuthType::Paypal(_) => Ok(Self::Paypal),
             AuthType::Loonio(_) => Ok(Self::Loonio),
             AuthType::Itaubank(_) => Ok(Self::Itaubank),
+            AuthType::Stripe(_) => Ok(Self::Stripe),
             AuthType::Deutschebank(_) => Ok(Self::Deutschebank),
             AuthType::Worldpayxml(_) => Ok(Self::Worldpayxml),
             AuthType::Cybersource(_) => Ok(Self::Cybersource),
+            AuthType::Gigadat(_) => Ok(Self::Gigadat),
             AuthType::Santander(_) => Ok(Self::Santander),
             AuthType::Truelayer(_) => Ok(Self::Truelayer),
             AuthType::Trustly(_) => Ok(Self::Trustly),
             AuthType::GotymeSanlam(_) => Ok(Self::GotymeSanlam),
+            AuthType::Mifinity(_) => Ok(Self::Mifinity),
             _ => Err(error_stack::Report::new(
                 IntegrationError::InvalidDataFormat {
                     field_name: "connector",
@@ -549,7 +560,6 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Hyperswitch => Ok(Self::Hyperswitch),
             grpc_api_types::payments::Connector::Qwikcilver => Ok(Self::Qwikcilver),
             grpc_api_types::payments::Connector::Flywire => Ok(Self::Flywire),
-            grpc_api_types::payments::Connector::Kount => Ok(Self::Kount),
             grpc_api_types::payments::Connector::Tesouro => Ok(Self::Tesouro),
             grpc_api_types::payments::Connector::Glomopay => Ok(Self::Glomopay),
             grpc_api_types::payments::Connector::Givepayments => Ok(Self::Givepayments),
@@ -750,7 +760,7 @@ pub struct PaymentsSyncData {
     pub payment_method_type: Option<PaymentMethodType>,
     pub currency: Currency,
     pub payment_experience: Option<common_enums::PaymentExperience>,
-    pub amount: MinorUnit,
+    pub amount: Money,
     pub all_keys_required: Option<bool>,
     pub integrity_object: Option<PaymentSynIntegrityObject>,
     pub split_payments: Option<SplitPaymentsDetails>,
@@ -831,10 +841,8 @@ pub struct PaymentFlowData {
     pub address: payment_address::PaymentAddress,
     pub auth_type: AuthenticationType,
     pub connector_feature_data: Option<SecretSerdeValue>,
-    pub amount_captured: Option<i64>,
-    // minor amount for amount frameworka
-    pub minor_amount_captured: Option<MinorUnit>,
-    pub minor_amount_capturable: Option<MinorUnit>,
+    pub amount_captured: Option<Money>,
+    pub amount_capturable: Option<Money>,
     pub amount: Option<Money>,
     pub access_token: Option<ServerAuthenticationTokenResponseData>,
     pub session_token: Option<String>,
@@ -859,8 +867,8 @@ pub struct PaymentFlowData {
     pub connector_response: Option<ConnectorResponseData>,
     pub recurring_mandate_payment_data: Option<RecurringMandatePaymentData>,
     pub order_details: Option<Vec<payment_address::OrderDetailsWithAmount>>,
-    // stores the authorized amount in case of partial authorization
-    pub minor_amount_authorized: Option<MinorUnit>,
+    /// Stores the authorized amount in case of partial authorization.
+    pub amount_authorized: Option<Money>,
     pub l2_l3_data: Option<Box<L2L3Data>>,
     /// Request ID generated by the caller system for the connector's API call.
     /// Required by connectors (e.g. 2C2P PACO) that demand a per-request
@@ -1611,7 +1619,7 @@ pub struct PaymentVoidData {
     pub integrity_object: Option<PaymentVoidIntegrityObject>,
     pub raw_connector_response: Option<String>,
     pub browser_info: Option<BrowserInformation>,
-    pub amount: Option<MinorUnit>,
+    pub amount: Option<Money>,
     pub currency: Option<Currency>,
     pub connector_feature_data: Option<SecretSerdeValue>,
     pub metadata: Option<SecretSerdeValue>,
@@ -1665,6 +1673,8 @@ pub struct PaymentMethodEligibilityData {
     /// when known. Mirrors `GetPaymentMethodData`'s identifier so connectors
     /// can reuse the same lookup as `GetPaymentMethod`.
     pub connector_payment_method_id: Option<String>,
+    /// Tokenized payment-method reference.
+    pub payment_method_token: Option<String>,
     /// Market/country the eligibility check is for. BNPL eligibility is
     /// country-gated, so connectors operating per-market rely on this.
     /// (Billing/shipping address and order line items are carried on the
@@ -1751,8 +1761,8 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     /// get_tax_on_surcharge_amount()
     /// get_total_surcharge_amount() // returns surcharge_amount + tax_on_surcharge_amount
     /// ```
-    pub amount: MinorUnit,
-    pub order_tax_amount: Option<MinorUnit>,
+    pub amount: Money,
+    pub order_tax_amount: Option<Money>,
     pub surcharge_amount: Option<Money>,
     pub email: Option<Email>,
     pub customer_document_details: Option<CustomerDocumentDetails>,
@@ -1788,13 +1798,11 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     /// Unified split settlement (supersedes split_payments). Boxed to keep the
     /// enclosing request (and its RouterDataV2 clones) small on the async stack.
     pub split_settlement: Option<Box<SplitSettlement>>,
-    // New amount for amount frame work
-    pub minor_amount: MinorUnit,
     /// Merchant's identifier for the payment/invoice. This will be sent to the connector
     /// if the connector provides support to accept multiple reference ids.
     /// In case the connector supports only one reference id, Hyperswitch's Payment ID will be sent as reference.
     pub merchant_order_id: Option<String>,
-    pub shipping_cost: Option<MinorUnit>,
+    pub shipping_cost: Option<Money>,
     pub merchant_account_id: Option<String>,
     pub integrity_object: Option<AuthoriseIntegrityObject>,
     pub merchant_config_currency: Option<Currency>,
@@ -1832,6 +1840,26 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub customer: Option<CustomerInfo>,
     /// Merchant business country, used for country-specific connector rules.
     pub business_country: Option<common_enums::CountryAlpha2>,
+    /// Opt in to address verification when billing details are available.
+    /// Only `Some(true)` requests AVS; connectors decide how to send it.
+    pub enable_avs_check: Option<bool>,
+}
+
+/// A request sets up a mandate with the customer present when the shopper has
+/// consented — through an explicit acceptance, or through mandate details supplied
+/// with the request — and the stated intent is to charge again off-session.
+///
+/// This lives in one place because every request type that asks the question has to
+/// answer it the same way. They did not: one of the three omitted the
+/// `setup_mandate_details` half, and a connector reading it would have treated a
+/// mandate set up that way as merchant-initiated.
+pub fn is_customer_initiated_mandate(
+    customer_acceptance: Option<&CustomerAcceptance>,
+    setup_mandate_details: Option<&MandateData>,
+    setup_future_usage: Option<common_enums::FutureUsage>,
+) -> bool {
+    (customer_acceptance.is_some() || setup_mandate_details.is_some())
+        && setup_future_usage == Some(common_enums::FutureUsage::OffSession)
 }
 
 impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
@@ -1936,8 +1964,7 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
     }
 
     pub fn is_mandate_payment(&self) -> bool {
-        ((self.customer_acceptance.is_some() || self.setup_mandate_details.is_some())
-            && self.setup_future_usage == Some(common_enums::FutureUsage::OffSession))
+        self.is_customer_initiated_mandate_payment()
             || self
                 .mandate_id
                 .as_ref()
@@ -2014,8 +2041,11 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
     // }
 
     pub fn is_customer_initiated_mandate_payment(&self) -> bool {
-        (self.customer_acceptance.is_some() || self.setup_mandate_details.is_some())
-            && self.setup_future_usage == Some(common_enums::FutureUsage::OffSession)
+        is_customer_initiated_mandate(
+            self.customer_acceptance.as_ref(),
+            self.setup_mandate_details.as_ref(),
+            self.setup_future_usage,
+        )
     }
 
     pub fn get_metadata_as_object(&self) -> Option<SecretSerdeValue> {
@@ -2135,6 +2165,10 @@ pub enum PaymentsResponseData {
         connector_feature_data: Option<serde_json::Value>,
         connector_response_reference_id: Option<String>,
         status_code: u16,
+        /// Set when the Authenticate leg itself charged the payment (e.g. frictionless 3DS)
+        mandate_reference: Option<Box<MandateReference>>,
+        network_txn_id: Option<String>,
+        network_txn_link_id: Option<String>,
     },
     PostAuthenticateResponse {
         authentication_data: Option<router_request_types::AuthenticationData>,
@@ -2201,7 +2235,7 @@ pub enum CaptureSyncResponse {
 
 #[derive(Debug, Clone)]
 pub struct PaymentCreateOrderData {
-    pub amount: MinorUnit,
+    pub amount: Money,
     pub currency: Currency,
     pub integrity_object: Option<CreateOrderIntegrityObject>,
     pub metadata: Option<SecretSerdeValue>,
@@ -2237,7 +2271,7 @@ pub struct PaymentMethodTokenizationData<T: PaymentMethodDataTypes> {
     pub payment_method_data: PaymentMethodData<T>,
     pub browser_info: Option<BrowserInformation>,
     pub currency: Currency,
-    pub amount: MinorUnit,
+    pub amount: Money,
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub customer_acceptance: Option<CustomerAcceptance>,
     pub setup_future_usage: Option<common_enums::FutureUsage>,
@@ -2251,8 +2285,11 @@ pub struct PaymentMethodTokenizationData<T: PaymentMethodDataTypes> {
 
 impl<T: PaymentMethodDataTypes> PaymentMethodTokenizationData<T> {
     pub fn is_customer_initiated_mandate_payment(&self) -> bool {
-        (self.customer_acceptance.is_some() || self.setup_mandate_details.is_some())
-            && self.setup_future_usage == Some(common_enums::FutureUsage::OffSession)
+        is_customer_initiated_mandate(
+            self.customer_acceptance.as_ref(),
+            self.setup_mandate_details.as_ref(),
+            self.setup_future_usage,
+        )
     }
 }
 
@@ -2270,7 +2307,7 @@ pub struct RechargeRequestData {
     pub merchant_request_id: Option<String>,
     pub merchant_recharge_id: Option<String>,
     pub product_id: String,
-    pub amount: MinorUnit,
+    pub amount: Money,
     pub currency: Currency,
     pub description: Option<String>,
     pub payment_method_type: PaymentMethodType,
@@ -2371,7 +2408,7 @@ pub struct RefreshPaymentMethodResponseData {
 #[derive(Debug, Clone)]
 pub struct PaymentsPreAuthenticateData<T: PaymentMethodDataTypes> {
     pub payment_method_data: Option<PaymentMethodData<T>>,
-    pub amount: MinorUnit,
+    pub amount: Money,
     pub email: Option<Email>,
     pub currency: Option<Currency>,
     pub payment_method_type: Option<PaymentMethodType>,
@@ -2463,7 +2500,7 @@ pub enum DeviceChannel {
 #[derive(Debug, Clone)]
 pub struct PaymentsAuthenticateData<T: PaymentMethodDataTypes> {
     pub payment_method_data: Option<PaymentMethodData<T>>,
-    pub amount: MinorUnit,
+    pub amount: Money,
     pub email: Option<Email>,
     pub currency: Option<Currency>,
     pub payment_method_type: Option<PaymentMethodType>,
@@ -2479,9 +2516,27 @@ pub struct PaymentsAuthenticateData<T: PaymentMethodDataTypes> {
     pub domain_data: Option<DomainData>,
     pub sdk_information: Option<SdkInformation>,
     pub device_channel: Option<DeviceChannel>,
+    /// Stored-credential intent, for connectors whose Authenticate leg can charge
+    pub setup_future_usage: Option<common_enums::FutureUsage>,
+    pub customer_acceptance: Option<CustomerAcceptance>,
+    pub enable_partial_authorization: Option<bool>,
+    pub payment_channel: Option<PaymentChannel>,
+    pub billing_descriptor: Option<BillingDescriptor>,
 }
 
 impl<T: PaymentMethodDataTypes> PaymentsAuthenticateData<T> {
+    pub fn is_customer_initiated_mandate_payment(&self) -> bool {
+        // `PaymentsAuthenticateData` has no `setup_mandate_details`: the Authenticate
+        // request contract carries `customer_acceptance` and `setup_future_usage` only
+        // (`payment.proto`, `PaymentMethodAuthenticationServiceAuthenticateRequest`),
+        // so there is no second source of consent to consider on this flow.
+        is_customer_initiated_mandate(
+            self.customer_acceptance.as_ref(),
+            None,
+            self.setup_future_usage,
+        )
+    }
+
     pub fn is_auto_capture(&self) -> Result<bool, Error> {
         match self.capture_method {
             Some(common_enums::CaptureMethod::Automatic)
@@ -2513,7 +2568,11 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthenticateData<T> {
 
 #[derive(Debug, Clone)]
 pub struct PaymentsIncrementalAuthorizationData {
-    pub minor_amount: MinorUnit,
+    /// New total authorized amount, including this increase.
+    pub amount: Money,
+    /// Increase over the current authorized total, in the same currency as amount.
+    pub additional_amount: Option<Money>,
+    pub network_transaction_id: Option<String>,
     pub currency: Currency,
     pub reason: Option<String>,
     pub connector_transaction_id: ResponseId,
@@ -2522,13 +2581,13 @@ pub struct PaymentsIncrementalAuthorizationData {
 
 #[derive(Debug, Clone)]
 pub struct ClientAuthenticationTokenRequestData {
-    pub amount: MinorUnit,
+    pub amount: Money,
     pub currency: Currency,
     pub country: Option<common_enums::CountryAlpha2>,
     pub order_details: Option<Vec<payment_address::OrderDetailsWithAmount>>,
     pub customer: Option<CustomerInfo>,
-    pub order_tax_amount: Option<MinorUnit>,
-    pub shipping_cost: Option<MinorUnit>,
+    pub order_tax_amount: Option<Money>,
+    pub shipping_cost: Option<Money>,
     /// The specific payment method type for which the session token is being generated
     pub payment_method_type: Option<PaymentMethodType>,
     pub webhook_url: Option<String>,
@@ -2560,7 +2619,7 @@ pub enum ThreeDsCompletionIndicator {
 #[derive(Debug, Clone)]
 pub struct PaymentsPostAuthenticateData<T: PaymentMethodDataTypes> {
     pub payment_method_data: Option<PaymentMethodData<T>>,
-    pub amount: MinorUnit,
+    pub amount: Money,
     pub email: Option<Email>,
     pub currency: Option<Currency>,
     pub payment_method_type: Option<PaymentMethodType>,
@@ -2613,7 +2672,7 @@ pub struct ContinueRedirectionResponse {
 
 #[derive(Debug, Clone)]
 pub struct ServerSessionAuthenticationTokenRequestData {
-    pub amount: MinorUnit,
+    pub amount: Money,
     pub currency: Currency,
     pub browser_info: Option<BrowserInformation>,
     pub customer_id: Option<common_utils::id_type::CustomerId>,
@@ -2998,9 +3057,7 @@ pub struct WebhookDetailsResponse {
     pub raw_connector_response: Option<String>,
     pub status_code: u16,
     pub response_headers: Option<http::HeaderMap>,
-    pub amount_captured: Option<i64>,
-    // minor amount for amount framework
-    pub minor_amount_captured: Option<MinorUnit>,
+    pub amount_captured: Option<Money>,
     pub network_txn_id: Option<String>,
     pub payment_method_update: Option<PaymentMethodUpdate>,
     pub sender_payment_instrument_id: Option<String>,
@@ -3043,6 +3100,8 @@ pub struct PaymentWebhookReference {
     pub connector_transaction_id: Option<String>,
     /// Caller-assigned order / invoice ID echoed back by the connector.
     pub merchant_transaction_id: Option<String>,
+    /// PSP-assigned ID from a preprocessing/source step.
+    pub connector_preprocessing_id: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -3126,6 +3185,32 @@ pub struct DisputeWebhookDetailsResponse {
     pub response_headers: Option<http::HeaderMap>,
     /// connector_reason
     pub connector_reason_code: Option<String>,
+    /// Card-network specific details of the dispute
+    pub additional_details: Option<DisputeAdditionalDetails>,
+}
+
+/// Additional details of a dispute, such as card network specific details.
+#[derive(Debug, Clone)]
+pub struct DisputeAdditionalDetails {
+    /// Card network specific details of the dispute.
+    pub network_details: Option<DisputeNetworkDetails>,
+}
+
+/// Card network specific details of a dispute.
+#[derive(Debug, Clone)]
+pub enum DisputeNetworkDetails {
+    /// Visa specific dispute details.
+    Visa {
+        /// Rapid Dispute Resolution details.
+        rapid_dispute_resolution: Option<RapidDisputeResolution>,
+    },
+}
+
+/// Visa Rapid Dispute Resolution details.
+#[derive(Debug, Clone)]
+pub struct RapidDisputeResolution {
+    /// Whether Rapid Dispute Resolution has been applied.
+    pub applied: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -3178,6 +3263,8 @@ pub enum EventType {
     PaymentIntentCancelFailure,
     PaymentIntentAuthorizationSuccess,
     PaymentIntentAuthorizationFailure,
+    PaymentIntentExtendAuthorizationSuccess,
+    PaymentIntentExtendAuthorizationFailure,
     PaymentIntentCaptureSuccess,
     PaymentIntentCaptureFailure,
     PaymentIntentExpired,
@@ -3191,6 +3278,7 @@ pub enum EventType {
     RefundFailure,
     RefundSuccess,
     RefundProcessing,
+    RefundReview,
 
     // Dispute events
     DisputeOpened,
@@ -3250,6 +3338,8 @@ impl EventType {
                 | Self::PaymentIntentCancelFailure
                 | Self::PaymentIntentAuthorizationSuccess
                 | Self::PaymentIntentAuthorizationFailure
+                | Self::PaymentIntentExtendAuthorizationSuccess
+                | Self::PaymentIntentExtendAuthorizationFailure
                 | Self::PaymentIntentCaptureSuccess
                 | Self::PaymentIntentCaptureFailure
                 | Self::PaymentIntentExpired
@@ -3265,7 +3355,11 @@ impl EventType {
     pub fn is_refund_event(&self) -> bool {
         matches!(
             self,
-            Self::RefundFailure | Self::RefundSuccess | Self::RefundProcessing | Self::Refund
+            Self::RefundFailure
+                | Self::RefundSuccess
+                | Self::RefundProcessing
+                | Self::RefundReview
+                | Self::Refund
         )
     }
 
@@ -3361,6 +3455,12 @@ impl ForeignTryFrom<grpc_api_types::payments::WebhookEventType> for EventType {
             grpc_api_types::payments::WebhookEventType::PaymentIntentAuthorizationFailure => {
                 Ok(Self::PaymentIntentAuthorizationFailure)
             }
+            grpc_api_types::payments::WebhookEventType::PaymentIntentExtendAuthorizationSuccess => {
+                Ok(Self::PaymentIntentExtendAuthorizationSuccess)
+            }
+            grpc_api_types::payments::WebhookEventType::PaymentIntentExtendAuthorizationFailure => {
+                Ok(Self::PaymentIntentExtendAuthorizationFailure)
+            }
             grpc_api_types::payments::WebhookEventType::PaymentIntentCaptureSuccess => {
                 Ok(Self::PaymentIntentCaptureSuccess)
             }
@@ -3387,6 +3487,9 @@ impl ForeignTryFrom<grpc_api_types::payments::WebhookEventType> for EventType {
             }
             grpc_api_types::payments::WebhookEventType::WebhookRefundProcessing => {
                 Ok(Self::RefundProcessing)
+            }
+            grpc_api_types::payments::WebhookEventType::WebhookRefundReview => {
+                Ok(Self::RefundReview)
             }
             grpc_api_types::payments::WebhookEventType::WebhookDisputeOpened => {
                 Ok(Self::DisputeOpened)
@@ -3466,6 +3569,12 @@ impl ForeignTryFrom<EventType> for grpc_api_types::payments::WebhookEventType {
             EventType::PaymentIntentAuthorizationFailure => {
                 Ok(Self::PaymentIntentAuthorizationFailure)
             }
+            EventType::PaymentIntentExtendAuthorizationSuccess => {
+                Ok(Self::PaymentIntentExtendAuthorizationSuccess)
+            }
+            EventType::PaymentIntentExtendAuthorizationFailure => {
+                Ok(Self::PaymentIntentExtendAuthorizationFailure)
+            }
             EventType::PaymentIntentCaptureSuccess => Ok(Self::PaymentIntentCaptureSuccess),
             EventType::PaymentIntentCaptureFailure => Ok(Self::PaymentIntentCaptureFailure),
             EventType::PaymentIntentExpired => Ok(Self::PaymentIntentExpired),
@@ -3475,6 +3584,7 @@ impl ForeignTryFrom<EventType> for grpc_api_types::payments::WebhookEventType {
             EventType::RefundFailure => Ok(Self::WebhookRefundFailure),
             EventType::RefundSuccess => Ok(Self::WebhookRefundSuccess),
             EventType::RefundProcessing => Ok(Self::WebhookRefundProcessing),
+            EventType::RefundReview => Ok(Self::WebhookRefundReview),
             EventType::DisputeOpened => Ok(Self::WebhookDisputeOpened),
             EventType::DisputeExpired => Ok(Self::WebhookDisputeExpired),
             EventType::DisputeAccepted => Ok(Self::WebhookDisputeAccepted),
@@ -3612,14 +3722,12 @@ pub struct RefundsData {
     pub connector_refund_id: Option<String>,
     pub customer_id: Option<String>,
     pub currency: Currency,
-    pub payment_amount: i64,
     pub reason: Option<String>,
     pub webhook_url: Option<String>,
-    pub refund_amount: i64,
     pub connector_feature_data: Option<SecretSerdeValue>,
     pub refund_connector_metadata: Option<SecretSerdeValue>,
-    pub minor_payment_amount: MinorUnit,
-    pub minor_refund_amount: MinorUnit,
+    pub payment_amount: Money,
+    pub refund_amount: Money,
     pub refund_status: common_enums::RefundStatus,
     pub merchant_account_id: Option<String>,
     pub capture_method: Option<common_enums::CaptureMethod>,
@@ -3692,8 +3800,7 @@ pub struct MultipleCaptureRequestData {
 
 #[derive(Debug, Default, Clone)]
 pub struct PaymentsCaptureData {
-    pub amount_to_capture: i64,
-    pub minor_amount_to_capture: MinorUnit,
+    pub amount_to_capture: Money,
     pub currency: Currency,
     pub connector_transaction_id: ResponseId,
     pub multiple_capture_data: Option<MultipleCaptureRequestData>,
@@ -3702,7 +3809,7 @@ pub struct PaymentsCaptureData {
     pub browser_info: Option<BrowserInformation>,
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub metadata: Option<SecretSerdeValue>,
-    pub order_tax_amount: Option<MinorUnit>,
+    pub order_tax_amount: Option<Money>,
     pub merchant_order_id: Option<String>,
     pub split_payments: Option<SplitPaymentsDetails>,
     /// Unified split settlement (supersedes split_payments). Boxed to keep the
@@ -3749,7 +3856,6 @@ impl PaymentsCaptureData {
 pub struct SetupMandateRequestData<T: PaymentMethodDataTypes> {
     pub currency: Currency,
     pub payment_method_data: PaymentMethodData<T>,
-    pub amount: Option<i64>,
     pub confirm: bool,
     pub billing_descriptor: Option<BillingDescriptor>,
     pub customer_acceptance: Option<CustomerAcceptance>,
@@ -3770,8 +3876,8 @@ pub struct SetupMandateRequestData<T: PaymentMethodDataTypes> {
     pub complete_authorize_url: Option<String>,
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub merchant_order_id: Option<String>,
-    pub minor_amount: Option<MinorUnit>,
-    pub shipping_cost: Option<MinorUnit>,
+    pub amount: Option<Money>,
+    pub shipping_cost: Option<Money>,
     pub customer_id: Option<CustomerId>,
     pub integrity_object: Option<SetupMandateIntegrityObject>,
     pub payment_channel: Option<PaymentChannel>,
@@ -3859,8 +3965,7 @@ impl<T: PaymentMethodDataTypes> SetupMandateRequestData<T> {
 #[derive(Debug, Clone)]
 pub struct RepeatPaymentData<T: PaymentMethodDataTypes> {
     pub mandate_reference: MandateReferenceId,
-    pub amount: i64,
-    pub minor_amount: MinorUnit,
+    pub amount: Money,
     pub currency: Currency,
     pub merchant_order_id: Option<String>,
     pub metadata: Option<SecretSerdeValue>,
@@ -3882,7 +3987,7 @@ pub struct RepeatPaymentData<T: PaymentMethodDataTypes> {
     /// enclosing request (and its RouterDataV2 clones) small on the async stack.
     pub split_settlement: Option<Box<SplitSettlement>>,
     pub recurring_mandate_payment_data: Option<router_data::RecurringMandatePaymentData>,
-    pub shipping_cost: Option<MinorUnit>,
+    pub shipping_cost: Option<Money>,
     pub payment_channel: Option<PaymentChannel>,
     pub mit_category: Option<common_enums::MitCategory>,
     pub enable_partial_authorization: Option<bool>,
@@ -4657,7 +4762,8 @@ pub struct AdyenSplitItem {
 
 #[derive(Debug, serde::Deserialize, Clone)]
 pub struct StripeSplitRefundData {
-    pub charge_id: String,
+    /// `None` when the charge id is unknown; the refund is issued against the payment intent.
+    pub charge_id: Option<String>,
     pub transfer_account_id: String,
     pub charge_type: common_enums::PaymentChargeType,
     pub options: ChargeRefundsOptions,
@@ -4760,8 +4866,7 @@ pub struct SplitSettlementRefundVendor {
 #[derive(Debug, Default, Clone, Serialize)]
 pub struct RecurringMandatePaymentData {
     pub payment_method_type: Option<PaymentMethodType>, //required for making recurring payment using saved payment method through stripe
-    pub original_payment_authorized_amount: Option<MinorUnit>,
-    pub original_payment_authorized_currency: Option<Currency>,
+    pub original_payment_authorized_amount: Option<Money>,
     pub mandate_metadata: Option<SecretSerdeValue>,
 }
 
@@ -4773,10 +4878,14 @@ pub trait RecurringMandateData {
 impl RecurringMandateData for RecurringMandatePaymentData {
     fn get_original_payment_amount(&self) -> Result<MinorUnit, Error> {
         self.original_payment_authorized_amount
+            .as_ref()
+            .map(|money| money.amount)
             .ok_or_else(missing_field_err("original_payment_authorized_amount"))
     }
     fn get_original_payment_currency(&self) -> Result<Currency, Error> {
-        self.original_payment_authorized_currency
+        self.original_payment_authorized_amount
+            .as_ref()
+            .map(|money| money.currency)
             .ok_or_else(missing_field_err("original_payment_authorized_currency"))
     }
 }
@@ -4971,9 +5080,9 @@ pub struct OrderInfo {
     pub order_date: Option<time::PrimitiveDateTime>,
     pub order_details: Option<Vec<payment_address::OrderDetailsWithAmount>>,
     pub merchant_order_reference_id: Option<String>,
-    pub discount_amount: Option<MinorUnit>,
-    pub shipping_cost: Option<MinorUnit>,
-    pub duty_amount: Option<MinorUnit>,
+    pub discount_amount: Option<Money>,
+    pub shipping_cost: Option<Money>,
+    pub duty_amount: Option<Money>,
 }
 
 #[derive(Debug, Clone)]
@@ -4981,8 +5090,8 @@ pub struct TaxInfo {
     pub tax_status: Option<common_enums::TaxStatus>,
     pub customer_tax_registration_id: Option<Secret<String>>,
     pub merchant_tax_registration_id: Option<Secret<String>>,
-    pub shipping_amount_tax: Option<MinorUnit>,
-    pub order_tax_amount: Option<MinorUnit>,
+    pub shipping_amount_tax: Option<Money>,
+    pub order_tax_amount: Option<Money>,
 }
 
 #[derive(Debug, Clone)]
@@ -5147,17 +5256,19 @@ impl L2L3Data {
     pub fn get_discount_amount(&self) -> Option<MinorUnit> {
         self.order_info
             .as_ref()
-            .and_then(|order| order.discount_amount)
+            .and_then(|order| order.discount_amount.as_ref().map(|money| money.amount))
     }
 
     pub fn get_shipping_cost(&self) -> Option<MinorUnit> {
         self.order_info
             .as_ref()
-            .and_then(|order| order.shipping_cost)
+            .and_then(|order| order.shipping_cost.as_ref().map(|money| money.amount))
     }
 
     pub fn get_duty_amount(&self) -> Option<MinorUnit> {
-        self.order_info.as_ref().and_then(|order| order.duty_amount)
+        self.order_info
+            .as_ref()
+            .and_then(|order| order.duty_amount.as_ref().map(|money| money.amount))
     }
 
     pub fn get_tax_status(&self) -> Option<common_enums::TaxStatus> {
@@ -5179,11 +5290,13 @@ impl L2L3Data {
     pub fn get_shipping_amount_tax(&self) -> Option<MinorUnit> {
         self.tax_info
             .as_ref()
-            .and_then(|tax| tax.shipping_amount_tax)
+            .and_then(|tax| tax.shipping_amount_tax.as_ref().map(|money| money.amount))
     }
 
     pub fn get_order_tax_amount(&self) -> Option<MinorUnit> {
-        self.tax_info.as_ref().and_then(|tax| tax.order_tax_amount)
+        self.tax_info
+            .as_ref()
+            .and_then(|tax| tax.order_tax_amount.as_ref().map(|money| money.amount))
     }
 
     pub fn get_customer_id(&self) -> Option<CustomerId> {
@@ -6009,7 +6122,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Glomopay(_) => Ok(Self::Payment(ConnectorEnum::Glomopay)),
             AuthType::Qwikcilver(_) => Ok(Self::Payment(ConnectorEnum::Qwikcilver)),
             AuthType::Payconex(_) => Ok(Self::Payment(ConnectorEnum::Payconex)),
-            AuthType::Kount(_) => Ok(Self::Payment(ConnectorEnum::Kount)),
+            AuthType::Kount(_) => Ok(Self::Frm(FrmConnectorEnum::Kount)),
             AuthType::Hyperswitch(_) => Ok(Self::Payment(ConnectorEnum::Hyperswitch)),
             AuthType::Grabpay(_) => Ok(Self::Payment(ConnectorEnum::Grabpay)),
             AuthType::Maya(_) => Ok(Self::Payment(ConnectorEnum::Maya)),
@@ -6110,6 +6223,17 @@ pub struct AdditionalConnectorDetails {
     pub checkout: Option<CheckoutAdditionalInformation>,
     /// Worldpayxml-specific additional information.
     pub worldpayxml: Option<WorldpayxmlAdditionalInformation>,
+    /// Stripe-specific additional information.
+    pub stripe: Option<StripeAdditionalInformation>,
+}
+
+/// Stripe-specific additional information.
+#[derive(Debug, Clone)]
+pub struct StripeAdditionalInformation {
+    /// For MIT (merchant-initiated) payments: when true, Stripe fails the payment outright
+    /// instead of returning a `requires_action` status, since there's no customer present to
+    /// complete additional authentication.
+    pub error_on_requires_action: Option<bool>,
 }
 
 /// Worldpayxml-specific additional information.

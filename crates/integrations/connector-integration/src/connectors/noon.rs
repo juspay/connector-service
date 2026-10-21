@@ -225,6 +225,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             PaymentWebhookReference {
                 connector_transaction_id: Some(webhook_object.order_id.to_string()),
                 merchant_transaction_id: None,
+                connector_preprocessing_id: None,
             },
         )))
     }
@@ -312,7 +313,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             response_headers: None,
             mandate_reference: None,
             amount_captured: None,
-            minor_amount_captured: None,
             error_reason: None,
             network_txn_id: None,
             payment_method_update: None,

@@ -204,6 +204,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 PaymentWebhookReference {
                     connector_transaction_id: None,
                     merchant_transaction_id: Some(reference_body.event_body.order_id),
+                    connector_preprocessing_id: None,
                 },
             ))),
             transformers::NmiActionType::Refund => Ok(Some(WebhookResourceReference::Refund(
@@ -256,7 +257,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             status_code: 200,
             response_headers: None,
             amount_captured: None,
-            minor_amount_captured: None,
             network_txn_id: None,
             payment_method_update: None,
             sender_payment_instrument_id: None,

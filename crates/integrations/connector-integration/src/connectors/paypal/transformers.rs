@@ -8,7 +8,7 @@ use cards;
 use common_enums;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
-    types::StringMajorUnit,
+    types::{MinorUnit, StringMajorUnit},
     CustomResult, Method,
 };
 use domain_types::{
@@ -138,14 +138,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
+                item.router_data.request.amount.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
                 context: Default::default(),
             })?;
         // Hyperswitch treats `shipping_cost` as optional for the Authorize flow,
-        // defaulting to zero when absent (req.request.shipping_cost.unwrap_or(MinorUnit::zero())).
+        // defaulting to zero when absent (req.request.shipping_cost.as_ref().map(|money| money.amount).unwrap_or(MinorUnit::zero())).
         // Mirror that here instead of hard-failing with MissingRequiredField, otherwise UCS
         // returns gRPC InvalidArgument for card payments that carry no shipping_cost.
         let shipping_value = item
@@ -155,7 +155,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data
                     .request
                     .shipping_cost
-                    .unwrap_or(common_utils::types::MinorUnit::zero()),
+                    .as_ref()
+                    .map(|money| money.amount)
+                    .unwrap_or(MinorUnit::zero()),
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -209,7 +211,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
+                item.router_data.request.amount.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -222,7 +224,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data
                     .request
                     .shipping_cost
-                    .unwrap_or(common_utils::types::MinorUnit::zero()),
+                    .as_ref()
+                    .map(|money| money.amount)
+                    .unwrap_or(MinorUnit::zero()),
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -307,7 +311,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
+                item.router_data.request.amount.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -360,7 +364,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
+                item.router_data.request.amount.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -535,6 +539,18 @@ pub struct CardRequestStruct<
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CardVaultStruct {
     vault_id: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    attributes: Option<VaultRequestAttributes>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VaultRequestAttributes {
+    customer: Option<CustomerRequestData>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomerRequestData {
+    merchant_customer_id: Option<common_utils::id_type::CustomerId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -558,6 +574,8 @@ pub enum CardRequest<
 pub struct CardRequestAttributes {
     vault: Option<PaypalVault>,
     verification: Option<ThreeDsMethod>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    customer: Option<CustomerRequestData>,
 }
 
 #[derive(Debug, Serialize)]
@@ -847,7 +865,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let value = item
             .connector
             .amount_converter
-            .convert(router_data.request.amount, router_data.request.currency)
+            .convert(
+                router_data.request.amount.amount,
+                router_data.request.currency,
+            )
             .change_context(IntegrationError::AmountConversionFailed {
                 context: Default::default(),
             })?;
@@ -1401,6 +1422,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 None => None,
                             },
                             verification,
+                            customer: item
+                                .router_data
+                                .resource_common_data
+                                .customer_id
+                                .clone()
+                                .map(|customer_id| CustomerRequestData {
+                                    merchant_customer_id: Some(customer_id),
+                                }),
                         }),
                     },
                 )));
@@ -1546,7 +1575,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .connector
                         .amount_converter
                         .convert(
-                            item.router_data.request.minor_amount,
+                            item.router_data.request.amount.amount,
                             item.router_data.request.currency,
                         )
                         .change_context(IntegrationError::AmountConversionFailed {
@@ -2904,7 +2933,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount_to_capture,
+                item.router_data.request.amount_to_capture.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -2964,13 +2993,19 @@ impl From<PaypalPaymentStatus> for common_enums::AttemptStatus {
     }
 }
 
-impl TryFrom<ResponseRouterData<PaypalCaptureResponse, Self>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<PaypalCaptureResponse, PaypalRouterData<Self, T>>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = Report<ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<PaypalCaptureResponse, Self>,
+        item: ResponseRouterData<PaypalCaptureResponse, PaypalRouterData<Self, T>>,
     ) -> Result<Self, Self::Error> {
+        let item = ResponseRouterData {
+            response: item.response,
+            router_data: item.router_data.router_data,
+            http_code: item.http_code,
+        };
         let status = common_enums::AttemptStatus::from(item.response.status);
         let amount_captured = match status {
             common_enums::AttemptStatus::Pending
@@ -2999,12 +3034,17 @@ impl TryFrom<ResponseRouterData<PaypalCaptureResponse, Self>>
             | common_enums::AttemptStatus::VoidPostCaptureInitiated
             | common_enums::AttemptStatus::Expired
             | common_enums::AttemptStatus::Unknown
-            | common_enums::AttemptStatus::PartiallyAuthorized => 0,
+            | common_enums::AttemptStatus::PartiallyAuthorized => {
+                Some(common_utils::types::Money {
+                    amount: MinorUnit::zero(),
+                    currency: item.router_data.request.currency,
+                })
+            }
             common_enums::AttemptStatus::Charged
             | common_enums::AttemptStatus::PartialCharged
             | common_enums::AttemptStatus::PartialChargedAndChargeable
             | common_enums::AttemptStatus::IntegrityFailure => {
-                item.router_data.request.amount_to_capture
+                Some(item.router_data.request.amount_to_capture.clone())
             }
         };
         let connector_payment_id: PaypalMeta = match to_connector_meta(
@@ -3035,7 +3075,7 @@ impl TryFrom<ResponseRouterData<PaypalCaptureResponse, Self>>
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
-                amount_captured: Some(amount_captured),
+                amount_captured,
                 ..item.router_data.resource_common_data
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -3310,7 +3350,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     _ => {
                         // Failed: Authentication checks failed
                         let error_message = format!(
-                            "Cannot continue authentication. Connector Responded with LiabilityShift: {:?}, EnrollmentStatus: {:?}, and AuthenticationStatus: {:?}",
+                            "Cannot continue with Authorization due to failed Liability Shift. Connector Responded with LiabilityShift: {:?}, EnrollmentStatus: {:?}, and AuthenticationStatus: {:?}",
                             liability_response.payment_source.card.authentication_result.liability_shift,
                             liability_response
                                 .payment_source
@@ -3338,8 +3378,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 attempt_status: Some(FlowStatus::Payment(
                                     common_enums::AttemptStatus::Failure,
                                 )),
-                                code: "authentication_failed".to_string(),
-                                message: "3DS authentication failed".to_string(),
+                                code: NO_ERROR_CODE.to_string(),
+                                message: NO_ERROR_MESSAGE.to_string(),
                                 connector_transaction_id: None,
                                 reason: Some(error_message),
                                 status_code: item.http_code,
@@ -3453,7 +3493,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_refund_amount,
+                item.router_data.request.refund_amount.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -3612,6 +3652,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             common_enums::PaymentMethodType::Card => Some(PaymentSourceItem::Card(
                 CardRequest::CardVaultStruct(CardVaultStruct {
                     vault_id: Secret::new(connector_mandate_id),
+                    attributes: item
+                        .router_data
+                        .resource_common_data
+                        .customer_id
+                        .clone()
+                        .map(|customer_id| VaultRequestAttributes {
+                            customer: Some(CustomerRequestData {
+                                merchant_customer_id: Some(customer_id),
+                            }),
+                        }),
                 }),
             )),
             common_enums::PaymentMethodType::Paypal => Some(PaymentSourceItem::Paypal(
@@ -4215,7 +4265,7 @@ impl TryFrom<ResponseRouterData<PaypalClientAuthTokenResponse, Self>>
                 transaction_info: Some(PaypalTransactionInfoDomain {
                     flow: PaypalFlowDomain::Checkout,
                     currency_code: item.router_data.request.currency,
-                    total_price: item.router_data.request.amount,
+                    total_price: item.router_data.request.amount.amount,
                 }),
             },
         ));

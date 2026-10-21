@@ -391,6 +391,8 @@ pub enum ConnectorSpecificConfig {
         api_key: Secret<String>,
         merchant_id: Secret<String>,
         base_url: Option<String>,
+        /// HMAC-SHA256 webhook signing secret used to verify the `ppro-signature` header.
+        webhook_secret: Option<Secret<String>>,
     },
     Easebuzz {
         api_key: Secret<String>,
@@ -470,7 +472,9 @@ pub enum ConnectorSpecificConfig {
     },
     Jpmorgan {
         client_id: Secret<String>,
-        client_secret: Secret<String>,
+        thumbprint: Secret<String>,
+        private_key: Secret<String>,
+        resource_id: Secret<String>,
         base_url: Option<String>,
         secondary_base_url: Option<String>,
         company_name: Option<Secret<String>>,
@@ -1233,7 +1237,9 @@ impl ConnectorSpecificConfig {
             },
             Jpmorgan {
                 client_id,
-                client_secret
+                thumbprint,
+                private_key,
+                resource_id
             },
             Loonio {
                 merchant_id,
@@ -1774,7 +1780,9 @@ impl ConnectorSpecificConfig {
                 },
                 Jpmorgan {
                     client_id,
-                    client_secret
+                    thumbprint,
+                    private_key,
+                    resource_id
                 },
                 Loonio {
                     merchant_id,
@@ -2342,7 +2350,9 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
             }),
             AuthType::Jpmorgan(jpmorgan) => Ok(Self::Jpmorgan {
                 client_id: jpmorgan.client_id.ok_or_else(err)?,
-                client_secret: jpmorgan.client_secret.ok_or_else(err)?,
+                thumbprint: jpmorgan.thumbprint.ok_or_else(err)?,
+                private_key: jpmorgan.private_key.ok_or_else(err)?,
+                resource_id: jpmorgan.resource_id.ok_or_else(err)?,
                 base_url: jpmorgan.base_url,
                 secondary_base_url: jpmorgan.secondary_base_url,
                 company_name: jpmorgan.company_name,
@@ -2718,6 +2728,7 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 api_key: ppro.api_key.ok_or_else(err)?,
                 merchant_id: ppro.merchant_id.ok_or_else(err)?,
                 base_url: ppro.base_url,
+                webhook_secret: ppro.webhook_secret,
             }),
             AuthType::PinelabsOnline(pinelabs_online) => Ok(Self::PinelabsOnline {
                 client_id: pinelabs_online.client_id.ok_or_else(err)?,
@@ -3234,9 +3245,16 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorVariant)>
                     _ => Err(err().into()),
                 },
                 ConnectorEnum::Jpmorgan => match auth {
-                    ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::Jpmorgan {
+                    ConnectorAuthType::MultiAuthKey {
+                        api_key,
+                        key1,
+                        api_secret,
+                        key2,
+                    } => Ok(Self::Jpmorgan {
                         client_id: api_key.clone(),
-                        client_secret: key1.clone(),
+                        thumbprint: key1.clone(),
+                        private_key: api_secret.clone(),
+                        resource_id: key2.clone(),
                         base_url: None,
                         secondary_base_url: None,
                         company_name: None,
@@ -4064,6 +4082,7 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorVariant)>
                             api_key: api_key.clone(),
                             merchant_id: key1.clone(),
                             base_url: None,
+                            webhook_secret: None,
                         })
                     }
                     _ => Err(err().into()),
@@ -4128,19 +4147,6 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorVariant)>
                     ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::Payconex {
                         api_key: api_key.clone(),
                         account_id: key1.clone(),
-                        base_url: None,
-                    }),
-                    _ => Err(err().into()),
-                },
-                ConnectorEnum::Kount => match auth {
-                    ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Kount {
-                        api_key: api_key.clone(),
-                        // The legacy header carries no `client_id`; DDC (the only
-                        // flow that needs one) will reject a request that reaches
-                        // it without one.
-                        client_id: None,
-                        auth_server_id: None,
-                        khash_config_key: None,
                         base_url: None,
                     }),
                     _ => Err(err().into()),
@@ -4445,6 +4451,19 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorVariant)>
                 }
             }
             connector_types::ConnectorVariant::Payout(connector_enum) => match connector_enum {
+                PayoutConnectorEnum::Nuvei => match auth {
+                    ConnectorAuthType::SignatureKey {
+                        api_key,
+                        key1,
+                        api_secret,
+                    } => Ok(Self::Nuvei {
+                        merchant_id: api_key.clone(),
+                        merchant_site_id: key1.clone(),
+                        merchant_secret: api_secret.clone(),
+                        base_url: None,
+                    }),
+                    _ => Err(err().into()),
+                },
                 PayoutConnectorEnum::Loonio => match auth {
                     ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::Loonio {
                         merchant_id: api_key.clone(),
@@ -4490,6 +4509,13 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorVariant)>
                         client_secret: key1.clone(),
                         certificates: Some(api_secret.clone()),
                         private_key: Some(key2.clone()),
+                        base_url: None,
+                    }),
+                    _ => Err(err().into()),
+                },
+                PayoutConnectorEnum::Stripe => match auth {
+                    ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Stripe {
+                        api_key: api_key.clone(),
                         base_url: None,
                     }),
                     _ => Err(err().into()),
@@ -4540,6 +4566,20 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorVariant)>
                     }),
                     _ => Err(err().into()),
                 },
+                PayoutConnectorEnum::Gigadat => match auth {
+                    ConnectorAuthType::SignatureKey {
+                        api_key,
+                        key1,
+                        api_secret,
+                    } => Ok(Self::Gigadat {
+                        security_token: api_secret.clone(),
+                        access_token: api_key.clone(),
+                        campaign_id: key1.clone(),
+                        base_url: None,
+                        site: None,
+                    }),
+                    _ => Err(err().into()),
+                },
                 PayoutConnectorEnum::Santander => Err(err().into()),
                 PayoutConnectorEnum::GotymeSanlam => match auth {
                     ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::GotymeSanlam {
@@ -4550,6 +4590,15 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorVariant)>
                     _ => Err(err().into()),
                 },
                 PayoutConnectorEnum::Truelayer => Err(err().into()),
+                PayoutConnectorEnum::Mifinity => match auth {
+                    ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Mifinity {
+                        key: api_key.clone(),
+                        base_url: None,
+                        brand_id: None,
+                        destination_account_number: None,
+                    }),
+                    _ => Err(err().into()),
+                },
                 PayoutConnectorEnum::Trustly => match auth {
                     ConnectorAuthType::SignatureKey {
                         api_key,
