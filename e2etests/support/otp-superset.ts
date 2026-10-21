@@ -3,6 +3,7 @@ import {
   type ConnectorScenarioConfig,
   type OtpScenario,
   type Scenario,
+  scenarios,
 } from "./cases.js";
 import { merge } from "./config.js";
 import { overrides as adyen } from "../otp/adyen/card-no3ds/overrides.js";
@@ -26,8 +27,28 @@ const configurations: Record<
 
 // A connector opts into shared cases and supplies only request/configuration differences.
 export function otpSupersetCases(scenario: OtpScenario) {
-  if (scenario.scenarios.length !== 1)
-    throw new Error("Each superset spec must declare exactly one lifecycle");
+  if (!scenario.id || !/^[a-z][a-z0-9-]{0,47}$/.test(scenario.id))
+    throw new Error("Each scenario requires a stable synthetic identifier");
+  if (
+    ![scenario.description, scenario.verifies].every(
+      (text) => typeof text === "string" && text.trim().length > 0,
+    ) ||
+    !Array.isArray(scenario.sequence) ||
+    !scenario.sequence.length ||
+    scenario.sequence.some((step) => typeof step !== "string" || !step.trim())
+  )
+    throw new Error(
+      "Each scenario requires an explanation, verification intent, and nonempty sequence",
+    );
+  if (
+    scenario.scenarios.length !== 1 ||
+    !scenarios.includes(scenario.scenarios[0])
+  )
+    throw new Error(
+      "Each superset spec must declare exactly one supported lifecycle",
+    );
+  if (!["reference-pattern", "regression"].includes(scenario.coverage))
+    throw new Error("Each scenario requires a coverage classification");
   const cases: {
     connector: (typeof connectors)[number];
     scenario: OtpScenario;

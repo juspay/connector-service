@@ -112,6 +112,10 @@ e2etests/
     otp-scenarios.ts
     config.ts
     hs.ts
+    checks.ts
+    report.ts
+    framework-contract.ts
+    processors/
   docker/ucs.Dockerfile
   scripts/
   unit/
@@ -130,10 +134,20 @@ Copy `overrides.example.json` to an ignored `overrides.local.json` and set `E2E_
 
 The superset chooses the request fixture; a connector can replace it completely or supply field overrides. External connector settings and named variant overrides are then resolved by the shared configuration helper. Nested objects merge, arrays replace, and `null` clears a field. OTP guards reject future-usage, mandate, recurring-payment, wallet, and 3DS requests. Customer acceptance alone is allowed; the resulting payment must still have no future usage or mandate. Use synthetic fixture data.
 
+## Framework extension contract
+
+Scenario specs declare requests and expected behavior, then call `runOtpScenario`. Connector directories contain data overrides and synthetic fixture builders. They do not contain test implementations, HTTP clients, assertions, or report formatting.
+
+Payment, capture, cancellation, refund, and UCS routing checks use `support/checks.ts`. Define each comparison once with `equal(expected, actual)` or `oneOf([allowed, states], actual)`. The framework uses that definition for both the assertion and the JSON attachment, including failed comparisons. Missing observations are reported as `<missing>` and do not pass as null. Use boolean matches for identifiers or sensitive free-form values; whole response objects cannot be check values.
+
+Optional processor readback belongs in a typed adapter under `support/processors/`, registered in `index.ts`. An adapter validates its sandbox credentials, optionally resolves a runtime fixture, and returns standard check data from read-only processor APIs. The shared runner asserts and reports those checks. Adapters do not import Playwright assertions or create attachments. UCS masked audit events remain separate and are attached unchanged.
+
+The TypeScript-based contract checker runs in `npm run check` and when Playwright loads its configuration, before test discovery. It rejects connector-local specs, custom execution/assertions inside scenario specs, I/O in override/fixture modules, adapter-written reports/assertions, and manual report attachments in the common runner. Intentional additions to the shared lifecycle or reporting contract belong in framework code with corresponding checks, rather than a connector workaround.
+
 ## Reports and checks
 
 ```sh
-npm run check       # TypeScript validation
+npm run check       # TypeScript and framework contract validation
 npm run test:unit   # Offline harness checks
 npm run list        # Test discovery
 npm test            # Live sandbox payment

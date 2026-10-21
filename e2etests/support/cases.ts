@@ -33,7 +33,7 @@ export type RequestVariant = {
   coverage?: "reference-pattern" | "regression";
   connectorMetadata?: Json;
   profile?: Json;
-  scenarios: readonly Scenario[];
+  scenarios: readonly [Scenario];
 };
 
 export type OtpScenario = RequestVariant & {
@@ -44,7 +44,16 @@ export type OtpScenario = RequestVariant & {
   request: Json;
 };
 
-export type ConnectorCaseOverride = Omit<RequestVariant, "scenarios" | "id"> & {
+export type ConnectorCaseOverride = Pick<
+  RequestVariant,
+  | "payment"
+  | "request"
+  | "confirmRequest"
+  | "connectorMetadata"
+  | "profile"
+  | "fixture"
+  | "coverage"
+> & {
   id?: string;
   completion?: "submission";
 };

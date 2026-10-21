@@ -8,7 +8,7 @@
   "scripts": {
     "test": "playwright test",
     "list": "playwright test --list",
-    "check": "tsc --noEmit",
+    "check": "tsc --noEmit && tsx scripts/check-framework.ts",
     "test:unit": "tsx --test unit/*.test.ts",
     "stack:up": "node scripts/stack.mjs up",
     "stack:down": "node scripts/stack.mjs down",

@@ -1,6 +1,6 @@
 import { test, type TestContext } from "node:test";
 import assert from "node:assert/strict";
-import { stripeConnectedAccount } from "../support/stripe.js";
+import { stripeConnectedAccount } from "../support/processors/stripe-api.js";
 
 function clearAccountEnv(t: TestContext) {
   const original = process.env.STRIPE_CONNECTED_ACCOUNT_ID;

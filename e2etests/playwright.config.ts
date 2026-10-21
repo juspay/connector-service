@@ -1,4 +1,9 @@
 import { defineConfig } from "@playwright/test";
+import { fileURLToPath } from "node:url";
+import { assertFramework } from "./support/framework-contract.js";
+
+// Validate before test discovery, including direct npx playwright runs.
+assertFramework(fileURLToPath(new URL(".", import.meta.url)));
 
 export default defineConfig({
   testDir: "./otp",

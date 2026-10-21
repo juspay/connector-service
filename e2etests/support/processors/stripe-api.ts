@@ -1,4 +1,4 @@
-import type { Json } from "./config.js";
+import type { Json } from "../config.js";
 
 export function assertStripeSandboxKey(auth: Json): string {
   const key = auth.connector_account_details?.api_key;
