@@ -260,6 +260,34 @@ default = '{}'
 "address.billing_address.zip_code" = "98101"
 "billing_descriptor.statement_descriptor" = "PROBE DESCRIPTOR"
 
+# PayPal sends purchase_units[0].soft_descriptor, supplementary_data.card (Level 2/3)
+# and payment_source.card.stored_credential (CIT with setup_future_usage=OFF_SESSION)
+# only when the caller supplies the optional input behind them, so they are pre-set
+# here for the sample request to carry them. authentication_data is deliberately NOT
+# set: PayPal refuses merchant-supplied 3DS results before building the request.
+# 1 = CountryAlpha2::US, 1 = FutureUsage::OFF_SESSION.
+[connector_overrides.authorize.paypal]
+"address.shipping_address.first_name" = "Jane"
+"address.shipping_address.last_name" = "Doe"
+"address.shipping_address.line1" = "12 Main Street"
+"address.shipping_address.line2" = "Suite 400"
+"address.shipping_address.city" = "Seattle"
+"address.shipping_address.state" = "WA"
+"address.shipping_address.zip_code" = "98101"
+"address.shipping_address.country_alpha2_code" = 1
+"address.billing_address.line2" = "Apt 2"
+"address.billing_address.state" = "WA"
+"address.billing_address.country_alpha2_code" = 1
+"setup_future_usage" = 1
+"l2_l3_data.order_info.duty_amount" = 50
+"l2_l3_data.order_info.discount_amount" = 25
+"l2_l3_data.order_info.shipping_cost" = 200
+"l2_l3_data.order_info.order_details" = [
+  { product_name = "Probe item", quantity = 1, amount = 650, product_id = "sku_probe_001", description = "Probe line item", unit_of_measure = "EA", commodity_code = "4900", total_tax_amount = 100 },
+]
+"l2_l3_data.tax_info.order_tax_amount" = 100
+"billing_descriptor.statement_descriptor" = "PROBE DESCRIPTOR"
+
 # Header fields whose values are always random/dynamic and should be replaced
 # with a static placeholder in sample output.
 [normalize_headers]

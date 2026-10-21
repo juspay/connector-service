@@ -6,8 +6,8 @@
 // Run a scenario:  npx tsx paypal.ts checkout_autocapture
 
 import { PaymentClient, MerchantAuthenticationClient, EventClient, PaymentMethodAuthenticationClient, RecurringPaymentClient, RefundClient, types } from 'hyperswitch-prism';
-const { Environment, AcceptanceType, AuthenticationType, CaptureMethod, CardNetwork, Currency, FutureUsage, HttpMethod, PaymentMethodType } = types;
-export const SUPPORTED_FLOWS = ["authorize", "capture", "create_client_authentication_token", "create_order", "create_server_authentication_token", "get", "parse_event", "post_authenticate", "proxy_authorize", "recurring_charge", "refund", "refund_get", "setup_recurring", "void"];
+const { Environment, AcceptanceType, AuthenticationType, CaptureMethod, CardNetwork, CountryAlpha2, Currency, FutureUsage, HttpMethod, PaymentMethodType } = types;
+export const SUPPORTED_FLOWS = ["authorize", "capture", "create_client_authentication_token", "create_order", "create_server_authentication_token", "get", "parse_event", "post_authenticate", "proxy_authorize", "recurring_charge", "refund", "refund_get", "setup_recurring", "token_setup_recurring", "void"];
 
 const _defaultConfig: types.IConnectorConfig = {
     options: {
@@ -42,16 +42,55 @@ function _buildAuthorizeRequest(captureMethod: types.CaptureMethod): types.IPaym
         },
         "captureMethod": captureMethod,  // Method for capturing the payment.
         "address": {  // Address Information.
+            "shippingAddress": {
+                "firstName": {"value": "Jane"},  // Personal Information.
+                "lastName": {"value": "Doe"},
+                "line1": {"value": "12 Main Street"},  // Address Details.
+                "line2": {"value": "Suite 400"},
+                "city": {"value": "Seattle"},
+                "state": {"value": "WA"},
+                "zipCode": {"value": "98101"},
+                "countryAlpha2Code": CountryAlpha2.US
+            },
             "billingAddress": {
+                "line2": {"value": "Apt 2"},
+                "state": {"value": "WA"},
+                "countryAlpha2Code": CountryAlpha2.US
             }
         },
         "authType": AuthenticationType.NO_THREE_DS,  // Authentication Details.
         "returnUrl": "https://example.com/return",  // URLs for Redirection and Webhooks.
+        "setupFutureUsage": FutureUsage.OFF_SESSION,  // Behavioral Flags and Preferences.
+        "billingDescriptor": {  // Statement Descriptor.
+            "statementDescriptor": "PROBE DESCRIPTOR"  // Complete description that appears on customers' statements.
+        },
         "state": {  // State Information.
             "accessToken": {  // Access token obtained from connector.
                 "token": {"value": "probe_access_token"},  // The token string.
                 "expiresInSeconds": 3600,  // Expiration timestamp (seconds since epoch).
                 "tokenType": "Bearer"  // Token type (e.g., "Bearer", "Basic").
+            }
+        },
+        "l2L3Data": {  // Level 2 / Level 3 data for enhanced payment processing.
+            "orderInfo": {  // Order-level information.
+                "orderDetails": [  // Line items for the order.
+                    {
+                        "productName": "Probe item",  // Name of the product that is being purchased.
+                        "quantity": 1,  // The quantity of the product to be purchased.
+                        "amount": 650,  // Amount per quantity (in minor currency units).
+                        "totalTaxAmount": 100,  // Total tax amount (in minor currency units).
+                        "productId": "sku_probe_001",  // ID of the product that is being purchased.
+                        "description": "Probe line item",  // Description for the item.
+                        "unitOfMeasure": "EA",  // Unit of measure used for the item quantity.
+                        "commodityCode": "4900"  // Commodity code describing the product classification.
+                    }
+                ],
+                "discountAmount": 25,  // Discount applied to the order (in minor currency units).
+                "shippingCost": 200,  // Shipping cost for the order (in minor currency units).
+                "dutyAmount": 50  // Duty/customs amount for the order (in minor currency units).
+            },
+            "taxInfo": {  // Tax information.
+                "orderTaxAmount": 100  // Total tax amount for the order (in minor currency units).
             }
         }
     };
@@ -315,6 +354,49 @@ function _buildSetupRecurringRequest(): types.IPaymentServiceSetupRecurringReque
     };
 }
 
+function _buildTokenSetupRecurringRequest(): types.IPaymentServiceTokenSetupRecurringRequest {
+    return {
+        "merchantRecurringPaymentId": "probe_tokenized_mandate_001",
+        "amount": {
+            "minorAmount": 0,  // Amount in minor units (e.g., 1000 = $10.00).
+            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+        },
+        "connectorToken": {"value": "pm_1AbcXyzStripeTestToken"},
+        "address": {
+            "billingAddress": {
+            }
+        },
+        "state": {
+            "accessToken": {  // Access token obtained from connector.
+                "token": {"value": "probe_access_token"},  // The token string.
+                "expiresInSeconds": 3600,  // Expiration timestamp (seconds since epoch).
+                "tokenType": "Bearer"  // Token type (e.g., "Bearer", "Basic").
+            }
+        },
+        "customerAcceptance": {
+            "acceptanceType": AcceptanceType.ONLINE,  // Type of acceptance (e.g., online, offline).
+            "acceptedAt": 0,  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
+            "onlineMandateDetails": {  // Details if the acceptance was an online mandate.
+                "ipAddress": "127.0.0.1",  // IP address from which the mandate was accepted.
+                "userAgent": "Mozilla/5.0"  // User agent string of the browser used for mandate acceptance.
+            }
+        },
+        "setupMandateDetails": {
+            "mandateType": {  // Type of mandate (single_use or multi_use) with amount details.
+                "multiUse": {  // Multi use mandate with amount details (for recurring payments).
+                    "amount": 0,  // Use amount_money instead (will be removed in a future release).
+                    "currency": Currency.USD,  // Use amount_money.currency instead (will be removed in a future release).
+                    "amountMoney": {  // Amount in Money type.
+                        "minorAmount": 0,  // Amount in minor units (e.g., 1000 = $10.00).
+                        "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+                    }
+                }
+            }
+        },
+        "setupFutureUsage": FutureUsage.OFF_SESSION
+    };
+}
+
 function _buildVoidRequest(connectorTransactionId: string): types.IPaymentServiceVoidRequest {
     return {
         "merchantVoidId": "probe_void_001",  // Identification.
@@ -572,6 +654,15 @@ async function setupRecurring(merchantTransactionId: string, config: types.IConn
     return setupResponse;
 }
 
+// Flow: PaymentService.TokenSetupRecurring
+async function tokenSetupRecurring(merchantTransactionId: string, config: types.IConnectorConfig = _defaultConfig) {
+    const paymentClient = new PaymentClient(config);
+
+    const tokenResponse = await paymentClient.tokenSetupRecurring(_buildTokenSetupRecurringRequest());
+
+    return tokenResponse;
+}
+
 // Flow: PaymentService.Void
 async function voidPayment(merchantTransactionId: string, config: types.IConnectorConfig = _defaultConfig) {
     const paymentClient = new PaymentClient(config);
@@ -584,7 +675,7 @@ async function voidPayment(merchantTransactionId: string, config: types.IConnect
 
 // Export all process* functions for the smoke test
 export {
-    processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createClientAuthenticationToken, createOrder, createServerAuthenticationToken, get, handleEvent, parseEvent, postAuthenticate, proxyAuthorize, recurringCharge, refund, refundGet, setupRecurring, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildCreateClientAuthenticationTokenRequest, _buildCreateOrderRequest, _buildCreateServerAuthenticationTokenRequest, _buildGetRequest, _buildHandleEventRequest, _buildParseEventRequest, _buildPostAuthenticateRequest, _buildProxyAuthorizeRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildRefundGetRequest, _buildSetupRecurringRequest, _buildVoidRequest
+    processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createClientAuthenticationToken, createOrder, createServerAuthenticationToken, get, handleEvent, parseEvent, postAuthenticate, proxyAuthorize, recurringCharge, refund, refundGet, setupRecurring, tokenSetupRecurring, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildCreateClientAuthenticationTokenRequest, _buildCreateOrderRequest, _buildCreateServerAuthenticationTokenRequest, _buildGetRequest, _buildHandleEventRequest, _buildParseEventRequest, _buildPostAuthenticateRequest, _buildProxyAuthorizeRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildRefundGetRequest, _buildSetupRecurringRequest, _buildTokenSetupRecurringRequest, _buildVoidRequest
 };
 
 // CLI runner
