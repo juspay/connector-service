@@ -143,6 +143,20 @@ message CompositeFrmPostRiskCheckRequest {
 
   // Shipping/buyer identity document — ClearSale shipping.primaryDocument.
   optional CustomerDocumentDetails shipping_document_data = 17;
+
+  // Browser/device information for risk scoring (same as CompositeFrmPreRiskCheckRequest).
+  optional BrowserInformation browser_info = 18;
+
+  // Recurring / mandate details for subscription risk scoring (same as
+  // CompositeFrmPreRiskCheckRequest).
+  optional MandateAmountData mandate_details = 19;
+
+  // Merchant details (id + MCC) for risk scoring (same as CompositeFrmPreRiskCheckRequest).
+  optional MerchantDetails merchant_details = 20;
+
+  // Domain-specific order context (travel, hotel, airline…) as a typed object
+  // (same as CompositeFrmPreRiskCheckRequest).
+  optional DomainData domain_data = 21;
 }
 
 // ============================================================================

@@ -156,6 +156,19 @@ message FrmServicePostRiskCheckRequest {
 
   // Shipping/buyer identity document — ClearSale shipping.primaryDocument.
   optional CustomerDocumentDetails shipping_document_data = 15;
+
+  // Browser/device information for risk scoring (same as PreRiskCheck).
+  optional BrowserInformation browser_info = 16;
+
+  // Recurring / mandate details for subscription risk scoring (same as PreRiskCheck).
+  optional MandateAmountData mandate_details = 17;
+
+  // Merchant details (id + MCC) for risk scoring (same as PreRiskCheck).
+  optional MerchantDetails merchant_details = 18;
+
+  // Domain-specific order context (travel, hotel, airline…) as a typed object
+  // (same as PreRiskCheck). Re-analysis must replay the same order body.
+  optional DomainData domain_data = 19;
 }
 
 // Response for FrmService.PostRiskCheck

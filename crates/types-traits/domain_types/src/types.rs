@@ -4666,14 +4666,11 @@ impl ForeignTryFrom<grpc_payment_types::DomainData> for connector_types::DomainD
             }),
             hotel_data: domain_data
                 .hotel_data
-                .into_iter()
-                .map(connector_types::HotelData::foreign_from)
-                .collect(),
+                .map(connector_types::HotelData::foreign_from),
             travel_data: domain_data
                 .travel_data
-                .into_iter()
                 .map(connector_types::TravelData::foreign_try_from)
-                .collect::<Result<Vec<_>, _>>()?,
+                .transpose()?,
         })
     }
 }

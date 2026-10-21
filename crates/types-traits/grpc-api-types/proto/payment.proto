@@ -232,7 +232,7 @@ enum DocumentKind {
   PSN = 3; // Philippine PhilSys Number (12-digit national ID), required by dLocal for GCash.
   // Identifier for the customer who actually buys the product or service
   // (ClearSale shipping.primaryDocument).
-  OTHER = 5; // Generic / other non-Brazilian national document; the connector validates it per country. Kept last as the catch-all.
+  OTHER = 4; // Generic / other non-Brazilian national document; the connector validates it per country. Kept last as the catch-all.
 }
 
 // Customer's country-specific identification document.
@@ -1514,8 +1514,8 @@ message L2L3Data {
 message DomainData {
   optional AirlineData airline_data = 1; // Airline / travel itinerary data
   optional EducationData education_data = 2; // Education / student data
-  repeated HotelData hotel_data = 3;     // Hotel / accommodation bookings
-  repeated TravelData travel_data = 4;   // Ground / sea travel bookings
+  optional HotelData hotel_data = 3;     // Hotel / accommodation booking
+  optional TravelData travel_data = 4;   // Ground / sea travel booking
 }
 
 // Connector-agnostic education data (e.g. Flywire tuition payments).

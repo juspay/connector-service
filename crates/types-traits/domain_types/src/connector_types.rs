@@ -217,10 +217,6 @@ pub enum SurchargeConnectorEnum {
 pub enum FrmConnectorEnum {
     Kount,
     Nsure,
-    // Pinned explicitly: the header `x-frm-connector: clearsale_br` is parsed
-    // via this enum's `from_str`, and heck's snake_case would otherwise split
-    // the trailing acronym ("clearsale_frmbr").
-    #[strum(serialize = "clearsale_br")]
     ClearsaleBr,
 }
 
@@ -4912,11 +4908,8 @@ pub struct CurrencyConversionData {
 pub struct DomainData {
     pub airline_data: Option<AirlineData>,
     pub education_data: Option<EducationData>,
-    pub hotel_data: Vec<HotelData>,
-    /// Ground / sea travel bookings — ClearSale maps each booking's
-    /// `travel_segments` onto connections[] and appends every segment's
-    /// passengers into order-level passengers[].
-    pub travel_data: Vec<TravelData>,
+    pub hotel_data: Option<HotelData>,
+    pub travel_data: Option<TravelData>,
 }
 
 /// Connector-agnostic education data (e.g. Flywire tuition payments).

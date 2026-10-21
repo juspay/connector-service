@@ -409,6 +409,12 @@ impl ForeignTryFrom<grpc_api_types::frm::FrmServicePostRiskCheckRequest> for Pos
                 },
             })?;
 
+        let payment_method_type = value
+            .payment_method
+            .clone()
+            .and_then(|pm| Option::<PaymentMethodType>::foreign_try_from(pm).ok())
+            .flatten();
+
         let payment_method = value
             .payment_method
             .map(|pm| {
@@ -473,6 +479,20 @@ impl ForeignTryFrom<grpc_api_types::frm::FrmServicePostRiskCheckRequest> for Pos
                 },
             })?;
 
+        let browser_info = value
+            .browser_info
+            .map(BrowserInformation::foreign_try_from)
+            .transpose()
+            .change_context(IntegrationError::InvalidDataFormat {
+                field_name: "browser_info",
+                context: crate::errors::IntegrationErrorContext {
+                    additional_context: Some(
+                        "Failed to parse browser info in post-risk check".to_owned(),
+                    ),
+                    ..Default::default()
+                },
+            })?;
+
         Ok(Self {
             amount: Money {
                 amount: MinorUnit::new(amount.minor_amount),
@@ -480,6 +500,7 @@ impl ForeignTryFrom<grpc_api_types::frm::FrmServicePostRiskCheckRequest> for Pos
             },
             customer_info,
             payment_method,
+            browser_info,
             merchant_transaction_id: value.merchant_transaction_id,
             order_details,
             metadata: value.metadata,
@@ -497,6 +518,20 @@ impl ForeignTryFrom<grpc_api_types::frm::FrmServicePostRiskCheckRequest> for Pos
                 .shipping_document_data
                 .as_ref()
                 .and_then(crate::types::map_customer_document_details),
+            payment_method_type,
+            domain_data: value
+                .domain_data
+                .map(crate::connector_types::DomainData::foreign_try_from)
+                .transpose()
+                .change_context(IntegrationError::InvalidDataFormat {
+                    field_name: "domain_data",
+                    context: crate::errors::IntegrationErrorContext {
+                        additional_context: Some(
+                            "Failed to parse domain data in post-risk check".to_owned(),
+                        ),
+                        ..Default::default()
+                    },
+                })?,
         })
     }
 }

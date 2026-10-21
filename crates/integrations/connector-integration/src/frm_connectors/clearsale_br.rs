@@ -1,3 +1,4 @@
+pub mod test;
 pub mod transformers;
 
 use std::fmt::Debug;
@@ -276,13 +277,23 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
     ) -> Result<EventType, error_stack::Report<WebhookError>> {
-        // The payload carries no status — only `{"code","date","type":"status"}`
-        // — so the event is always "an order status changed; go fetch it".
-        let _payload: ClearSaleWebhookPayload = request
+        // Map the payload `type` explicitly. ClearSale only documents
+        // `"status"` (an order status change — decision still unknown until a
+        // follow-up `GET /v1/orders/{code}/status`). Anything else is
+        // unrecognised and must not be hard-coded to Processing.
+        let payload: ClearSaleWebhookPayload = request
             .body
             .parse_struct("ClearSaleWebhookPayload")
             .change_context(WebhookError::WebhookEventTypeNotFound)?;
-        Ok(EventType::PaymentIntentProcessing)
+        match payload.event_type.as_str() {
+            "status" => Ok(EventType::Payment),
+            other => {
+                let _ = other;
+                Err(error_stack::report!(
+                    WebhookError::WebhookEventTypeNotFound
+                ))
+            }
+        }
     }
 
     fn get_webhook_event_reference(
@@ -290,7 +301,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
     ) -> Result<Option<WebhookResourceReference>, error_stack::Report<WebhookError>> {
         // `code` is the order reference the merchant created the order with —
-        // it is the correlation key stored at order-create time.
+        // it is the correlation key stored at order-create time. The same
+        // `code` is what `process_payment_webhook` returns as the resource id
+        // (merchant_transaction_id carrier — not a PSP connector id).
         let payload: ClearSaleWebhookPayload = request
             .body
             .parse_struct("ClearSaleWebhookPayload")
@@ -299,7 +312,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             PaymentWebhookReference {
                 connector_transaction_id: None,
                 merchant_transaction_id: Some(payload.code),
-                connector_preprocessing_id: None,
             },
         )))
     }
@@ -316,16 +328,21 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         // `ClearSaleStatusGetResponse.status` through
         // `ClearSaleStatusEnum::to_frm_decision`. There is no public FRM-sync
         // RPC yet (spec §11 open question 5), so for now the event is surfaced
-        // as "processing" with the order code as the resource id.
+        // as pending with the merchant order code as the correlation id —
+        // the same carrier `get_webhook_event_reference` reports
+        // (`merchant_transaction_id`).
         let payload: ClearSaleWebhookPayload = request
             .body
             .parse_struct("ClearSaleWebhookPayload")
             .change_context(WebhookError::WebhookBodyDecodingFailed)?;
         Ok(WebhookDetailsResponse {
-            resource_id: Some(ResponseId::ConnectorTransactionId(payload.code)),
+            // ResponseId has no merchant_transaction_id variant; the order
+            // `code` is the merchant order key, so it rides as
+            // `EncodedData` (never as a PSP `ConnectorTransactionId`).
+            resource_id: Some(ResponseId::EncodedData(payload.code.clone())),
             status: common_enums::AttemptStatus::Pending,
             connector_response_reference_id: None,
-            connector_request_reference_id: None,
+            connector_request_reference_id: Some(payload.code),
             mandate_reference: None,
             error_code: None,
             error_message: None,
@@ -568,12 +585,12 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<FrmPaymentOutcome, FrmFlowData, FrmPaymentOutcomeRequest, FrmPaymentOutcomeResponse>,
         ) -> CustomResult<String, IntegrationError> {
+            // Order `code` is the merchant transaction id only — the PSP
+            // connector_transaction_id is not a ClearSale order key.
             let order_code = req
                 .request
                 .merchant_transaction_id
                 .as_deref()
-                .or(req.request.frm_transaction_id.as_deref())
-                .or(req.request.connector_transaction_id.as_deref())
                 .ok_or_else(|| {
                     IntegrationError::MissingRequiredField {
                         field_name: "merchant_transaction_id",

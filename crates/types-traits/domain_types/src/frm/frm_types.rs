@@ -124,6 +124,7 @@ pub struct PostRiskCheckRequest {
     pub amount: Money,
     pub customer_info: Option<CustomerInfo>,
     pub payment_method: Option<PaymentMethodData<DefaultPCIHolder>>,
+    pub browser_info: Option<BrowserInformation>,
     pub merchant_transaction_id: Option<String>,
     pub order_details: Option<Vec<OrderDetailsWithAmount>>,
     pub metadata: Option<Secret<String>>,
@@ -137,6 +138,8 @@ pub struct PostRiskCheckRequest {
     pub billing_document_data: Option<CustomerDocumentDetails>,
     /// Shipping/buyer identity document — ClearSale `shipping.primaryDocument`.
     pub shipping_document_data: Option<CustomerDocumentDetails>,
+    pub payment_method_type: Option<PaymentMethodType>,
+    pub domain_data: Option<DomainData>,
 }
 
 /// Response data for post-risk check
