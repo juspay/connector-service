@@ -14,7 +14,6 @@ tests/e2e/
       requests.ts
     <connector>/card-no3ds/
       config.ts
-      requests.ts              # Optional complete connector requests
   framework/
     scenario.ts                # Scenario types and connector registration
     runner.ts                  # Shared payment lifecycle execution
@@ -37,7 +36,7 @@ tests/e2e/
 ```
 
 - `otp/superset/<variant>/` defines shared scenarios once, including the request sequence and expected behavior. Each explanation appears alongside its test declaration.
-- `otp/<connector>/<variant>/config.ts` selects shared scenarios and supplies request or configuration differences. Optional `requests.ts` supplies complete request data when field overrides are insufficient. Connector directories do not duplicate test execution.
+- `otp/<connector>/<variant>/config.ts` selects shared scenarios and supplies request or configuration differences. Complete request definitions live in the shared superset `requests.ts`. Connector directories do not duplicate test execution.
 - `framework/` supplies typed scenarios, connector registration, one lifecycle runner, HS access, audit collection, and shared assertion/report helpers. `hyperswitch.ts` makes HS API calls and reads local HS database records for UCS routing and processor-reference checks.
 - `framework/tests/` checks shared helpers without starting the payment stack.
 - `scripts/` operates the Docker stack and retrieves external credentials when configured.
