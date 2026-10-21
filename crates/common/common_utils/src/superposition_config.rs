@@ -10,7 +10,7 @@ use serde_json::{Map, Value};
 use superposition_provider::{
     data_source::{file::FileDataSource, http::HttpDataSource},
     traits::AllFeatureProvider,
-    EvaluationContext, LocalResolutionProvider, PollingStrategy, RefreshStrategy,
+    AuthMethod, EvaluationContext, LocalResolutionProvider, PollingStrategy, RefreshStrategy,
     SuperpositionDataSource, SuperpositionOptions, WatchStrategy,
 };
 
@@ -49,7 +49,7 @@ pub enum SuperpositionConfigError {
 /// prism must boot file-first wherever no workspace exists yet.
 ///
 /// Env overrides: `CS__SUPERPOSITION__{SOURCE,ENDPOINT,TOKEN,ORG_ID,WORKSPACE_ID,
-/// POLLING_INTERVAL,REQUEST_TIMEOUT,BACKUP_FILE_PATH}`.
+/// POLLING_INTERVAL_MILLISECONDS,REQUEST_TIMEOUT_MILLISECONDS,BACKUP_FILE_PATH}`.
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct SuperpositionClientConfig {
@@ -61,11 +61,11 @@ pub struct SuperpositionClientConfig {
     pub token: Secret<String>,
     pub org_id: String,
     pub workspace_id: String,
-    /// Seconds between polls of the remote workspace.
-    pub polling_interval: u64,
-    /// Request timeout in seconds for the poll. Kept for parity with hyperswitch; the
+    /// Milliseconds between polls of the remote workspace.
+    pub polling_interval_milliseconds: u64,
+    /// Request timeout in milliseconds for the poll. Kept for parity with hyperswitch; the
     /// provider only logs it today.
-    pub request_timeout: Option<u64>,
+    pub request_timeout_milliseconds: Option<u64>,
     /// Fallback the provider loads if the remote source fails at init. Consulted at init
     /// ONLY — after a successful init a failed poll keeps the last good snapshot. Defaults
     /// to the baked `config/superposition.toml` when unset.
@@ -80,8 +80,8 @@ impl Default for SuperpositionClientConfig {
             token: Secret::new(String::new()),
             org_id: String::new(),
             workspace_id: String::new(),
-            polling_interval: 15,
-            request_timeout: None,
+            polling_interval_milliseconds: 15_000,
+            request_timeout_milliseconds: None,
             backup_file_path: None,
         }
     }
@@ -169,7 +169,7 @@ impl SuperpositionConfig {
     ///
     /// `source = "remote"` → the workspace as primary with the backup file (default: the
     /// baked file at `baked_path`) as the provider's init-time fallback, polled every
-    /// `polling_interval` seconds — hyperswitch's `SuperpositionClient::new` shape. If
+    /// `polling_interval_milliseconds` — hyperswitch's `SuperpositionClient::new` shape. If
     /// even that cannot initialise (remote unreachable AND fallback unreadable), boot
     /// continues on the baked file alone, loudly: prism's contract is fail-open.
     ///
@@ -188,7 +188,7 @@ impl SuperpositionConfig {
                 .unwrap_or_else(|| PathBuf::from(baked_path));
             let primary = HttpDataSource::new(SuperpositionOptions::new(
                 settings.endpoint.clone(),
-                settings.token.peek().clone(),
+                AuthMethod::Token(settings.token.peek().clone()),
                 settings.org_id.clone(),
                 settings.workspace_id.clone(),
             ));
@@ -207,9 +207,10 @@ impl SuperpositionConfig {
                     None
                 }
             };
-            let strategy = RefreshStrategy::Polling(PollingStrategy {
-                interval: settings.polling_interval,
-                timeout: settings.request_timeout,
+            let polling_strategy = PollingStrategy::new(settings.polling_interval_milliseconds);
+            let strategy = RefreshStrategy::Polling(match settings.request_timeout_milliseconds {
+                Some(timeout_milliseconds) => polling_strategy.with_timeout(timeout_milliseconds),
+                None => polling_strategy,
             });
             match Self::with_sources(
                 Box::new(primary),
@@ -626,7 +627,7 @@ mod tests {
     fn settings_default_is_the_file_source_with_hyperswitch_polling_interval() {
         let settings = SuperpositionClientConfig::default();
         assert_eq!(settings.source, SuperpositionSource::File);
-        assert_eq!(settings.polling_interval, 15);
+        assert_eq!(settings.polling_interval_milliseconds, 15_000);
         assert!(settings.backup_file_path.is_none());
     }
 

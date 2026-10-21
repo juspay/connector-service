@@ -78,7 +78,7 @@ endpoint = "http://superposition:8080"
 token = "sp_test_token"
 org_id = "hyperswitch"
 workspace_id = "prism"
-polling_interval = 7
+polling_interval_milliseconds = 7000
 "#;
     let cfg = load(
         "complete",
@@ -88,7 +88,7 @@ polling_interval = 7
     assert_eq!(cfg.superposition.endpoint, "http://superposition:8080");
     assert_eq!(cfg.superposition.token.peek(), "sp_test_token");
     assert_eq!(cfg.superposition.workspace_id, "prism");
-    assert_eq!(cfg.superposition.polling_interval, 7);
+    assert_eq!(cfg.superposition.polling_interval_milliseconds, 7000);
 }
 
 /// The shipped development config is file-first.
@@ -96,5 +96,5 @@ polling_interval = 7
 fn shipped_development_config_is_file_first() {
     let cfg = load("shipped", &dev_config_toml());
     assert_eq!(cfg.superposition.source, SuperpositionSource::File);
-    assert_eq!(cfg.superposition.polling_interval, 15);
+    assert_eq!(cfg.superposition.polling_interval_milliseconds, 15_000);
 }
