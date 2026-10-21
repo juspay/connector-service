@@ -19,6 +19,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.10.21.0
+
+### Features
+
+- **connector:** Add Worldpay raft IncrementalAuthorization flow ([#2504](https://github.com/juspay/connector-service/pull/2504)) ([`3478360`](https://github.com/juspay/connector-service/commit/347836001d2d22a66f6856b84f0334552c0e41da))
+
+### Bug Fixes
+
+- **framework:** Stop GRACE runs stalling on rm approval prompts (grace/ only) ([#2562](https://github.com/juspay/connector-service/pull/2562)) ([`c5058cb`](https://github.com/juspay/connector-service/commit/c5058cb1d95fc2eb234ad9a22dcb5690b7d1ac7c))
+
+**Full Changelog:** [`2026.10.20.0...2026.10.21.0`](https://github.com/juspay/connector-service/compare/2026.10.20.0...2026.10.21.0)
+
+- - -
+
 ## 2026.10.20.0
 
 ### Features
