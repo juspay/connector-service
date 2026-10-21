@@ -79,8 +79,7 @@ pub struct JpmorganRetailAddenda {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub summary_item_commodity_code: Option<String>,
     /// Level 3 line-item data. Present only for the networks whose Level 3
-    /// requirements JPMorgan documents, and only when the line items
-    /// reconcile against the transaction amount.
+    /// requirements JPMorgan documents, and when line items are supplied.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub level3: Option<JpmorganLevel3>,
 }
@@ -127,25 +126,34 @@ pub struct JpmorganLevel3 {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub party_tax_government_issued_identifier: Option<Secret<String>>,
     /// At least one line item is required; an empty list means no Level 3.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub line_items: Vec<JpmorganLineItem>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganLineItem {
-    pub line_item_description_text: String,
-    pub merchant_product_identifier: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub line_item_description_text: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub merchant_product_identifier: Option<String>,
     /// JPMorgan's schema misspells "commodity" with one `m`. Reproduced
     /// verbatim because that is the name their API accepts.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub item_comodity_code: Option<String>,
-    pub line_item_unit_quantity: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub line_item_unit_quantity: Option<String>,
     /// JPMorgan spells this with a lowercase `of`, which `rename_all` would
     /// not produce, so the wire name is given explicitly.
-    #[serde(rename = "lineItemUnitofMeasureCode")]
-    pub line_item_unit_of_measure_code: String,
-    pub unit_price_amount: MinorUnit,
-    pub tax_inclusive_line_item_total_amount: MinorUnit,
+    #[serde(
+        rename = "lineItemUnitofMeasureCode",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub line_item_unit_of_measure_code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unit_price_amount: Option<MinorUnit>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tax_inclusive_line_item_total_amount: Option<MinorUnit>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub transaction_discount_amount: Option<MinorUnit>,
     /// Mastercard only.
@@ -161,7 +169,8 @@ pub struct JpmorganLineItem {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganLineItemTax {
-    pub line_item_tax_amount: MinorUnit,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub line_item_tax_amount: Option<MinorUnit>,
     /// A percentage scaled by 1000 and sent as a string: JPMorgan implies
     /// three decimal places here, so `"1300"` is 1.3%. Note this differs from
     /// the order-level VAT percents, which imply two.
