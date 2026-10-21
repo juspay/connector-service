@@ -343,17 +343,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let optional_amount = |value: Option<MinorUnit>, context: &'static str| {
             value.map(|v| to_tamara_amount(v, context)).transpose()
         };
-        fn required_field<T>(
-            value: Option<T>,
-            field_name: &'static str,
-        ) -> Result<T, error_stack::Report<errors::IntegrationError>> {
-            value.ok_or(error_stack::report!(
-                errors::IntegrationError::MissingRequiredField {
-                    field_name,
-                    context: errors::IntegrationErrorContext::default(),
-                }
-            ))
-        }
 
         let items: Vec<TamaraLineItem> = router_data
             .resource_common_data
@@ -369,33 +358,27 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .iter()
             .map(|data| {
                 Ok(TamaraLineItem {
-                    name: data.product_name.clone(),
-                    quantity: data.quantity,
-                    reference_id: required_field(
-                        data.product_id.clone(),
-                        "order_details[].product_id",
-                    )?,
-                    sku: required_field(data.sku.clone(), "order_details[].sku")?,
+                    name: data.get_product_name(),
+                    quantity: data.get_quantity(),
+                    reference_id: data.get_product_id()?,
+                    sku: data.get_sku()?,
                     total_amount: to_tamara_amount(
-                        data.total_amount.unwrap_or(data.amount),
+                        data.get_total_amount(),
                         "Failed to convert line item total amount from minor to major units",
                     )?,
-                    item_type: required_field(
-                        data.product_type.clone(),
-                        "order_details[].product_type",
-                    )?,
-                    item_url: data.product_link.clone(),
-                    image_url: data.product_img_link.clone(),
+                    item_type: data.get_product_type()?,
+                    item_url: data.get_optional_product_link(),
+                    image_url: data.get_optional_product_img_link(),
                     unit_price: to_tamara_amount(
-                        data.amount,
+                        data.get_unit_amount(),
                         "Failed to convert line item unit price from minor to major units",
                     )?,
                     discount_amount: optional_amount(
-                        data.unit_discount_amount,
+                        data.get_optional_unit_discount_amount(),
                         "Failed to convert line item discount amount from minor to major units",
                     )?,
                     tax_amount: optional_amount(
-                        data.total_tax_amount,
+                        data.get_optional_total_tax_amount(),
                         "Failed to convert line item tax amount from minor to major units",
                     )?,
                 })
