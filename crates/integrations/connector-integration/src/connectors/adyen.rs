@@ -20,17 +20,18 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, ClientAuthenticationToken, CreateOrder, DefendDispute,
-        IncrementalAuthorization, PSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
-        VoidPC,
+        Accept, Authenticate, Authorize, Capture, ClientAuthenticationToken, CreateOrder,
+        DefendDispute, IncrementalAuthorization, PSync, PostAuthenticate, PreAuthenticate, Refund,
+        RepeatPayment, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, ClientAuthenticationTokenRequestData, ConnectorSpecifications,
         ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         DisputeWebhookReference, EventContext, MandateReference, MandateWebhookReference,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
-        PaymentWebhookReference, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
-        PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsResponseData,
+        PaymentWebhookReference, PaymentsAuthenticateData, PaymentsAuthorizeData,
+        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
+        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundWebhookDetailsResponse, RefundWebhookReference,
         RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails, ResponseId,
         SetupMandateRequestData, SubmitEvidenceData, SupportedPaymentMethodsExt,
@@ -60,12 +61,14 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{
-    self as adyen, AdyenCaptureRequest, AdyenCaptureResponse, AdyenClientAuthRequest,
-    AdyenClientAuthResponse, AdyenDefendDisputeRequest, AdyenDefendDisputeResponse,
-    AdyenDisputeAcceptRequest, AdyenDisputeAcceptResponse, AdyenDisputeSubmitEvidenceRequest,
-    AdyenIncrementalAuthRequest, AdyenIncrementalAuthResponse, AdyenNotificationRequestItemWH,
-    AdyenOrderCreateRequest, AdyenOrderCreateResponse, AdyenPSyncResponse, AdyenPaymentRequest,
-    AdyenPaymentResponse, AdyenRedirectRequest, AdyenRefundRequest, AdyenRefundResponse,
+    self as adyen, AdyenAuthenticateRequest, AdyenAuthenticationResponse, AdyenCaptureRequest,
+    AdyenCaptureResponse, AdyenClientAuthRequest, AdyenClientAuthResponse,
+    AdyenDefendDisputeRequest, AdyenDefendDisputeResponse, AdyenDisputeAcceptRequest,
+    AdyenDisputeAcceptResponse, AdyenDisputeSubmitEvidenceRequest, AdyenIncrementalAuthRequest,
+    AdyenIncrementalAuthResponse, AdyenNotificationRequestItemWH, AdyenOrderCreateRequest,
+    AdyenOrderCreateResponse, AdyenPSyncResponse, AdyenPaymentRequest, AdyenPaymentResponse,
+    AdyenPostAuthenticateRequest, AdyenPostAuthenticationResponse, AdyenPreAuthenticateRequest,
+    AdyenPreAuthenticationResponse, AdyenRedirectRequest, AdyenRefundRequest, AdyenRefundResponse,
     AdyenRepeatPaymentRequest, AdyenRepeatPaymentResponse, AdyenReversalRequest,
     AdyenReversalResponse, AdyenSubmitEvidenceResponse, AdyenVoidRequest, AdyenVoidResponse,
     SetupMandateRequest, SetupMandateResponse,
@@ -181,6 +184,24 @@ macros::create_all_prerequisites!(
             response_body: AdyenPSyncResponse,
             response_router_data: connector,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        (
+            flow: PreAuthenticate,
+            request_body: AdyenPreAuthenticateRequest<T>,
+            response_body: AdyenPreAuthenticationResponse,
+            router_data: RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: Authenticate,
+            request_body: AdyenAuthenticateRequest,
+            response_body: AdyenAuthenticationResponse,
+            router_data: RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: PostAuthenticate,
+            request_body: AdyenPostAuthenticateRequest,
+            response_body: AdyenPostAuthenticationResponse,
+            router_data: RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
         ),
         (
             flow: Capture,
@@ -640,6 +661,9 @@ const ADYEN_IDEMPOTENCY_OP_CANCELS: &str = "cancels";
 const ADYEN_IDEMPOTENCY_OP_REFUNDS: &str = "refunds";
 const ADYEN_CANCELS_DOC_URL: &str =
     "https://docs.adyen.com/api-explorer/Checkout/68/post/payments/-paymentPspReference-/cancels";
+/// Checkout version used by the standalone authentication legs: `authenticationData` does not
+/// exist on v68 (measured: Adyen answers `702 ... unknown fields: [authenticationData]`).
+const ADYEN_AUTHENTICATION_API_VERSION: &str = "v71";
 const ADYEN_AMOUNT_UPDATES_DOC_URL: &str =
     "https://docs.adyen.com/api-explorer/Checkout/68/post/payments/-paymentPspReference-/amountUpdates";
 
@@ -697,6 +721,107 @@ macros::macro_connector_implementation!(
 );
 
 macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type],
+    connector: Adyen,
+    curl_request: Json(AdyenPreAuthenticateRequest),
+    curl_response: AdyenPreAuthenticationResponse,
+    flow_name: PreAuthenticate,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsPreAuthenticateData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize ],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            let endpoint = build_env_specific_endpoint(
+                self.connector_base_url_payments(req),
+                req.resource_common_data.test_mode,
+                &req.connector_config,
+            )?;
+            Ok(format!("{endpoint}{ADYEN_AUTHENTICATION_API_VERSION}/payments"))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Adyen,
+    curl_request: Json(AdyenAuthenticateRequest),
+    curl_response: AdyenAuthenticationResponse,
+    flow_name: Authenticate,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsAuthenticateData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize ],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            let endpoint = build_env_specific_endpoint(
+                self.connector_base_url_payments(req),
+                req.resource_common_data.test_mode,
+                &req.connector_config,
+            )?;
+            Ok(format!("{endpoint}{ADYEN_AUTHENTICATION_API_VERSION}/payments/details"))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Adyen,
+    curl_request: Json(AdyenPostAuthenticateRequest),
+    curl_response: AdyenPostAuthenticationResponse,
+    flow_name: PostAuthenticate,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsPostAuthenticateData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize ],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            let endpoint = build_env_specific_endpoint(
+                self.connector_base_url_payments(req),
+                req.resource_common_data.test_mode,
+                &req.connector_config,
+            )?;
+            Ok(format!("{endpoint}{ADYEN_AUTHENTICATION_API_VERSION}/payments/details"))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    // get_error_response_v2 is overridden below with the Sync-flow error mapping, so it must not
+    // also come from the defaults.
     connector_default_implementations: [get_content_type],
     connector: Adyen,
     curl_request: Json(AdyenRedirectRequest),
@@ -907,6 +1032,47 @@ macros::macro_connector_implementation!(
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Adyen<T>
 {
+    /// Routes a 3DS card payment through the native 3DS2 ladder.
+    ///
+    /// Both client returns (the 3DS method iframe and the ACS challenge) come back "with
+    /// params", so `redirect_state` alone cannot tell leg 2 from leg 3; `completed_step` is the
+    /// disambiguator. The flag cannot be read here: this method gets no connector config, and
+    /// `Adyen<T>` (generated by `create_all_prerequisites!`) holds only bridges and amount
+    /// converters. The request builders are therefore the place that decides whether
+    /// `nativeThreeDS: preferred` is sent.
+    fn next_authentication_step(
+        &self,
+        auth_type: common_enums::AuthenticationType,
+        payment_method: PaymentMethod,
+        redirect_state: connector_types::RedirectState,
+        completed_step: Option<connector_types::AuthenticationStep>,
+    ) -> connector_types::AuthenticationStep {
+        use connector_types::{AuthenticationStep, RedirectState};
+        if auth_type == common_enums::AuthenticationType::ThreeDs
+            && payment_method == PaymentMethod::Card
+        {
+            match (redirect_state, completed_step) {
+                // Entering the ladder is deliberately left to an explicit PreAuthenticate call.
+                // Routing it from here would send every existing Adyen 3DS card payment on
+                // CompositeAuthorize through PreAuthenticate, and `native_three_ds` cannot be
+                // turned on over the wire yet (`AdyenConfig` carries no such field), so those
+                // merchants would get a standalone authentication they did not ask for. Change
+                // this arm to `AuthenticationStep::PreAuthenticate` once the opt-in is readable.
+                (RedirectState::InitialRequest, None) => AuthenticationStep::Authorize,
+                (RedirectState::RedirectWithParams, Some(AuthenticationStep::PreAuthenticate)) => {
+                    AuthenticationStep::Authenticate
+                }
+                (RedirectState::RedirectWithParams, Some(AuthenticationStep::Authenticate)) => {
+                    AuthenticationStep::PostAuthenticate
+                }
+                (_, Some(AuthenticationStep::PostAuthenticate)) => AuthenticationStep::Authorize,
+                _ => AuthenticationStep::Authorize,
+            }
+        } else {
+            AuthenticationStep::Authorize
+        }
+    }
+
     fn validate_psync_reference_id(
         &self,
         data: &PaymentsSyncData,
@@ -921,6 +1087,21 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         }
         .into())
     }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentPreAuthenticateV2<T> for Adyen<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAuthenticateV2<T> for Adyen<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentPostAuthenticateV2<T> for Adyen<T>
+{
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -2064,9 +2245,6 @@ macros::macro_connector_flow_status_impls!(
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     not_implemented: [
-        PreAuthenticate,
-        Authenticate,
-        PostAuthenticate,
         MandateRevoke,
         PaymentMethodToken,
     ],

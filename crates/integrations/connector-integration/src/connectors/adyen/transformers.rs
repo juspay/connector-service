@@ -11,9 +11,9 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, ClientAuthenticationToken, CreateOrder, DefendDispute,
-        IncrementalAuthorization, PSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
-        VoidPC,
+        Accept, Authenticate, Authorize, Capture, ClientAuthenticationToken, CreateOrder,
+        DefendDispute, IncrementalAuthorization, PSync, PostAuthenticate, PreAuthenticate, Refund,
+        RepeatPayment, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         self, AcceptDisputeData,
@@ -23,10 +23,11 @@ use domain_types::{
         ConnectorSplitResponseData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         EventType, MandateReference, MandateReferenceId, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodUpdate, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
-        PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
-        SetupMandateRequestData, SplitPaymentsDetails, SubmitEvidenceData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        SplitPaymentsDetails, SubmitEvidenceData,
     },
     merchant_authentication_flow_data::MerchantAuthenticationFlowData,
     payment_method_data::{
@@ -40,7 +41,7 @@ use domain_types::{
         ErrorResponse, ExtendedAuthorizationResponseData, FlowStatus,
     },
     router_data_v2::RouterDataV2,
-    router_request_types::SyncRequestType,
+    router_request_types::{AuthenticationData, SyncRequestType},
     router_response_types::RedirectForm,
     utils::{self as domain_utils, get_timestamp_in_milliseconds},
 };
@@ -4234,6 +4235,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum AdyenPaymentResponse {
+    // Must stay before `RedirectionResponse`: `AdyenRedirectAction`'s url / method / data are
+    // all optional, so a native `threeDS2` action body parses cleanly as a redirect, yields
+    // `redirection_data: None`, and hangs the payment with no next action and no error. The
+    // required `subtype` + `token` on `AdyenThreeDs2Action` keep this variant from matching
+    // anything but a real native action.
+    ThreeDs2Action(Box<AdyenThreeDs2ActionResponse>),
     Response(Box<AdyenResponse>),
     PresentToShopper(Box<PresentToShopperResponse>),
     QrCodeResponse(Box<QrCodeResponseResponse>),
@@ -4351,6 +4358,9 @@ pub enum ActionType {
     #[serde(rename = "qrCode")]
     QrCode,
     Voucher,
+    /// Native 3DS2 fingerprint / challenge action.
+    #[serde(rename = "threeDS2")]
+    ThreeDs2,
     #[serde(other)]
     Unknown,
 }
@@ -4600,6 +4610,9 @@ where
         let pmt = payment_method_type;
 
         let adyen_payments_response_data = match response {
+            AdyenPaymentResponse::ThreeDs2Action(response) => {
+                get_three_ds2_action_response(*response, http_code)?
+            }
             AdyenPaymentResponse::Response(response) => {
                 get_adyen_response(*response, is_manual_capture, http_code, pmt)?
             }
@@ -4744,6 +4757,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Process response using existing helper functions (same as Authorize)
         let adyen_payments_response_data = match response {
+            AdyenPaymentResponse::ThreeDs2Action(response) => {
+                get_three_ds2_action_response(*response, http_code)?
+            }
             AdyenPaymentResponse::Response(response) => {
                 get_adyen_response(*response, is_manual_capture, http_code, pmt)?
             }
@@ -7743,6 +7759,9 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
 
         // Process response using existing helper functions (same as Authorize/RepeatPayment)
         let adyen_payments_response_data = match adyen_response {
+            AdyenPaymentResponse::ThreeDs2Action(response) => {
+                get_three_ds2_action_response(*response, http_code)?
+            }
             AdyenPaymentResponse::Response(response) => {
                 get_adyen_response(*response, is_manual_capture, http_code, pmt)?
             }
@@ -9736,5 +9755,1439 @@ mod level_two_three_tests {
 
         assert!(parsed.level_two_three.is_none());
         assert_eq!(parsed.auth_code, Some("012345".to_string()));
+    }
+}
+
+// ===== Native 3DS2: standalone authentication =====
+//
+// Native (browser, SDK-less) 3DS2 with `authenticationData.authenticationOnly: true`
+// (https://docs.adyen.com/online-payments/3d-secure/standalone-authentication). Three legs that
+// move no money, then the existing Authorize, which is the only money call:
+//
+// 1. PreAuthenticate: `POST v71/payments` with the card and
+//    `authenticationData.threeDSRequestData.nativeThreeDS = preferred`. Adyen answers
+//    `IdentifyShopper` + a `threeDS2` / `fingerprint` action, `ChallengeShopper` + a
+//    `threeDS2` / `challenge` action, or a frictionless `AuthenticationFinished` +
+//    `threeDS2Result`.
+// 2. Authenticate: `POST v71/payments/details` with `details["threeds2.fingerprint"]` and the
+//    `paymentData` carried over from leg 1. Answers `ChallengeShopper` or
+//    `AuthenticationFinished`.
+// 3. PostAuthenticate: `POST v71/payments/details` with `details.threeDSResult`, carrying the
+//    challenge outcome and the `authorisationToken` taken from the challenge action.
+// 4. Authorize (unchanged) sends the resulting `threeDS2Result` as `mpiData`.
+
+const ADYEN_STANDALONE_3DS_DOC_URL: &str =
+    "https://docs.adyen.com/online-payments/3d-secure/standalone-authentication";
+
+/// Error code for an `Authorised` result on an `authenticationOnly` leg, which should never
+/// happen: the payment was authorised by the authentication call itself.
+const ADYEN_UNEXPECTED_AUTHORISATION: &str = "ADYEN_UNEXPECTED_AUTHORISATION";
+
+/// `connector_feature_data` key under which a native 3DS2 leg hands its state to the next one.
+/// Same convention (and the same tolerance for unrelated merchant settings in the carrier) as
+/// cybersource's `three_ds_data`.
+const THREE_DS_DATA_KEY: &str = "three_ds_data";
+
+/// `threeDSCompInd` sent on the Authenticate leg: the 3DS method ran in the hidden iframe
+/// PreAuthenticate returned, so Adyen only wants the completion indicator back.
+const ADYEN_THREE_DS_METHOD_COMPLETED: &str = "Y";
+
+/// `transStatus` sent on the PostAuthenticate leg when the shopper return carries none.
+/// Adyen re-derives the real outcome from `authorisationToken`, and the response's
+/// `threeDS2Result` is what [`get_corroborated_authentication_data`] gates on, so this is a
+/// placeholder for the request shape and not a claim about the challenge.
+const ADYEN_CHALLENGE_COMPLETED_TRANS_STATUS: &str = "Y";
+
+fn standalone_3ds_missing_field(field_name: &'static str, suggested_action: &str) -> Error {
+    IntegrationError::MissingRequiredField {
+        field_name,
+        context: IntegrationErrorContext {
+            suggested_action: Some(suggested_action.to_string()),
+            doc_url: Some(ADYEN_STANDALONE_3DS_DOC_URL.to_string()),
+            additional_context: Some(
+                "required by adyen native 3DS2 standalone authentication (authenticationOnly)"
+                    .to_string(),
+            ),
+        },
+    }
+    .into()
+}
+
+fn standalone_3ds_bad_format(field_name: &'static str, additional_context: &str) -> Error {
+    IntegrationError::InvalidDataFormat {
+        field_name,
+        context: IntegrationErrorContext {
+            suggested_action: Some(
+                "forward the values adyen returned on the previous authentication leg unchanged"
+                    .to_string(),
+            ),
+            doc_url: Some(ADYEN_STANDALONE_3DS_DOC_URL.to_string()),
+            additional_context: Some(additional_context.to_string()),
+        },
+    }
+    .into()
+}
+
+/// `authenticationData.threeDSRequestData.nativeThreeDS`. Only `preferred` is ever sent: it is
+/// the single value that makes Adyen answer with a native fingerprint / challenge action
+/// instead of a redirect.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum AdyenNativeThreeDs {
+    Preferred,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct AdyenThreeDsRequestData {
+    #[serde(rename = "nativeThreeDS")]
+    native_three_ds: AdyenNativeThreeDs,
+}
+
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenAuthenticationData {
+    authentication_only: bool,
+    #[serde(rename = "threeDSRequestData")]
+    three_ds_request_data: Option<AdyenThreeDsRequestData>,
+}
+
+/// `native_three_ds` opt-in on the Adyen connector config. Absent or `false` leaves
+/// `threeDSRequestData` off the request, so Adyen keeps answering the redirect variant.
+fn native_three_ds_request_data(
+    connector_config: &ConnectorSpecificConfig,
+) -> Option<AdyenThreeDsRequestData> {
+    matches!(
+        connector_config,
+        ConnectorSpecificConfig::Adyen {
+            native_three_ds: Some(true),
+            ..
+        }
+    )
+    .then_some(AdyenThreeDsRequestData {
+        native_three_ds: AdyenNativeThreeDs::Preferred,
+    })
+}
+
+/// `POST v71/payments` body for the PreAuthenticate leg: standalone authentication, so it
+/// carries no capture intent and cannot settle a payment.
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenPreAuthenticateRequest<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
+    amount: Amount,
+    merchant_account: Secret<String>,
+    reference: String,
+    payment_method: AdyenPaymentMethod<T>,
+    return_url: String,
+    browser_info: AdyenBrowserInfo,
+    channel: Channel,
+    origin: String,
+    authentication_data: AdyenAuthenticationData,
+    billing_address: Option<Address>,
+    shopper_email: Option<common_utils::pii::Email>,
+    #[serde(rename = "shopperIP")]
+    shopper_ip: Option<Secret<String, common_utils::pii::IpAddress>>,
+}
+
+/// `details` of a `v71/payments/details` call. `paymentData` is a *sibling* of `details` in
+/// Adyen's body, never a member of it, so it lives on [`AdyenDetailsRequest`].
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum AdyenPostAuthenticateDetails {
+    /// Authenticate leg: outcome of the 3DS method (device fingerprint) iframe.
+    Fingerprint {
+        #[serde(rename = "threeds2.fingerprint")]
+        fingerprint: String,
+    },
+    /// PostAuthenticate leg: outcome of the ACS challenge.
+    ThreeDsResult {
+        #[serde(rename = "threeDSResult")]
+        three_ds_result: String,
+    },
+}
+
+/// `POST v71/payments/details` body, shared by the Authenticate and PostAuthenticate legs.
+/// No amount and no capture flag: nothing here can settle a payment.
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenDetailsRequest {
+    details: AdyenPostAuthenticateDetails,
+    payment_data: Option<String>,
+    authentication_data: AdyenAuthenticationData,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(transparent)]
+pub struct AdyenAuthenticateRequest(AdyenDetailsRequest);
+
+#[derive(Debug, Serialize)]
+#[serde(transparent)]
+pub struct AdyenPostAuthenticateRequest(AdyenDetailsRequest);
+
+/// `subtype` of a native `threeDS2` action.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum AdyenThreeDs2Subtype {
+    Fingerprint,
+    Challenge,
+}
+
+/// `action` of a native 3DS2 response. `subtype` and `token` are required, so only a real
+/// `threeDS2` action deserialises into this shape: a redirect action carries neither, and its
+/// `url` / `method` / `data` are all optional.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenThreeDs2Action {
+    #[serde(rename = "type")]
+    type_of_response: ActionType,
+    subtype: AdyenThreeDs2Subtype,
+    token: Secret<String>,
+    authorisation_token: Option<Secret<String>>,
+    payment_data: Option<String>,
+    payment_method_type: Option<PaymentType>,
+}
+
+/// Decoded `action.token` of a `fingerprint` action.
+#[derive(Debug, Clone, Deserialize)]
+pub struct AdyenFingerprintToken {
+    #[serde(rename = "threeDSMethodUrl")]
+    three_ds_method_url: String,
+    #[serde(rename = "threeDSMethodNotificationURL")]
+    three_ds_method_notification_url: String,
+    #[serde(rename = "threeDSServerTransID")]
+    three_ds_server_trans_id: String,
+    #[serde(rename = "threeDSMessageVersion")]
+    three_ds_message_version: String,
+}
+
+/// Decoded `action.token` of a `challenge` action. `acsReferenceNumber` and
+/// `threeDSNotificationURL` are also present on the wire but nothing here needs them.
+#[derive(Debug, Clone, Deserialize)]
+pub struct AdyenChallengeToken {
+    #[serde(rename = "acsURL")]
+    acs_url: String,
+    #[serde(rename = "acsTransID")]
+    acs_trans_id: String,
+    #[serde(rename = "messageVersion")]
+    message_version: String,
+    #[serde(rename = "threeDSServerTransID")]
+    three_ds_server_trans_id: String,
+}
+
+/// `resultCode` of a standalone authentication leg.
+///
+/// Deliberately separate from [`AdyenStatus`]: `IdentifyShopper` has no meaning on Authorize,
+/// and teaching `AdyenStatus` about it would change how every other Adyen flow reads that code.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+pub enum AdyenAuthenticationStatus {
+    IdentifyShopper,
+    ChallengeShopper,
+    AuthenticationFinished,
+    AuthenticationNotRequired,
+    RedirectShopper,
+    Authorised,
+    Refused,
+    Error,
+    Cancelled,
+    Received,
+    Pending,
+    #[serde(other)]
+    Unknown,
+}
+
+/// `threeDS2Result` of a standalone authentication. `transStatus` is kept as received and
+/// parsed when mapped, so an unlisted value fails closed instead of failing the whole parse.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenThreeDS2Result {
+    authentication_value: Option<Secret<String>>,
+    eci: Option<String>,
+    trans_status: Option<String>,
+    #[serde(rename = "dsTransID")]
+    ds_trans_id: Option<String>,
+    #[serde(rename = "threeDSServerTransID")]
+    three_ds_server_trans_id: Option<String>,
+    message_version: Option<String>,
+    challenge_cancel: Option<String>,
+}
+
+/// Response body of a standalone authentication leg. All three legs answer the same shape; the
+/// newtypes exist because the connector macro derives one templating type per response type.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenAuthenticationResponse {
+    result_code: AdyenAuthenticationStatus,
+    psp_reference: Option<String>,
+    merchant_reference: Option<String>,
+    action: Option<AdyenThreeDs2Action>,
+    #[serde(rename = "threeDS2Result")]
+    three_ds2_result: Option<AdyenThreeDS2Result>,
+    refusal_reason: Option<String>,
+    refusal_reason_code: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(transparent)]
+pub struct AdyenPreAuthenticationResponse(AdyenAuthenticationResponse);
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(transparent)]
+pub struct AdyenPostAuthenticationResponse(AdyenAuthenticationResponse);
+
+/// A native `threeDS2` action surfacing on Authorize / PSync / SetupMandate, which have no
+/// Authenticate or PostAuthenticate leg to run it. Its variant is ordered first in
+/// [`AdyenPaymentResponse`] so the action stops matching the all-optional redirect shape,
+/// which yielded `redirection_data: None` and left the payment in `AuthenticationPending`
+/// with no next action and no error.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenThreeDs2ActionResponse {
+    result_code: AdyenStatus,
+    action: AdyenThreeDs2Action,
+    psp_reference: Option<String>,
+    merchant_reference: Option<String>,
+    refusal_reason: Option<String>,
+    refusal_reason_code: Option<String>,
+}
+
+/// State the native 3DS2 ladder carries from one leg to the next.
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenThreeDsState {
+    payment_data: Option<String>,
+    authorisation_token: Option<Secret<String>>,
+}
+
+/// `connector_feature_data` carrier. Unknown top-level keys are tolerated on purpose: the same
+/// carrier also holds unrelated merchant settings.
+#[derive(Debug, Deserialize)]
+struct AdyenThreeDsMetadata {
+    three_ds_data: AdyenThreeDsState,
+}
+
+/// Reads the ladder state a previous leg left in `connector_feature_data`.
+///
+/// `None` when the carrier is absent or holds no `three_ds_data` key. A `three_ds_data` that is
+/// present but unreadable is refused rather than ignored: continuing without `paymentData` or
+/// `authorisationToken` would send Adyen a details call it cannot match to the authentication.
+fn get_adyen_three_ds_state(
+    connector_feature_data: Option<&SecretSerdeValue>,
+) -> Result<Option<AdyenThreeDsState>, Error> {
+    let carrier = match connector_feature_data {
+        Some(carrier) if carrier.peek().get(THREE_DS_DATA_KEY).is_some() => carrier,
+        _ => return Ok(None),
+    };
+    serde_json::from_value::<AdyenThreeDsMetadata>(carrier.peek().clone())
+        .map(|metadata| Some(metadata.three_ds_data))
+        .map_err(|_| {
+            standalone_3ds_bad_format(
+                "connector_feature_data.three_ds_data",
+                "connector_feature_data carries a three_ds_data object that is not an adyen native 3DS2 state",
+            )
+        })
+}
+
+/// Puts the ladder state under `three_ds_data` in the feature-data carrier, keeping whatever
+/// unrelated merchant settings the carrier already holds.
+fn set_adyen_three_ds_state(
+    carrier: Option<SecretSerdeValue>,
+    state: &AdyenThreeDsState,
+) -> Option<SecretSerdeValue> {
+    let value = serde_json::to_value(state).ok()?;
+    let mut object = match carrier.map(ExposeInterface::expose) {
+        Some(serde_json::Value::Object(object)) => object,
+        _ => serde_json::Map::new(),
+    };
+    object.insert(THREE_DS_DATA_KEY.to_string(), value);
+    Some(Secret::new(serde_json::Value::Object(object)))
+}
+
+/// Decodes an `action.token`. The tokens are base64url without padding; the alphabet is
+/// normalised first so a padded or standard-alphabet token decodes too. Malformed input is a
+/// typed error, never a panic.
+fn decode_adyen_native_token<D: serde::de::DeserializeOwned>(
+    token: &Secret<String>,
+    field_name: &'static str,
+) -> Result<D, Error> {
+    let malformed =
+        || standalone_3ds_bad_format(field_name, "adyen action.token is base64url-encoded JSON");
+    let normalised = token.peek().replace('-', "+").replace('_', "/");
+    let decoded = base64::engine::general_purpose::STANDARD_NO_PAD
+        .decode(normalised.trim_end_matches('='))
+        .map_err(|_| malformed())?;
+    serde_json::from_slice(&decoded).map_err(|_| malformed())
+}
+
+/// `details["threeds2.fingerprint"]` of the Authenticate leg.
+fn encode_adyen_fingerprint_completion() -> String {
+    STANDARD.encode(
+        serde_json::json!({ "threeDSCompInd": ADYEN_THREE_DS_METHOD_COMPLETED }).to_string(),
+    )
+}
+
+/// `details.threeDSResult` of the PostAuthenticate leg.
+fn encode_adyen_three_ds_result(
+    trans_status: &str,
+    authorisation_token: &Secret<String>,
+) -> String {
+    STANDARD.encode(
+        serde_json::json!({
+            "transStatus": trans_status,
+            "authorisationToken": authorisation_token.peek(),
+        })
+        .to_string(),
+    )
+}
+
+/// Hidden-iframe form that runs Adyen's 3DS method (device fingerprint).
+///
+/// The field names are the ones hyperswitch's converter sniffs for
+/// (`threeDsMethodDataSubmission` in `authorize_flow.rs`) to build the hidden-iframe next
+/// action, so they must keep this exact spelling.
+fn get_adyen_fingerprint_form(token: &AdyenFingerprintToken) -> RedirectForm {
+    // EMVCo `threeDSMethodData` is base64url without padding.
+    let method_data = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(
+        serde_json::json!({
+            "threeDSServerTransID": token.three_ds_server_trans_id,
+            "threeDSMethodNotificationURL": token.three_ds_method_notification_url,
+        })
+        .to_string(),
+    );
+    RedirectForm::Form {
+        endpoint: token.three_ds_method_url.clone(),
+        method: Method::Post,
+        form_fields: std::collections::HashMap::from([
+            ("threeDsMethodData".to_string(), method_data),
+            (
+                "threeDSServerTransID".to_string(),
+                token.three_ds_server_trans_id.clone(),
+            ),
+            (
+                "threeDsMethodUrl".to_string(),
+                token.three_ds_method_url.clone(),
+            ),
+            (
+                "messageVersion".to_string(),
+                token.three_ds_message_version.clone(),
+            ),
+            (
+                "threeDsMethodDataSubmission".to_string(),
+                "true".to_string(),
+            ),
+        ]),
+    }
+}
+
+/// ACS challenge form: the EMVCo `creq` posted to `acsURL`.
+fn get_adyen_challenge_form(token: &AdyenChallengeToken) -> RedirectForm {
+    let creq = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(
+        serde_json::json!({
+            "threeDSServerTransID": token.three_ds_server_trans_id,
+            "acsTransID": token.acs_trans_id,
+            "messageVersion": token.message_version,
+            "messageType": "CReq",
+            "challengeWindowSize": "05",
+        })
+        .to_string(),
+    );
+    RedirectForm::Form {
+        endpoint: token.acs_url.clone(),
+        method: Method::Post,
+        form_fields: std::collections::HashMap::from([("creq".to_string(), creq)]),
+    }
+}
+
+/// Turns a native `threeDS2` action into the browser form that runs it plus the state the next
+/// leg needs. Anything that is not a `threeDS2` action is refused.
+fn get_adyen_native_action(
+    action: &AdyenThreeDs2Action,
+) -> Result<(RedirectForm, AdyenThreeDsState), Error> {
+    if !matches!(action.type_of_response, ActionType::ThreeDs2) {
+        return Err(standalone_3ds_bad_format(
+            "action.type",
+            "native 3DS2 expects an action of type threeDS2",
+        ));
+    }
+    let form =
+        match action.subtype {
+            AdyenThreeDs2Subtype::Fingerprint => get_adyen_fingerprint_form(
+                &decode_adyen_native_token::<AdyenFingerprintToken>(&action.token, "action.token")?,
+            ),
+            AdyenThreeDs2Subtype::Challenge => get_adyen_challenge_form(
+                &decode_adyen_native_token::<AdyenChallengeToken>(&action.token, "action.token")?,
+            ),
+        };
+    Ok((
+        form,
+        AdyenThreeDsState {
+            payment_data: action.payment_data.clone(),
+            authorisation_token: action.authorisation_token.clone(),
+        },
+    ))
+}
+
+/// Maps a `threeDS2Result` onto [`AuthenticationData`] only when its ECI corroborates the
+/// transaction status ([`is_three_ds_outcome_corroborated`]). Any other combination, a missing
+/// result or an unlisted `transStatus` yields `None`.
+fn get_corroborated_authentication_data(
+    three_ds2_result: Option<&AdyenThreeDS2Result>,
+) -> Option<AuthenticationData> {
+    let result = three_ds2_result?;
+    let trans_status = result.trans_status.as_ref().and_then(|status| {
+        serde_json::from_value::<common_enums::TransactionStatus>(serde_json::Value::String(
+            status.clone(),
+        ))
+        .ok()
+    });
+    if !is_three_ds_outcome_corroborated(trans_status.as_ref(), result.eci.as_deref()) {
+        return None;
+    }
+    Some(AuthenticationData {
+        trans_status,
+        eci: result.eci.clone(),
+        cavv: result.authentication_value.clone(),
+        ucaf_collection_indicator: None,
+        threeds_server_transaction_id: result.three_ds_server_trans_id.clone(),
+        message_version: result
+            .message_version
+            .as_deref()
+            .and_then(|version| version.parse::<SemanticVersion>().ok()),
+        ds_trans_id: result.ds_trans_id.clone(),
+        acs_transaction_id: None,
+        transaction_id: None,
+        network_params: None,
+        exemption_indicator: None,
+        created_at: None,
+        challenge_code: None,
+        challenge_cancel: result.challenge_cancel.clone(),
+        challenge_code_reason: None,
+        message_extension: None,
+        authentication_type: None,
+    })
+}
+
+/// Authentication failure of a standalone leg: a 2xx body that is not a usable authentication
+/// outcome is an error, never a success.
+fn get_adyen_authentication_error(
+    response: &AdyenAuthenticationResponse,
+    status_code: u16,
+    code: Option<&str>,
+    reason: Option<String>,
+) -> ErrorResponse {
+    ErrorResponse {
+        status_code,
+        code: code
+            .map(str::to_string)
+            .or_else(|| response.refusal_reason_code.clone())
+            .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
+        message: response
+            .refusal_reason
+            .clone()
+            .or_else(|| reason.clone())
+            .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
+        reason: reason.or_else(|| response.refusal_reason.clone()),
+        connector_transaction_id: response.psp_reference.clone(),
+        ..Default::default()
+    }
+}
+
+/// Which leg is reading the response. The three legs accept different result codes, and only
+/// the two whose response variant carries `redirection_data` can surface a shopper action.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AdyenAuthenticationLeg {
+    PreAuthenticate,
+    Authenticate,
+    PostAuthenticate,
+}
+
+/// What a standalone authentication leg produced.
+#[derive(Debug, Default)]
+struct AdyenNativeOutcome {
+    redirection_data: Option<RedirectForm>,
+    authentication_data: Option<AuthenticationData>,
+    three_ds_data: Option<AdyenThreeDsState>,
+}
+
+/// Outcome of a standalone authentication leg, or the status and error to report.
+fn get_adyen_native_outcome(
+    response: &AdyenAuthenticationResponse,
+    status_code: u16,
+    leg: AdyenAuthenticationLeg,
+    is_manual_capture: bool,
+) -> Result<(AttemptStatus, AdyenNativeOutcome), (AttemptStatus, ErrorResponse)> {
+    let failed = |reason: Option<String>| {
+        (
+            AttemptStatus::AuthenticationFailed,
+            get_adyen_authentication_error(response, status_code, None, reason),
+        )
+    };
+    // A leg whose response variant has no `redirection_data` cannot surface a shopper action,
+    // and neither can a fingerprint that arrives after the fingerprint leg. Fail closed rather
+    // than drop the action and leave the payment pending with no next step.
+    let shopper_action = |allowed: bool| {
+        let action = response.action.as_ref().ok_or_else(|| {
+            failed(Some(format!(
+                "resultCode {:?} without a threeDS2 action: the shopper step cannot be shown",
+                response.result_code
+            )))
+        })?;
+        if !allowed {
+            return Err(failed(Some(format!(
+                "unexpected {:?} action on the {leg:?} leg",
+                action.subtype
+            ))));
+        }
+        let (form, state) =
+            get_adyen_native_action(action).map_err(|error| failed(Some(error.to_string())))?;
+        Ok((
+            AttemptStatus::AuthenticationPending,
+            AdyenNativeOutcome {
+                redirection_data: Some(form),
+                authentication_data: None,
+                three_ds_data: Some(state),
+            },
+        ))
+    };
+    // https://docs.adyen.com/online-payments/build-your-integration/payment-result-codes
+    match response.result_code {
+        // Native fingerprint: only the first leg can ask for one.
+        AdyenAuthenticationStatus::IdentifyShopper => {
+            shopper_action(leg == AdyenAuthenticationLeg::PreAuthenticate)
+        }
+        // Native challenge: legs 1 and 2 surface it; leg 3 carries the challenge result itself.
+        AdyenAuthenticationStatus::ChallengeShopper => {
+            shopper_action(leg != AdyenAuthenticationLeg::PostAuthenticate)
+        }
+        // Frictionless or post-challenge result, usable only when the ECI corroborates it.
+        AdyenAuthenticationStatus::AuthenticationFinished => {
+            match get_corroborated_authentication_data(response.three_ds2_result.as_ref()) {
+                Some(data) => Ok((
+                    AttemptStatus::AuthenticationSuccessful,
+                    AdyenNativeOutcome {
+                        authentication_data: Some(data),
+                        ..Default::default()
+                    },
+                )),
+                None => Err(failed(Some(
+                    "threeDS2Result transStatus is not corroborated by its ECI".to_string(),
+                ))),
+            }
+        }
+        // No authentication needed, or still in flight: Authorize proceeds without mpiData.
+        AdyenAuthenticationStatus::AuthenticationNotRequired
+        | AdyenAuthenticationStatus::Received
+        | AdyenAuthenticationStatus::Pending
+        | AdyenAuthenticationStatus::Unknown => {
+            Ok((AttemptStatus::Pending, AdyenNativeOutcome::default()))
+        }
+        AdyenAuthenticationStatus::Refused
+        | AdyenAuthenticationStatus::Error
+        | AdyenAuthenticationStatus::Cancelled => Err(failed(None)),
+        // nativeThreeDS was asked for, so a redirect action is not something these legs run.
+        AdyenAuthenticationStatus::RedirectShopper => Err(failed(Some(
+            "adyen answered the redirect 3DS2 variant; the native legs cannot run it".to_string(),
+        ))),
+        // Money moved on an authenticationOnly call: report it honestly instead of letting the
+        // composite loop authorise the payment a second time.
+        AdyenAuthenticationStatus::Authorised => Err((
+            if is_manual_capture {
+                AttemptStatus::Authorized
+            } else {
+                AttemptStatus::Charged
+            },
+            get_adyen_authentication_error(
+                response,
+                status_code,
+                Some(ADYEN_UNEXPECTED_AUTHORISATION),
+                Some("adyen authorised the payment on the authentication-only call".to_string()),
+            ),
+        )),
+    }
+}
+
+/// Value of one shopper-return key: the key of the return URL query
+/// (`redirect_response.params`, query-string decoded once like the PSync redirect path), else
+/// the string value of that key in the posted form body (`redirect_response.payload`).
+fn get_adyen_redirect_response_value(
+    redirect_response: Option<&connector_types::ContinueRedirectionResponse>,
+    key: &str,
+) -> Option<String> {
+    let redirect_response = redirect_response?;
+    let from_params = redirect_response.params.as_ref().and_then(|params| {
+        url::form_urlencoded::parse(params.peek().as_bytes())
+            .find(|(name, value)| name == key && !value.trim().is_empty())
+            .map(|(_, value)| value.into_owned())
+    });
+    from_params.or_else(|| {
+        redirect_response.payload.as_ref().and_then(|payload| {
+            payload
+                .peek()
+                .get(key)
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_string)
+        })
+    })
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        AdyenRouterData<
+            RouterDataV2<
+                PreAuthenticate,
+                PaymentFlowData,
+                PaymentsPreAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for AdyenPreAuthenticateRequest<T>
+{
+    type Error = Error;
+    fn try_from(
+        item: AdyenRouterData<
+            RouterDataV2<
+                PreAuthenticate,
+                PaymentFlowData,
+                PaymentsPreAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+        let request = &router_data.request;
+
+        // Standalone 3DS2 authenticates raw card details only.
+        let card = match request.payment_method_data.as_ref() {
+            Some(PaymentMethodData::Card(card)) => card,
+            Some(_) => {
+                return Err(IntegrationError::NotSupported {
+                    message: "3DS authentication for this payment method".to_string(),
+                    connector: "adyen",
+                    context: IntegrationErrorContext {
+                        suggested_action: Some(
+                            "use Authorize for wallets, network tokens and stored tokens; \
+                             standalone 3DS authenticates raw cards only"
+                                .to_string(),
+                        ),
+                        doc_url: Some(ADYEN_STANDALONE_3DS_DOC_URL.to_string()),
+                        additional_context: None,
+                    },
+                }
+                .into())
+            }
+            None => {
+                return Err(standalone_3ds_missing_field(
+                    "payment_method_data",
+                    "send the card to authenticate",
+                ))
+            }
+        };
+
+        // returnUrl must bring the shopper back to the complete-authorize route.
+        let continue_redirection_url = request.continue_redirection_url.as_ref().ok_or_else(|| {
+            standalone_3ds_missing_field(
+                "continue_redirection_url",
+                "send continue_redirection_url (the URL the shopper returns to after the 3DS steps)",
+            )
+        })?;
+        let origin = continue_redirection_url.origin().ascii_serialization();
+
+        // browserInfo is required for channel Web; each getter names its own field.
+        let browser = request.browser_info.as_ref().ok_or_else(|| {
+            standalone_3ds_missing_field(
+                "browser_info",
+                "send browser_info with accept_header, user_agent, language, color_depth, \
+                 screen_height, screen_width, time_zone_offset_minutes and java_enabled",
+            )
+        })?;
+        let browser_info = AdyenBrowserInfo {
+            accept_header: browser.get_accept_header()?,
+            language: browser.get_language()?,
+            screen_height: browser.get_screen_height()?,
+            screen_width: browser.get_screen_width()?,
+            color_depth: browser.get_color_depth()?,
+            user_agent: browser.get_user_agent()?,
+            time_zone_offset: browser.get_time_zone()?,
+            java_enabled: browser.get_java_enabled()?,
+        };
+
+        let currency = request
+            .currency
+            .ok_or_else(|| standalone_3ds_missing_field("currency", "send the amount currency"))?;
+
+        let auth_type = AdyenAuthType::try_from(&router_data.connector_config)?;
+        let card_holder_name = card.card_holder_name.clone().or_else(|| {
+            router_data
+                .resource_common_data
+                .get_optional_billing_full_name()
+        });
+        let billing_address =
+            get_address_info(router_data.resource_common_data.get_optional_billing())
+                .and_then(Result::ok);
+
+        Ok(Self {
+            amount: Amount {
+                currency,
+                value: request.amount.amount,
+            },
+            merchant_account: auth_type.merchant_account,
+            reference: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            payment_method: AdyenPaymentMethod::try_from((card, card_holder_name))?,
+            return_url: continue_redirection_url.to_string(),
+            browser_info,
+            channel: Channel::Web,
+            origin,
+            authentication_data: AdyenAuthenticationData {
+                authentication_only: true,
+                three_ds_request_data: native_three_ds_request_data(&router_data.connector_config),
+            },
+            billing_address,
+            shopper_email: request.email.clone(),
+            shopper_ip: browser
+                .ip_address
+                .map(|ip_address| Secret::new(ip_address.to_string())),
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        AdyenRouterData<
+            RouterDataV2<
+                Authenticate,
+                PaymentFlowData,
+                PaymentsAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for AdyenAuthenticateRequest
+{
+    type Error = Error;
+    fn try_from(
+        item: AdyenRouterData<
+            RouterDataV2<
+                Authenticate,
+                PaymentFlowData,
+                PaymentsAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let payment_data = get_adyen_three_ds_state(
+            item.router_data
+                .resource_common_data
+                .connector_feature_data
+                .as_ref(),
+        )?
+        .and_then(|state| state.payment_data)
+        .ok_or_else(|| {
+            standalone_3ds_missing_field(
+                "connector_feature_data.three_ds_data.paymentData",
+                "forward the connector_feature_data returned by PreAuthenticate unchanged",
+            )
+        })?;
+        Ok(Self(AdyenDetailsRequest {
+            details: AdyenPostAuthenticateDetails::Fingerprint {
+                fingerprint: encode_adyen_fingerprint_completion(),
+            },
+            payment_data: Some(payment_data),
+            authentication_data: AdyenAuthenticationData {
+                authentication_only: true,
+                three_ds_request_data: None,
+            },
+        }))
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        AdyenRouterData<
+            RouterDataV2<
+                PostAuthenticate,
+                PaymentFlowData,
+                PaymentsPostAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for AdyenPostAuthenticateRequest
+{
+    type Error = Error;
+    fn try_from(
+        item: AdyenRouterData<
+            RouterDataV2<
+                PostAuthenticate,
+                PaymentFlowData,
+                PaymentsPostAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let authorisation_token = get_adyen_three_ds_state(
+            item.router_data
+                .resource_common_data
+                .connector_feature_data
+                .as_ref(),
+        )?
+        .and_then(|state| state.authorisation_token)
+        .ok_or_else(|| {
+            standalone_3ds_missing_field(
+                "connector_feature_data.three_ds_data.authorisationToken",
+                "forward the connector_feature_data returned by the challenge leg unchanged",
+            )
+        })?;
+        let trans_status = get_adyen_redirect_response_value(
+            item.router_data.request.redirect_response.as_ref(),
+            "transStatus",
+        )
+        .unwrap_or_else(|| ADYEN_CHALLENGE_COMPLETED_TRANS_STATUS.to_string());
+        Ok(Self(AdyenDetailsRequest {
+            details: AdyenPostAuthenticateDetails::ThreeDsResult {
+                three_ds_result: encode_adyen_three_ds_result(&trans_status, &authorisation_token),
+            },
+            // `paymentData` is not sent on this leg: `authorisationToken` identifies the
+            // authentication Adyen is finishing.
+            payment_data: None,
+            authentication_data: AdyenAuthenticationData {
+                authentication_only: true,
+                three_ds_request_data: None,
+            },
+        }))
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<AdyenPreAuthenticationResponse, Self>>
+    for RouterDataV2<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        value: ResponseRouterData<AdyenPreAuthenticationResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response: AdyenPreAuthenticationResponse(response),
+            router_data,
+            http_code,
+        } = value;
+        let is_manual_capture = is_manual_capture(router_data.request.capture_method);
+        let mut resource_common_data = router_data.resource_common_data;
+        let response_data = match get_adyen_native_outcome(
+            &response,
+            http_code,
+            AdyenAuthenticationLeg::PreAuthenticate,
+            is_manual_capture,
+        ) {
+            Ok((status, outcome)) => {
+                resource_common_data.status = status;
+                if let Some(state) = outcome.three_ds_data.as_ref() {
+                    resource_common_data.connector_feature_data = set_adyen_three_ds_state(
+                        resource_common_data.connector_feature_data.clone(),
+                        state,
+                    );
+                }
+                Ok(PaymentsResponseData::PreAuthenticateResponse {
+                    resource_id: response
+                        .psp_reference
+                        .clone()
+                        .map(ResponseId::ConnectorTransactionId),
+                    authentication_data: outcome.authentication_data,
+                    redirection_data: outcome.redirection_data.map(Box::new),
+                    connector_response_reference_id: response.merchant_reference.clone(),
+                    status_code: http_code,
+                })
+            }
+            Err((status, error)) => {
+                resource_common_data.status = status;
+                Err(error)
+            }
+        };
+        Ok(Self {
+            response: response_data,
+            resource_common_data,
+            ..router_data
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<AdyenAuthenticationResponse, Self>>
+    for RouterDataV2<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        value: ResponseRouterData<AdyenAuthenticationResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = value;
+        let is_manual_capture = is_manual_capture(router_data.request.capture_method);
+        let mut resource_common_data = router_data.resource_common_data;
+        let response_data = match get_adyen_native_outcome(
+            &response,
+            http_code,
+            AdyenAuthenticationLeg::Authenticate,
+            is_manual_capture,
+        ) {
+            Ok((status, outcome)) => {
+                resource_common_data.status = status;
+                // This leg's grpc response reads `connector_feature_data` off the response
+                // variant, not off the flow data.
+                let connector_feature_data = outcome.three_ds_data.as_ref().and_then(|state| {
+                    set_adyen_three_ds_state(
+                        resource_common_data.connector_feature_data.clone(),
+                        state,
+                    )
+                    .map(ExposeInterface::expose)
+                });
+                Ok(PaymentsResponseData::AuthenticateResponse {
+                    resource_id: response
+                        .psp_reference
+                        .clone()
+                        .map(ResponseId::ConnectorTransactionId),
+                    redirection_data: outcome.redirection_data.map(Box::new),
+                    authentication_data: outcome.authentication_data,
+                    connector_feature_data,
+                    connector_response_reference_id: response.merchant_reference.clone(),
+                    status_code: http_code,
+                    // This leg is authenticationOnly, so it never charges: an Adyen-side
+                    // authorisation here is reported as ADYEN_UNEXPECTED_AUTHORISATION before
+                    // this variant is built.
+                    mandate_reference: None,
+                    network_txn_id: None,
+                    network_txn_link_id: None,
+                })
+            }
+            Err((status, error)) => {
+                resource_common_data.status = status;
+                Err(error)
+            }
+        };
+        Ok(Self {
+            response: response_data,
+            resource_common_data,
+            ..router_data
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<AdyenPostAuthenticationResponse, Self>>
+    for RouterDataV2<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        value: ResponseRouterData<AdyenPostAuthenticationResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response: AdyenPostAuthenticationResponse(response),
+            router_data,
+            http_code,
+        } = value;
+        let is_manual_capture = is_manual_capture(router_data.request.capture_method);
+        let mut resource_common_data = router_data.resource_common_data;
+        let response_data = match get_adyen_native_outcome(
+            &response,
+            http_code,
+            AdyenAuthenticationLeg::PostAuthenticate,
+            is_manual_capture,
+        ) {
+            Ok((status, outcome)) => {
+                resource_common_data.status = status;
+                Ok(PaymentsResponseData::PostAuthenticateResponse {
+                    authentication_data: outcome.authentication_data,
+                    connector_response_reference_id: response.merchant_reference.clone(),
+                    status_code: http_code,
+                })
+            }
+            Err((status, error)) => {
+                resource_common_data.status = status;
+                Err(error)
+            }
+        };
+        Ok(Self {
+            response: response_data,
+            resource_common_data,
+            ..router_data
+        })
+    }
+}
+
+/// Authorize / PSync / SetupMandate cannot run a native 3DS2 action: those flows have no
+/// Authenticate or PostAuthenticate leg to complete it. Fail closed naming the subtype, rather
+/// than returning no next step.
+pub fn get_three_ds2_action_response(
+    response: AdyenThreeDs2ActionResponse,
+    status_code: u16,
+) -> CustomResult<AdyenPaymentsResponseData, ConnectorError> {
+    let error = ErrorResponse {
+        status_code,
+        code: response
+            .refusal_reason_code
+            .clone()
+            .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
+        message: response.refusal_reason.clone().unwrap_or_else(|| {
+            format!(
+                "adyen returned a native 3DS2 {:?} action on a flow that cannot run it",
+                response.action.subtype
+            )
+        }),
+        reason: Some(
+            "run native 3DS2 through the PreAuthenticate / Authenticate / PostAuthenticate legs, \
+             or turn native 3DS2 off on the adyen account"
+                .to_string(),
+        ),
+        connector_transaction_id: response.psp_reference.clone(),
+        ..Default::default()
+    };
+    Ok(AdyenPaymentsResponseData {
+        status: AttemptStatus::AuthenticationFailed,
+        error: Some(error),
+        payments_response_data: PaymentsResponseData::TransactionResponse {
+            resource_id: response
+                .psp_reference
+                .clone()
+                .map(ResponseId::ConnectorTransactionId)
+                .unwrap_or(ResponseId::NoResponseId),
+            redirection_data: None,
+            mandate_reference: None,
+            connector_metadata: None,
+            network_txn_id: None,
+            network_txn_link_id: None,
+            connector_response_reference_id: response
+                .merchant_reference
+                .clone()
+                .or(response.psp_reference),
+            incremental_authorization_allowed: None,
+            status_code,
+            splits: None,
+            payment_account_reference: None,
+        },
+        txn_amount: None,
+        connector_response: None,
+    })
+}
+
+#[cfg(test)]
+mod native_three_ds_tests {
+    use super::*;
+
+    fn b64url(json: &str) -> Secret<String> {
+        Secret::new(base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(json))
+    }
+
+    #[test]
+    fn fingerprint_token_decodes() {
+        let token = b64url(
+            r#"{"threeDSMethodUrl":"https://acs.example/3ds-method",
+                "threeDSMethodNotificationURL":"https://hs.example/notify",
+                "threeDSServerTransID":"srv-1",
+                "threeDSMessageVersion":"2.2.0"}"#,
+        );
+        let decoded = decode_adyen_native_token::<AdyenFingerprintToken>(&token, "action.token")
+            .ok()
+            .map(|token| {
+                (
+                    token.three_ds_method_url,
+                    token.three_ds_server_trans_id,
+                    token.three_ds_message_version,
+                )
+            });
+        assert_eq!(
+            decoded,
+            Some((
+                "https://acs.example/3ds-method".to_string(),
+                "srv-1".to_string(),
+                "2.2.0".to_string(),
+            ))
+        );
+    }
+
+    #[test]
+    fn challenge_token_decodes() {
+        let token = b64url(
+            r#"{"acsURL":"https://acs.example/challenge",
+                "acsTransID":"acs-1",
+                "acsReferenceNumber":"ref-1",
+                "messageVersion":"2.2.0",
+                "threeDSNotificationURL":"https://hs.example/notify",
+                "threeDSServerTransID":"srv-1"}"#,
+        );
+        let decoded = decode_adyen_native_token::<AdyenChallengeToken>(&token, "action.token")
+            .ok()
+            .map(|token| (token.acs_url, token.acs_trans_id, token.message_version));
+        assert_eq!(
+            decoded,
+            Some((
+                "https://acs.example/challenge".to_string(),
+                "acs-1".to_string(),
+                "2.2.0".to_string(),
+            ))
+        );
+    }
+
+    #[test]
+    fn malformed_token_is_an_error_not_a_panic() {
+        let not_base64 = Secret::new("!!!not base64!!!".to_string());
+        assert!(
+            decode_adyen_native_token::<AdyenFingerprintToken>(&not_base64, "action.token")
+                .is_err()
+        );
+        let not_the_right_json = b64url(r#"{"unexpected":"shape"}"#);
+        assert!(decode_adyen_native_token::<AdyenFingerprintToken>(
+            &not_the_right_json,
+            "action.token"
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn authenticate_body_keeps_payment_data_beside_details() {
+        let body = AdyenAuthenticateRequest(AdyenDetailsRequest {
+            details: AdyenPostAuthenticateDetails::Fingerprint {
+                fingerprint: encode_adyen_fingerprint_completion(),
+            },
+            payment_data: Some("Ab02b4c0!payment-data".to_string()),
+            authentication_data: AdyenAuthenticationData {
+                authentication_only: true,
+                three_ds_request_data: None,
+            },
+        });
+        let serialized = serde_json::to_value(&body).unwrap_or_default();
+        // `paymentData` is a sibling of `details`, not a member of it.
+        assert_eq!(
+            serialized.get("paymentData").and_then(|v| v.as_str()),
+            Some("Ab02b4c0!payment-data")
+        );
+        assert_eq!(
+            serialized
+                .pointer("/details/paymentData")
+                .and_then(|v| v.as_str()),
+            None
+        );
+        assert_eq!(
+            serialized
+                .pointer("/authenticationData/authenticationOnly")
+                .and_then(|v| v.as_bool()),
+            Some(true)
+        );
+        // `threeDSRequestData` is absent on the details calls.
+        assert_eq!(
+            serialized.pointer("/authenticationData/threeDSRequestData"),
+            None
+        );
+        let fingerprint = serialized
+            .pointer("/details/threeds2.fingerprint")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default();
+        let decoded = STANDARD
+            .decode(fingerprint)
+            .ok()
+            .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok())
+            .unwrap_or_default();
+        assert_eq!(
+            decoded.get("threeDSCompInd").and_then(|v| v.as_str()),
+            Some("Y")
+        );
+    }
+
+    #[test]
+    fn post_authenticate_body_carries_trans_status_and_authorisation_token() {
+        let body = AdyenPostAuthenticateRequest(AdyenDetailsRequest {
+            details: AdyenPostAuthenticateDetails::ThreeDsResult {
+                three_ds_result: encode_adyen_three_ds_result(
+                    "Y",
+                    &Secret::new("auth-token-1".to_string()),
+                ),
+            },
+            payment_data: None,
+            authentication_data: AdyenAuthenticationData {
+                authentication_only: true,
+                three_ds_request_data: None,
+            },
+        });
+        let serialized = serde_json::to_value(&body).unwrap_or_default();
+        assert_eq!(serialized.get("paymentData"), None);
+        let three_ds_result = serialized
+            .pointer("/details/threeDSResult")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default();
+        let decoded = STANDARD
+            .decode(three_ds_result)
+            .ok()
+            .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok())
+            .unwrap_or_default();
+        assert_eq!(
+            (
+                decoded.get("transStatus").and_then(|v| v.as_str()),
+                decoded.get("authorisationToken").and_then(|v| v.as_str()),
+            ),
+            (Some("Y"), Some("auth-token-1"))
+        );
+    }
+
+    fn three_ds2_result(trans_status: &str, eci: &str) -> AdyenThreeDS2Result {
+        AdyenThreeDS2Result {
+            authentication_value: Some(Secret::new("cavv-value".to_string())),
+            eci: Some(eci.to_string()),
+            trans_status: Some(trans_status.to_string()),
+            ds_trans_id: Some("ds-1".to_string()),
+            three_ds_server_trans_id: Some("srv-1".to_string()),
+            message_version: Some("2.2.0".to_string()),
+            challenge_cancel: None,
+        }
+    }
+
+    #[test]
+    fn corroborated_three_ds2_result_becomes_authentication_data() {
+        let mapped = get_corroborated_authentication_data(Some(&three_ds2_result("Y", "05")))
+            .map(|data| {
+                (
+                    data.trans_status,
+                    data.eci,
+                    data.cavv.map(|cavv| cavv.peek().clone()),
+                    data.ds_trans_id,
+                    data.message_version.is_some(),
+                )
+            })
+            .unwrap_or_default();
+        assert_eq!(
+            mapped,
+            (
+                Some(common_enums::TransactionStatus::Success),
+                Some("05".to_string()),
+                Some("cavv-value".to_string()),
+                Some("ds-1".to_string()),
+                true,
+            )
+        );
+    }
+
+    #[test]
+    fn uncorroborated_three_ds2_result_is_refused() {
+        // transStatus Y with a "not authenticated" ECI, and an unlisted transStatus.
+        assert!(get_corroborated_authentication_data(Some(&three_ds2_result("Y", "07"))).is_none());
+        assert!(get_corroborated_authentication_data(Some(&three_ds2_result("N", "05"))).is_none());
+        assert!(get_corroborated_authentication_data(Some(&three_ds2_result("Z", "05"))).is_none());
+        assert!(get_corroborated_authentication_data(None).is_none());
+    }
+
+    #[test]
+    fn three_ds2_action_body_is_not_a_redirection_response() {
+        let body = serde_json::json!({
+            "resultCode": "IdentifyShopper",
+            "action": {
+                "paymentMethodType": "scheme",
+                "type": "threeDS2",
+                "subtype": "fingerprint",
+                "token": "e30",
+                "paymentData": "Ab02b4c0!payment-data"
+            }
+        })
+        .to_string();
+        let parsed = serde_json::from_str::<AdyenPaymentResponse>(&body).ok();
+        assert!(matches!(
+            parsed,
+            Some(AdyenPaymentResponse::ThreeDs2Action(_))
+        ));
+    }
+
+    #[test]
+    fn redirect_action_body_still_parses_as_a_redirection_response() {
+        let body = serde_json::json!({
+            "resultCode": "RedirectShopper",
+            "action": {
+                "paymentMethodType": "scheme",
+                "type": "redirect",
+                "url": "https://acs.example/redirect",
+                "method": "GET"
+            }
+        })
+        .to_string();
+        let parsed = serde_json::from_str::<AdyenPaymentResponse>(&body).ok();
+        assert!(matches!(
+            parsed,
+            Some(AdyenPaymentResponse::RedirectionResponse(_))
+        ));
+    }
+
+    #[test]
+    fn three_ds_state_round_trips_through_the_feature_data_carrier() {
+        let mut merchant_settings = serde_json::Map::new();
+        merchant_settings.insert(
+            "unrelated_merchant_setting".to_string(),
+            serde_json::Value::Bool(true),
+        );
+        let carrier = set_adyen_three_ds_state(
+            Some(Secret::new(serde_json::Value::Object(merchant_settings))),
+            &AdyenThreeDsState {
+                payment_data: Some("Ab02b4c0!payment-data".to_string()),
+                authorisation_token: Some(Secret::new("auth-token-1".to_string())),
+            },
+        );
+        // The unrelated merchant setting survives.
+        assert_eq!(
+            carrier
+                .as_ref()
+                .and_then(|carrier| carrier.peek().get("unrelated_merchant_setting"))
+                .and_then(|value| value.as_bool()),
+            Some(true)
+        );
+        let read_back = get_adyen_three_ds_state(carrier.as_ref())
+            .ok()
+            .flatten()
+            .map(|state| {
+                (
+                    state.payment_data,
+                    state.authorisation_token.map(|t| t.peek().clone()),
+                )
+            })
+            .unwrap_or_default();
+        assert_eq!(
+            read_back,
+            (
+                Some("Ab02b4c0!payment-data".to_string()),
+                Some("auth-token-1".to_string()),
+            )
+        );
+    }
+
+    #[test]
+    fn feature_data_without_three_ds_data_reads_as_absent() {
+        let mut merchant_settings = serde_json::Map::new();
+        merchant_settings.insert(
+            "unrelated_merchant_setting".to_string(),
+            serde_json::Value::Bool(true),
+        );
+        let carrier = Secret::new(serde_json::Value::Object(merchant_settings));
+        assert!(matches!(get_adyen_three_ds_state(Some(&carrier)), Ok(None)));
     }
 }

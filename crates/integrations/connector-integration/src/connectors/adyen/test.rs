@@ -97,7 +97,8 @@ mod tests {
                     review_key: None,
                     base_url: None,
                     dispute_base_url: None,
-                    endpoint_prefix: None
+                    endpoint_prefix: None,
+                    native_three_ds: None
 },
                 request: PaymentsAuthorizeData {
                     split_settlement: None,
@@ -314,7 +315,8 @@ mod tests {
                     review_key: None,
                     base_url: None,
                     dispute_base_url: None,
-                    endpoint_prefix: None
+                    endpoint_prefix: None,
+                    native_three_ds: None
 },
                 request: PaymentsAuthorizeData {
                     split_settlement: None,

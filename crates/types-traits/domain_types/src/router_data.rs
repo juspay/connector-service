@@ -609,6 +609,10 @@ pub enum ConnectorSpecificConfig {
         base_url: Option<String>,
         dispute_base_url: Option<String>,
         endpoint_prefix: Option<String>,
+        /// Opt-in for native (SDK-less, browser) 3DS2 standalone authentication, which runs
+        /// the PreAuthenticate / Authenticate / PostAuthenticate legs before Authorize.
+        /// Absent or `false` keeps Adyen on the redirect 3DS2 variant.
+        native_three_ds: Option<bool>,
     },
     BankOfAmerica {
         api_key: Secret<String>,
@@ -2190,6 +2194,9 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 base_url: adyen.base_url,
                 dispute_base_url: adyen.dispute_base_url,
                 endpoint_prefix: adyen.endpoint_prefix,
+                // `AdyenConfig` has no `native_three_ds` field yet, so the opt-in cannot be
+                // set over the wire: it stays `None` until the proto carries it.
+                native_three_ds: None,
             }),
             AuthType::Airwallex(airwallex) => Ok(Self::Airwallex {
                 api_key: airwallex.api_key.ok_or_else(err)?,
@@ -3308,6 +3315,7 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorVariant)>
                         base_url: None,
                         dispute_base_url: None,
                         endpoint_prefix: None,
+                        native_three_ds: None,
                     }),
                     ConnectorAuthType::SignatureKey {
                         api_key,
@@ -3320,6 +3328,7 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorVariant)>
                         base_url: None,
                         dispute_base_url: None,
                         endpoint_prefix: None,
+                        native_three_ds: None,
                     }),
                     _ => Err(err().into()),
                 },
