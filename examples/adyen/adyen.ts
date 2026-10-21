@@ -5,9 +5,9 @@
 // Adyen — all integration scenarios and flows in one file.
 // Run a scenario:  npx tsx adyen.ts checkout_autocapture
 
-import { PaymentClient, MerchantAuthenticationClient, DisputeClient, EventClient, RecurringPaymentClient, types } from 'hyperswitch-prism';
+import { PaymentClient, MerchantAuthenticationClient, DisputeClient, EventClient, PaymentMethodAuthenticationClient, RecurringPaymentClient, types } from 'hyperswitch-prism';
 const { Environment, AcceptanceType, AuthenticationType, CaptureMethod, CardNetwork, Currency, EvidenceType, FutureUsage, HttpMethod, PaymentMethodType } = types;
-export const SUPPORTED_FLOWS = ["authorize", "capture", "create_client_authentication_token", "create_order", "dispute_accept", "dispute_defend", "dispute_submit_evidence", "get", "incremental_authorization", "parse_event", "proxy_authorize", "proxy_setup_recurring", "recurring_charge", "refund", "reverse", "setup_recurring", "token_authorize", "void"];
+export const SUPPORTED_FLOWS = ["authorize", "capture", "create_client_authentication_token", "create_order", "dispute_accept", "dispute_defend", "dispute_submit_evidence", "get", "incremental_authorization", "parse_event", "pre_authenticate", "proxy_authorize", "proxy_setup_recurring", "recurring_charge", "refund", "reverse", "setup_recurring", "token_authorize", "void"];
 
 const _defaultConfig: types.IConnectorConfig = {
     options: {
@@ -21,6 +21,7 @@ const _defaultConfig: types.IConnectorConfig = {
             baseUrl: 'YOUR_BASE_URL',
             disputeBaseUrl: 'YOUR_DISPUTE_BASE_URL',
             endpointPrefix: 'YOUR_ENDPOINT_PREFIX',
+            nativeThreeDs: false,
         }
     },
 };
@@ -184,6 +185,43 @@ function _buildParseEventRequest(): types.IEventServiceParseRequest {
             "headers": {  // Headers of the HTTP request.
             },
             "body": new Uint8Array(Buffer.from("{\"notificationItems\":[{\"NotificationRequestItem\":{\"pspReference\":\"probe_ref_001\",\"merchantReference\":\"probe_order_001\",\"merchantAccountCode\":\"ProbeAccount\",\"eventCode\":\"AUTHORISATION\",\"success\":\"true\",\"amount\":{\"currency\":\"USD\",\"value\":1000},\"additionalData\":{}}}]}", "utf-8"))  // Body of the HTTP request.
+        }
+    };
+}
+
+function _buildPreAuthenticateRequest(): types.IPaymentMethodAuthenticationServicePreAuthenticateRequest {
+    return {
+        "amount": {  // Amount Information.
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+        },
+        "paymentMethod": {  // Payment Method.
+            "card": {  // Generic card payment.
+                "cardNumber": {"value": "4111111111111111"},  // Card Identification.
+                "cardExpMonth": {"value": "03"},
+                "cardExpYear": {"value": "2030"},
+                "cardCvc": {"value": "737"},
+                "cardHolderName": {"value": "John Doe"}  // Cardholder Information.
+            }
+        },
+        "address": {  // Address Information.
+            "billingAddress": {
+            }
+        },
+        "enrolledFor_3ds": false,  // Authentication Details.
+        "returnUrl": "https://example.com/3ds-return",  // URLs for Redirection.
+        "browserInfo": {  // Contextual Information.
+            "colorDepth": 24,  // Display Information.
+            "screenHeight": 900,
+            "screenWidth": 1440,
+            "javaEnabled": false,  // Browser Settings.
+            "javaScriptEnabled": true,
+            "language": "en-US",
+            "timeZoneOffsetMinutes": -480,
+            "acceptHeader": "application/json",  // Browser Headers.
+            "userAgent": "Mozilla/5.0 (probe-bot)",
+            "acceptLanguage": "en-US,en;q=0.9",
+            "ipAddress": "1.2.3.4"  // Device Information.
         }
     };
 }
@@ -599,6 +637,15 @@ async function parseEvent(merchantTransactionId: string, config: types.IConnecto
     return parseResponse;
 }
 
+// Flow: PaymentMethodAuthenticationService.PreAuthenticate
+async function preAuthenticate(merchantTransactionId: string, config: types.IConnectorConfig = _defaultConfig) {
+    const paymentMethodAuthenticationClient = new PaymentMethodAuthenticationClient(config);
+
+    const preResponse = await paymentMethodAuthenticationClient.preAuthenticate(_buildPreAuthenticateRequest());
+
+    return preResponse;
+}
+
 // Flow: PaymentService.ProxyAuthorize
 async function proxyAuthorize(merchantTransactionId: string, config: types.IConnectorConfig = _defaultConfig) {
     const paymentClient = new PaymentClient(config);
@@ -674,7 +721,7 @@ async function voidPayment(merchantTransactionId: string, config: types.IConnect
 
 // Export all process* functions for the smoke test
 export {
-    processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createClientAuthenticationToken, createOrder, disputeAccept, disputeDefend, disputeSubmitEvidence, get, handleEvent, incrementalAuthorization, parseEvent, proxyAuthorize, proxySetupRecurring, recurringCharge, refund, reverse, setupRecurring, tokenAuthorize, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildCreateClientAuthenticationTokenRequest, _buildCreateOrderRequest, _buildDisputeAcceptRequest, _buildDisputeDefendRequest, _buildDisputeSubmitEvidenceRequest, _buildGetRequest, _buildHandleEventRequest, _buildIncrementalAuthorizationRequest, _buildParseEventRequest, _buildProxyAuthorizeRequest, _buildProxySetupRecurringRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildReverseRequest, _buildSetupRecurringRequest, _buildTokenAuthorizeRequest, _buildVoidRequest
+    processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createClientAuthenticationToken, createOrder, disputeAccept, disputeDefend, disputeSubmitEvidence, get, handleEvent, incrementalAuthorization, parseEvent, preAuthenticate, proxyAuthorize, proxySetupRecurring, recurringCharge, refund, reverse, setupRecurring, tokenAuthorize, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildCreateClientAuthenticationTokenRequest, _buildCreateOrderRequest, _buildDisputeAcceptRequest, _buildDisputeDefendRequest, _buildDisputeSubmitEvidenceRequest, _buildGetRequest, _buildHandleEventRequest, _buildIncrementalAuthorizationRequest, _buildParseEventRequest, _buildPreAuthenticateRequest, _buildProxyAuthorizeRequest, _buildProxySetupRecurringRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildReverseRequest, _buildSetupRecurringRequest, _buildTokenAuthorizeRequest, _buildVoidRequest
 };
 
 // CLI runner

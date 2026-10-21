@@ -11,10 +11,11 @@ from payments import PaymentClient
 from payments import MerchantAuthenticationClient
 from payments import DisputeClient
 from payments import EventClient
+from payments import PaymentMethodAuthenticationClient
 from payments import RecurringPaymentClient
 from payments.generated import sdk_config_pb2, payment_pb2, events_pb2, payment_methods_pb2
 
-SUPPORTED_FLOWS = ["authorize", "capture", "create_client_authentication_token", "create_order", "dispute_accept", "dispute_defend", "dispute_submit_evidence", "get", "incremental_authorization", "parse_event", "proxy_authorize", "proxy_setup_recurring", "recurring_charge", "refund", "reverse", "setup_recurring", "token_authorize", "void"]
+SUPPORTED_FLOWS = ["authorize", "capture", "create_client_authentication_token", "create_order", "dispute_accept", "dispute_defend", "dispute_submit_evidence", "get", "incremental_authorization", "parse_event", "pre_authenticate", "proxy_authorize", "proxy_setup_recurring", "recurring_charge", "refund", "reverse", "setup_recurring", "token_authorize", "void"]
 
 _default_config = sdk_config_pb2.ConnectorConfig(
     options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
@@ -26,6 +27,7 @@ _default_config = sdk_config_pb2.ConnectorConfig(
             base_url="YOUR_BASE_URL",
             dispute_base_url="YOUR_DISPUTE_BASE_URL",
             endpoint_prefix="YOUR_ENDPOINT_PREFIX",
+            native_three_ds=False,
         ),
     ),
 )
@@ -161,6 +163,41 @@ def _build_parse_event_request():
             uri="https://example.com/webhook",  # URI of the request.
             headers={},  # Headers of the HTTP request.
             body="{\"notificationItems\":[{\"NotificationRequestItem\":{\"pspReference\":\"probe_ref_001\",\"merchantReference\":\"probe_order_001\",\"merchantAccountCode\":\"ProbeAccount\",\"eventCode\":\"AUTHORISATION\",\"success\":\"true\",\"amount\":{\"currency\":\"USD\",\"value\":1000},\"additionalData\":{}}}]}".encode(),  # Body of the HTTP request.
+        ),
+    )
+
+def _build_pre_authenticate_request():
+    return payment_pb2.PaymentMethodAuthenticationServicePreAuthenticateRequest(
+        amount=payment_pb2.Money(  # Amount Information.
+            minor_amount=1000,  # Amount in minor units (e.g., 1000 = $10.00).
+            currency=payment_pb2.Currency.Value("USD"),  # ISO 4217 currency code (e.g., "USD", "EUR").
+        ),
+        payment_method=payment_methods_pb2.PaymentMethod(  # Payment Method.
+            card=payment_methods_pb2.CardDetails(
+                card_number=payment_methods_pb2.CardNumberType(value="4111111111111111"),  # Card Identification.
+                card_exp_month=payment_methods_pb2.SecretString(value="03"),
+                card_exp_year=payment_methods_pb2.SecretString(value="2030"),
+                card_cvc=payment_methods_pb2.SecretString(value="737"),
+                card_holder_name=payment_methods_pb2.SecretString(value="John Doe"),  # Cardholder Information.
+            ),
+        ),
+        address=payment_pb2.PaymentAddress(  # Address Information.
+            billing_address=payment_pb2.Address(),
+        ),
+        enrolled_for_3ds=False,  # Authentication Details.
+        return_url="https://example.com/3ds-return",  # URLs for Redirection.
+        browser_info=payment_pb2.BrowserInformation(  # Contextual Information.
+            color_depth=24,  # Display Information.
+            screen_height=900,
+            screen_width=1440,
+            java_enabled=False,  # Browser Settings.
+            java_script_enabled=True,
+            language="en-US",
+            time_zone_offset_minutes=-480,
+            accept_header="application/json",  # Browser Headers.
+            user_agent="Mozilla/5.0 (probe-bot)",
+            accept_language="en-US,en;q=0.9",
+            ip_address="1.2.3.4",  # Device Information.
         ),
     )
 
@@ -550,6 +587,15 @@ async def process_parse_event(merchant_transaction_id: str, config: sdk_config_p
     parse_response = event_client.parse_event(_build_parse_event_request())
 
     return {"event_type": parse_response.event_type}
+
+
+async def process_pre_authenticate(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: PaymentMethodAuthenticationService.PreAuthenticate"""
+    paymentmethodauthentication_client = PaymentMethodAuthenticationClient(config)
+
+    pre_response = await paymentmethodauthentication_client.pre_authenticate(_build_pre_authenticate_request())
+
+    return {"status": pre_response.status}
 
 
 async def process_proxy_authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
