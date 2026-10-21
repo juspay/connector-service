@@ -19,6 +19,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.10.21.1
+
+### Features
+
+- **connector:** [JPMorgan] Update Access Token Flow ([#2533](https://github.com/juspay/connector-service/pull/2533)) ([`e19e837`](https://github.com/juspay/connector-service/commit/e19e837894051ec3240a15679d4cf87ddff2f278))
+
+### Documentation
+
+- Explain Prism webhooks and connector diagnostics ([#2546](https://github.com/juspay/connector-service/pull/2546)) ([`814b6ab`](https://github.com/juspay/connector-service/commit/814b6ab4a5fce7db94295d6ca16687cea1e4640a))
+
+**Full Changelog:** [`2026.10.21.0...2026.10.21.1`](https://github.com/juspay/connector-service/compare/2026.10.21.0...2026.10.21.1)
+
+- - -
+
+## 2026.10.21.0
+
+### Features
+
+- **connector:** Add Worldpay raft IncrementalAuthorization flow ([#2504](https://github.com/juspay/connector-service/pull/2504)) ([`3478360`](https://github.com/juspay/connector-service/commit/347836001d2d22a66f6856b84f0334552c0e41da))
+
+### Bug Fixes
+
+- **framework:** Stop GRACE runs stalling on rm approval prompts (grace/ only) ([#2562](https://github.com/juspay/connector-service/pull/2562)) ([`c5058cb`](https://github.com/juspay/connector-service/commit/c5058cb1d95fc2eb234ad9a22dcb5690b7d1ac7c))
+
+**Full Changelog:** [`2026.10.20.0...2026.10.21.0`](https://github.com/juspay/connector-service/compare/2026.10.20.0...2026.10.21.0)
+
+- - -
+
+## 2026.10.20.0
+
+### Features
+
+- **connector:** [Cybersource] guard the 3DS authorization outcome and make webhook status capture-aware ([#2516](https://github.com/juspay/connector-service/pull/2516)) ([`bf871e2`](https://github.com/juspay/connector-service/commit/bf871e2311f37274c6f95ab9cbbd24e039031682))
+- **jpmorgan:** Support stored cardholder payments ([#2529](https://github.com/juspay/connector-service/pull/2529)) ([`ba06ea5`](https://github.com/juspay/connector-service/commit/ba06ea59420728d3c6bab87d813b833ce367100f))
+
+**Full Changelog:** [`2026.10.19.0...2026.10.20.0`](https://github.com/juspay/connector-service/compare/2026.10.19.0...2026.10.20.0)
+
+- - -
+
 ## 2026.10.19.0
 
 ### Features
