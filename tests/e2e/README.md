@@ -36,12 +36,12 @@ tests/e2e/
 ```
 
 - `otp/superset/<variant>/` defines shared scenarios once, including the request sequence and expected behavior. Each explanation appears alongside its test declaration.
-- `otp/<connector>/<variant>/config.ts` selects shared scenarios and supplies request or configuration differences. Complete request definitions live in the shared superset `requests.ts`. Connector directories do not duplicate test execution.
+- `otp/<connector>/<variant>/config.ts` supplies request differences and explicit scenario exclusions with reasons. Complete request definitions live in the shared superset `requests.ts`. Connector directories do not duplicate test execution.
 - `framework/` supplies typed scenarios, connector registration, one lifecycle runner, HS access, audit collection, and shared assertion/report helpers. `hyperswitch.ts` makes HS API calls and reads local HS database records for UCS routing and processor-reference checks.
 - `framework/tests/` checks shared helpers without starting the payment stack.
 - `scripts/` operates the Docker stack and retrieves external credentials when configured.
 - `docker/` contains the UCS image wrapper that adds the gRPC health probe used before HS starts.
 
-A manual-capture scenario belongs in `otp/superset/card-no3ds/`. Connectors enable it in their configs and supply only differences. Adding a connector reuses the superset; adding a scenario extends the superset once. Test discovery lists enabled connector/scenario combinations.
+A manual-capture scenario belongs in `otp/superset/card-no3ds/`. All applicable connectors run it by default and supply only differences. Adding a connector reuses the superset; adding a scenario extends the superset once. Test discovery lists connector/scenario combinations; reports show explicit exclusions and unmet capabilities as skipped with reasons.
 
 Further payment flows can be added beside `otp/`. The `.gitkeep` files preserve empty directories. Test implementation, dependencies, credentials, and CI configuration are outside this scaffold PR.
