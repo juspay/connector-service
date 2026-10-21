@@ -54,7 +54,7 @@ jobs:
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
           'ubuntu-latest' ||
-          github.event_name == 'merge_group' && 'hyperswitch-runners-merge' ||
+          github.event_name == 'merge_group' && 'ubuntu-latest' ||
           github.event_name == 'push' && 'hyperswitch-runners-merge' ||
           'hyperswitch-runners' }}
     permissions:
@@ -356,7 +356,7 @@ jobs:
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
           'ubuntu-latest' ||
-          github.event_name == 'merge_group' && 'hyperswitch-runners-merge' ||
+          github.event_name == 'merge_group' && 'ubuntu-latest' ||
           github.event_name == 'push' && 'hyperswitch-runners-merge' ||
           'hyperswitch-runners' }}
     steps:
@@ -376,7 +376,7 @@ jobs:
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
           'ubuntu-latest' ||
-          github.event_name == 'merge_group' && 'hyperswitch-runners-merge' ||
+          github.event_name == 'merge_group' && 'ubuntu-latest' ||
           github.event_name == 'push' && 'hyperswitch-runners-merge' ||
           'hyperswitch-runners' }}
     steps:
@@ -422,7 +422,7 @@ jobs:
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
           'ubuntu-latest' ||
-          github.event_name == 'merge_group' && 'hyperswitch-runners-merge' ||
+          github.event_name == 'merge_group' && 'ubuntu-latest' ||
           github.event_name == 'push' && 'hyperswitch-runners-merge' ||
           'hyperswitch-runners' }}
     permissions:
@@ -603,7 +603,7 @@ jobs:
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
           'ubuntu-latest' ||
-          github.event_name == 'merge_group' && 'hyperswitch-runners-merge' ||
+          github.event_name == 'merge_group' && 'ubuntu-latest' ||
           github.event_name == 'push' && 'hyperswitch-runners-merge' ||
           'hyperswitch-runners' }}
     steps:
@@ -638,7 +638,7 @@ jobs:
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
           'ubuntu-latest' ||
-          github.event_name == 'merge_group' && 'hyperswitch-runners-merge' ||
+          github.event_name == 'merge_group' && 'ubuntu-latest' ||
           github.event_name == 'push' && 'hyperswitch-runners-merge' ||
           'hyperswitch-runners' }}
 
@@ -700,7 +700,7 @@ jobs:
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
           'ubuntu-latest' ||
-          github.event_name == 'merge_group' && 'hyperswitch-runners-merge' ||
+          github.event_name == 'merge_group' && 'ubuntu-latest' ||
           github.event_name == 'push' && 'hyperswitch-runners-merge' ||
           'hyperswitch-runners' }}
 
@@ -971,7 +971,7 @@ jobs:
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
           'ubuntu-latest' ||
-          github.event_name == 'merge_group' && 'hyperswitch-runners-merge' ||
+          github.event_name == 'merge_group' && 'ubuntu-latest' ||
           github.event_name == 'push' && 'hyperswitch-runners-merge' ||
           'hyperswitch-runners' }}
 
@@ -1074,7 +1074,7 @@ jobs:
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
           'ubuntu-latest' ||
-          github.event_name == 'merge_group' && 'hyperswitch-runners-merge' ||
+          github.event_name == 'merge_group' && 'ubuntu-latest' ||
           github.event_name == 'push' && 'hyperswitch-runners-merge' ||
           'hyperswitch-runners' }}
 
@@ -1212,7 +1212,7 @@ jobs:
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
           'ubuntu-latest' ||
-          github.event_name == 'merge_group' && 'hyperswitch-runners-merge' ||
+          github.event_name == 'merge_group' && 'ubuntu-latest' ||
           github.event_name == 'push' && 'hyperswitch-runners-merge' ||
           'hyperswitch-runners' }}
     steps:
