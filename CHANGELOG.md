@@ -19,6 +19,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.10.21.0
+
+### Features
+
+- **connector:** Add Worldpay raft IncrementalAuthorization flow ([#2504](https://github.com/juspay/connector-service/pull/2504)) ([`3478360`](https://github.com/juspay/connector-service/commit/347836001d2d22a66f6856b84f0334552c0e41da))
+
+### Bug Fixes
+
+- **framework:** Stop GRACE runs stalling on rm approval prompts (grace/ only) ([#2562](https://github.com/juspay/connector-service/pull/2562)) ([`c5058cb`](https://github.com/juspay/connector-service/commit/c5058cb1d95fc2eb234ad9a22dcb5690b7d1ac7c))
+
+**Full Changelog:** [`2026.10.20.0...2026.10.21.0`](https://github.com/juspay/connector-service/compare/2026.10.20.0...2026.10.21.0)
+
+- - -
+
+## 2026.10.20.0
+
+### Features
+
+- **connector:** [Cybersource] guard the 3DS authorization outcome and make webhook status capture-aware ([#2516](https://github.com/juspay/connector-service/pull/2516)) ([`bf871e2`](https://github.com/juspay/connector-service/commit/bf871e2311f37274c6f95ab9cbbd24e039031682))
+- **jpmorgan:** Support stored cardholder payments ([#2529](https://github.com/juspay/connector-service/pull/2529)) ([`ba06ea5`](https://github.com/juspay/connector-service/commit/ba06ea59420728d3c6bab87d813b833ce367100f))
+
+**Full Changelog:** [`2026.10.19.0...2026.10.20.0`](https://github.com/juspay/connector-service/compare/2026.10.19.0...2026.10.20.0)
+
+- - -
+
+## 2026.10.19.0
+
+### Features
+
+- **connector:**
+  - [Stripe] harden payment flows, 3DS and webhooks ([#2526](https://github.com/juspay/connector-service/pull/2526)) ([`66a63df`](https://github.com/juspay/connector-service/commit/66a63df330e22d5b60e01c4f66bec8fb9f9c9a9f))
+  - [Nuvei] add 10 flows (Authorize, PSync, Capture, Void, Refund, RSync, ...) ([#2330](https://github.com/juspay/connector-service/pull/2330)) ([`526be1f`](https://github.com/juspay/connector-service/commit/526be1f19ad70bbe535556eba44087788d92c815))
+
+### Bug Fixes
+
+- **elavon_pg:** Include total in hosted sale ([#2541](https://github.com/juspay/connector-service/pull/2541)) ([`675e267`](https://github.com/juspay/connector-service/commit/675e26743d18aea954c72f2eece4be7677bd3493))
+- **ucs:** Convert response amounts through connector amount types ([#2494](https://github.com/juspay/connector-service/pull/2494)) ([`d298463`](https://github.com/juspay/connector-service/commit/d298463e17181df244bd0067c28359cf7bd3e02a))
+- **webhooks:** Expose preprocessing id in payment references ([#2432](https://github.com/juspay/connector-service/pull/2432)) ([`95f16a0`](https://github.com/juspay/connector-service/commit/95f16a06769fb66851e2d04188484f130d7f3c4f))
+
+**Full Changelog:** [`2026.10.16.2...2026.10.19.0`](https://github.com/juspay/connector-service/compare/2026.10.16.2...2026.10.19.0)
+
+- - -
+
 ## 2026.10.16.2
 
 ### Bug Fixes
