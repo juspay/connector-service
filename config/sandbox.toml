@@ -231,6 +231,7 @@ endpoint = ""                   # e.g. http://superposition.<ns>.svc.cluster.loc
 token = ""                      # secret: CS__SUPERPOSITION__TOKEN from the k8s secret
 org_id = "hyperswitch"
 workspace_id = ""               # the prism workspace
+# Deprecated: polling_interval / request_timeout (seconds) are still read when the *_milliseconds key is not set
 polling_interval_milliseconds = 15000 # milliseconds
 # request_timeout_milliseconds = 60000 # parity with hyperswitch; the provider only logs it today
 # backup_file_path = ""         # default: the baked config/superposition.toml

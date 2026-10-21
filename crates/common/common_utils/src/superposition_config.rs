@@ -39,6 +39,13 @@ pub enum SuperpositionConfigError {
     InvalidConfiguration(String),
 }
 
+/// Poll interval used when neither `polling_interval_milliseconds` nor the deprecated
+/// `polling_interval` is configured.
+const DEFAULT_POLLING_INTERVAL_MILLISECONDS: u64 = 15_000;
+
+/// Converts the deprecated seconds-based `polling_interval` and `request_timeout`.
+const MILLISECONDS_PER_SECOND: u64 = 1_000;
+
 /// The `[superposition]` table: where policy comes from.
 ///
 /// `source = "file"` (the default) keeps today's behaviour — the baked
@@ -61,11 +68,19 @@ pub struct SuperpositionClientConfig {
     pub token: Secret<String>,
     pub org_id: String,
     pub workspace_id: String,
-    /// Milliseconds between polls of the remote workspace.
-    pub polling_interval_milliseconds: u64,
+    /// Milliseconds between polls of the remote workspace (default: 15000).
+    pub polling_interval_milliseconds: Option<u64>,
     /// Request timeout in milliseconds for the poll. Kept for parity with hyperswitch; the
     /// provider only logs it today.
     pub request_timeout_milliseconds: Option<u64>,
+    /// Deprecated: seconds between polls. Only read when `polling_interval_milliseconds`
+    /// is not set.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub polling_interval: Option<u64>,
+    /// Deprecated: request timeout in seconds. Only read when
+    /// `request_timeout_milliseconds` is not set.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request_timeout: Option<u64>,
     /// Fallback the provider loads if the remote source fails at init. Consulted at init
     /// ONLY — after a successful init a failed poll keeps the last good snapshot. Defaults
     /// to the baked `config/superposition.toml` when unset.
@@ -80,14 +95,52 @@ impl Default for SuperpositionClientConfig {
             token: Secret::new(String::new()),
             org_id: String::new(),
             workspace_id: String::new(),
-            polling_interval_milliseconds: 15_000,
+            polling_interval_milliseconds: None,
             request_timeout_milliseconds: None,
+            polling_interval: None,
+            request_timeout: None,
             backup_file_path: None,
         }
     }
 }
 
 impl SuperpositionClientConfig {
+    /// Poll interval in milliseconds. `polling_interval_milliseconds` wins, then the
+    /// deprecated seconds-based `polling_interval`, then the default.
+    pub fn effective_polling_interval_milliseconds(&self) -> u64 {
+        self.polling_interval_milliseconds
+            .or_else(|| {
+                self.polling_interval
+                    .map(|seconds| seconds.saturating_mul(MILLISECONDS_PER_SECOND))
+            })
+            .unwrap_or(DEFAULT_POLLING_INTERVAL_MILLISECONDS)
+    }
+
+    /// Request timeout in milliseconds. `request_timeout_milliseconds` wins, then the
+    /// deprecated seconds-based `request_timeout`.
+    pub fn effective_request_timeout_milliseconds(&self) -> Option<u64> {
+        self.request_timeout_milliseconds.or_else(|| {
+            self.request_timeout
+                .map(|seconds| seconds.saturating_mul(MILLISECONDS_PER_SECOND))
+        })
+    }
+
+    /// Warn about each deprecated seconds-based key that is set.
+    pub fn warn_on_deprecated_keys(&self) {
+        if self.polling_interval.is_some() {
+            tracing::warn!(
+                polling_interval_milliseconds_set = self.polling_interval_milliseconds.is_some(),
+                "superposition.polling_interval (seconds) is deprecated, use superposition.polling_interval_milliseconds"
+            );
+        }
+        if self.request_timeout.is_some() {
+            tracing::warn!(
+                request_timeout_milliseconds_set = self.request_timeout_milliseconds.is_some(),
+                "superposition.request_timeout (seconds) is deprecated, use superposition.request_timeout_milliseconds"
+            );
+        }
+    }
+
     /// Do the settings describe a workspace at all (endpoint, token, org, workspace)?
     /// hyperswitch's check, field for field. Only meaningful for a remote source. Prism's
     /// loader treats a failure as "remote source off" — reported, then served from the
@@ -181,6 +234,7 @@ impl SuperpositionConfig {
         settings: &SuperpositionClientConfig,
         baked_path: &str,
     ) -> Result<Self, SuperpositionConfigError> {
+        settings.warn_on_deprecated_keys();
         if settings.source == SuperpositionSource::Remote {
             let fallback_path = settings
                 .backup_file_path
@@ -207,11 +261,15 @@ impl SuperpositionConfig {
                     None
                 }
             };
-            let polling_strategy = PollingStrategy::new(settings.polling_interval_milliseconds);
-            let strategy = RefreshStrategy::Polling(match settings.request_timeout_milliseconds {
-                Some(timeout_milliseconds) => polling_strategy.with_timeout(timeout_milliseconds),
-                None => polling_strategy,
-            });
+            let polling_strategy =
+                PollingStrategy::new(settings.effective_polling_interval_milliseconds());
+            let strategy =
+                RefreshStrategy::Polling(match settings.effective_request_timeout_milliseconds() {
+                    Some(timeout_milliseconds) => {
+                        polling_strategy.with_timeout(timeout_milliseconds)
+                    }
+                    None => polling_strategy,
+                });
             match Self::with_sources(
                 Box::new(primary),
                 fallback,
@@ -627,8 +685,67 @@ mod tests {
     fn settings_default_is_the_file_source_with_hyperswitch_polling_interval() {
         let settings = SuperpositionClientConfig::default();
         assert_eq!(settings.source, SuperpositionSource::File);
-        assert_eq!(settings.polling_interval_milliseconds, 15_000);
+        assert_eq!(settings.effective_polling_interval_milliseconds(), 15_000);
+        assert_eq!(settings.effective_request_timeout_milliseconds(), None);
         assert!(settings.backup_file_path.is_none());
+    }
+
+    fn parse_settings(json: &str) -> SuperpositionClientConfig {
+        serde_json::from_str(json).unwrap()
+    }
+
+    #[test]
+    fn settings_millisecond_keys_are_used_as_is() {
+        let settings = parse_settings(
+            r#"{"polling_interval_milliseconds": 2500, "request_timeout_milliseconds": 750}"#,
+        );
+        assert_eq!(settings.effective_polling_interval_milliseconds(), 2_500);
+        assert_eq!(settings.effective_request_timeout_milliseconds(), Some(750));
+    }
+
+    #[test]
+    fn settings_deprecated_second_keys_are_converted_to_milliseconds() {
+        let settings = parse_settings(r#"{"polling_interval": 300, "request_timeout": 60}"#);
+        assert_eq!(settings.effective_polling_interval_milliseconds(), 300_000);
+        assert_eq!(
+            settings.effective_request_timeout_milliseconds(),
+            Some(60_000)
+        );
+    }
+
+    #[test]
+    fn settings_millisecond_keys_win_over_deprecated_second_keys() {
+        let settings = parse_settings(
+            r#"{
+                "polling_interval": 300,
+                "request_timeout": 60,
+                "polling_interval_milliseconds": 2500,
+                "request_timeout_milliseconds": 750
+            }"#,
+        );
+        assert_eq!(settings.effective_polling_interval_milliseconds(), 2_500);
+        assert_eq!(settings.effective_request_timeout_milliseconds(), Some(750));
+    }
+
+    #[test]
+    fn settings_deprecated_second_keys_do_not_overflow() {
+        let settings = parse_settings(&format!(
+            r#"{{"polling_interval": {}, "request_timeout": {}}}"#,
+            u64::MAX,
+            u64::MAX
+        ));
+        assert_eq!(settings.effective_polling_interval_milliseconds(), u64::MAX);
+        assert_eq!(
+            settings.effective_request_timeout_milliseconds(),
+            Some(u64::MAX)
+        );
+    }
+
+    #[test]
+    fn settings_serialization_omits_unset_deprecated_keys() {
+        let serialized = serde_json::to_value(SuperpositionClientConfig::default()).unwrap();
+        assert!(serialized.get("polling_interval").is_none());
+        assert!(serialized.get("request_timeout").is_none());
     }
 
     /// Mirrors hyperswitch's `SuperpositionClientConfig::validate`: every field a
