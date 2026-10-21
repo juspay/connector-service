@@ -16,8 +16,8 @@ use domain_types::{
     errors::{ConnectorError, IntegrationError, IntegrationErrorContext, WebhookError},
     merchant_authentication_flow_data::MerchantAuthenticationFlowData,
     payment_method_data::{
-        BankDebitData, DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
-        VaultTokenHolder, WalletData,
+        ApplePayPaymentData, BankDebitData, DefaultPCIHolder, PaymentMethodData,
+        PaymentMethodDataTypes, RawCardNumber, VaultTokenHolder, WalletData,
     },
     router_data::{ConnectorSpecificConfig, ErrorResponse, FlowStatus},
     router_data_v2::RouterDataV2,
@@ -353,6 +353,9 @@ pub struct CreditCardDetails<T: PaymentMethodDataTypes> {
     card_number: RawCardNumber<T>,
     expiration_date: Secret<String>, // YYYY-MM
     card_code: Option<Secret<String>>,
+    // Set for network tokens such as a decrypted Apple Pay DPAN; Authorize.net then requires the cryptogram
+    is_payment_token: Option<bool>,
+    cryptogram: Option<Secret<String>>,
 }
 
 #[skip_serializing_none]
@@ -390,7 +393,9 @@ pub enum WalletMethod {
 
 /// The only wallets Authorize.Net accepts are Google Pay and Apple Pay, both as
 /// PSP-decryption `opaqueData` passthrough: Authorize.Net decrypts the token
-/// itself, so the encrypted blob is forwarded untouched. PayPal is a redirect
+/// itself, so the encrypted blob is forwarded untouched. An already-decrypted
+/// Apple Pay token is sent instead as `creditCard` with the DPAN marked
+/// `isPaymentToken` plus its cryptogram. PayPal is a redirect
 /// wallet and stays unimplemented -- the response side cannot surface the
 /// approval URL yet (`SecureAcceptance` is an empty stub and `redirection_data`
 /// is always `None`), so accepting the request would strand the payment.
@@ -403,19 +408,39 @@ impl<T: PaymentMethodDataTypes> TryFrom<&WalletData> for PaymentDetails<T> {
                 data_descriptor: WalletMethod::Googlepay,
                 data_value: Secret::new(wallet_data.get_encoded_wallet_token()?),
             })),
-            WalletData::ApplePay(applepay_token) => {
-                let apple_pay_encrypted_data = applepay_token
-                    .payment_data
-                    .get_encrypted_apple_pay_payment_data_mandatory()
-                    .change_context(IntegrationError::MissingRequiredField {
-                        field_name: "Apple pay encrypted data",
-                        context: Default::default(),
-                    })?;
-                Ok(Self::OpaqueData(WalletDetails {
-                    data_descriptor: WalletMethod::Applepay,
-                    data_value: Secret::new(apple_pay_encrypted_data.clone()),
-                }))
-            }
+            WalletData::ApplePay(applepay_token) => match &applepay_token.payment_data {
+                // Token already decrypted (by Hyperswitch with the merchant's key, or by the merchant):
+                // send the DPAN as a payment token with its cryptogram
+                ApplePayPaymentData::Decrypted(decrypted_data) => {
+                    let cryptogram = decrypted_data
+                        .payment_data
+                        .online_payment_cryptogram
+                        .clone();
+                    if cryptogram.peek().is_empty() {
+                        return Err(error_stack::report!(
+                            IntegrationError::MissingRequiredField {
+                                field_name: "apple_pay_cryptogram",
+                                context: Default::default(),
+                            }
+                        ));
+                    }
+                    Ok(Self::CreditCard(CreditCardDetails {
+                        card_number: RawCardNumber(T::inner_from_card_number(
+                            decrypted_data.application_primary_account_number.clone(),
+                        )),
+                        expiration_date: decrypted_data.get_expiry_date_as_yyyymm("-"),
+                        card_code: None,
+                        is_payment_token: Some(true),
+                        cryptogram: Some(cryptogram),
+                    }))
+                }
+                ApplePayPaymentData::Encrypted(apple_pay_encrypted_data) => {
+                    Ok(Self::OpaqueData(WalletDetails {
+                        data_descriptor: WalletMethod::Applepay,
+                        data_value: Secret::new(apple_pay_encrypted_data.clone()),
+                    }))
+                }
+            },
             WalletData::PaypalRedirect(_)
             | WalletData::AliPayQr(_)
             | WalletData::AliPayRedirect(_)
@@ -762,6 +787,8 @@ fn create_regular_transaction_request<
                 card_number: card.card_number.clone(),
                 expiration_date: Secret::new(expiration_date),
                 card_code: Some(card.card_cvc.clone()),
+                is_payment_token: None,
+                cryptogram: None,
             };
 
             Ok(PaymentDetails::CreditCard(credit_card_details))
@@ -3253,6 +3280,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     card_number: ccard.card_number.clone(),
                     expiration_date: Secret::new(expiration_date),
                     card_code: Some(ccard.card_cvc.clone()),
+                    is_payment_token: None,
+                    cryptogram: None,
                 })
             }
             PaymentMethodData::Wallet(wallet_data) => PaymentDetails::try_from(wallet_data)?,
