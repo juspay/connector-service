@@ -162,6 +162,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 WebhookResourceReference::Payment(PaymentWebhookReference {
                     connector_transaction_id: None,
                     merchant_transaction_id: Some(event.payment.user_reference.clone()),
+                    connector_preprocessing_id: None,
                 })
             }
         };
@@ -291,7 +292,7 @@ macros::macro_connector_implementation!(
                     .topic(self.get_kafka_topic(req)?.as_str())
                     .attach_default_headers()
                     .headers(self.get_headers(req)?)
-                    .set_optional_payload(self.get_request_body(req)?)
+                    .set_optional_payload(self.get_request_body(req)?.map(|d| d.content))
                     .build(),
             ))
         }
@@ -321,11 +322,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
-        let auth = absa_sanlam::AbsaSanlamAuthType::try_from(auth_type).change_context(
-            IntegrationError::FailedToObtainAuthType {
-                context: Default::default(),
-            },
-        )?;
+        let auth = absa_sanlam::AbsaSanlamAuthType::try_from(auth_type)?;
+
         Ok(vec![
             (
                 headers::AUTHORIZATION.to_string(),

@@ -190,7 +190,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         Some(OpenBankingUk { transaction_type }),
                         None,
                     )),
-                    BankRedirectData::OpenBanking {} => {
+                    BankRedirectData::OpenBanking { .. } => {
                         if matches!(currency, common_enums::Currency::GBP) {
                             Ok((
                                 PaymentSystem::OpenBankingUk,
@@ -232,7 +232,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     }
                 }?;
 
-                let amount = item.router_data.request.amount;
+                let amount = item.router_data.request.amount.amount;
                 let internal_reference = item
                     .router_data
                     .resource_common_data
@@ -494,6 +494,7 @@ impl<F, T> TryFrom<ResponseRouterData<VoltPaymentsResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             ..item.router_data
         })
@@ -568,6 +569,10 @@ impl<F, T> TryFrom<ResponseRouterData<VoltPaymentsResponseData, Self>>
                             network_advice_code: None,
                             network_decline_code: None,
                             network_error_message: None,
+                            typed_connector_response: None,
+                            raw_connector_response: None,
+                            raw_connector_request: None,
+                            typed_connector_request: None,
                         })
                     } else {
                         Ok(PaymentsResponseData::TransactionResponse {
@@ -585,6 +590,7 @@ impl<F, T> TryFrom<ResponseRouterData<VoltPaymentsResponseData, Self>>
                             incremental_authorization_allowed: None,
                             status_code: item.http_code,
                             splits: None,
+                            payment_account_reference: None,
                         })
                     },
                     ..item.router_data
@@ -617,6 +623,10 @@ impl<F, T> TryFrom<ResponseRouterData<VoltPaymentsResponseData, Self>>
                             network_advice_code: None,
                             network_decline_code: None,
                             network_error_message: None,
+                            typed_connector_response: None,
+                            raw_connector_response: None,
+                            raw_connector_request: None,
+                            typed_connector_request: None,
                         })
                     } else {
                         Ok(PaymentsResponseData::TransactionResponse {
@@ -634,6 +644,7 @@ impl<F, T> TryFrom<ResponseRouterData<VoltPaymentsResponseData, Self>>
                             incremental_authorization_allowed: None,
                             status_code: item.http_code,
                             splits: None,
+                            payment_account_reference: None,
                         })
                     },
                     ..item.router_data
@@ -674,7 +685,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
         item: VoltRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            amount: item.router_data.request.minor_refund_amount,
+            amount: item.router_data.request.refund_amount.amount,
             external_reference: item.router_data.request.refund_id.clone(),
         })
     }
@@ -695,6 +706,7 @@ impl<F> TryFrom<RefundsResponseRouterData<F, RefundResponse>>
                 connector_refund_id: item.response.id.to_string(),
                 refund_status: common_enums::RefundStatus::Pending, //We get Refund Status only by Webhooks
                 status_code: item.http_code,
+                acquirer_reference_number: None,
             }),
             ..item.router_data
         })

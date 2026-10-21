@@ -278,7 +278,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 order: SilverflowOrderType::Checkout,
             },
             amount: SilverflowAmount {
-                value: router_data.request.minor_amount,
+                value: router_data.request.amount.amount,
                 currency: router_data.request.currency,
             },
             clearing_mode: match router_data.request.capture_method {
@@ -444,6 +444,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<SilverflowPaymentsRes
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -525,6 +526,7 @@ impl TryFrom<ResponseRouterData<SilverflowSyncResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -581,7 +583,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         // Use the capture amount for partial capture, omit for full capture
-        let amount = Some(router_data.request.minor_amount_to_capture);
+        let amount = Some(router_data.request.amount_to_capture.amount);
 
         // Get connector transaction ID string for reference
         let reference = Some(
@@ -633,6 +635,7 @@ impl TryFrom<ResponseRouterData<SilverflowCaptureResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -703,7 +706,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         // Use the refund amount for partial refund, omit for full refund
-        let amount = Some(router_data.request.minor_refund_amount);
+        let amount = Some(router_data.request.refund_amount.amount);
 
         // Get refund ID as reference
         let reference = Some(router_data.request.refund_id.clone());
@@ -739,6 +742,7 @@ impl TryFrom<ResponseRouterData<SilverflowRefundResponse, Self>>
                 connector_refund_id: item.response.key,
                 refund_status,
                 status_code: item.http_code,
+                acquirer_reference_number: None,
             }),
             ..item.router_data
         })
@@ -800,6 +804,7 @@ impl TryFrom<ResponseRouterData<SilverflowRefundSyncResponse, Self>>
                 connector_refund_id: item.response.key,
                 refund_status,
                 status_code: item.http_code,
+                acquirer_reference_number: None,
             }),
             ..item.router_data
         })
@@ -902,6 +907,7 @@ impl TryFrom<ResponseRouterData<SilverflowVoidResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,

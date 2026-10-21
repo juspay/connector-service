@@ -371,7 +371,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
+                item.router_data.request.amount.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -488,7 +488,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .connector
                     .amount_converter
                     .convert(
-                        item.router_data.request.minor_amount,
+                        item.router_data.request.amount.amount,
                         item.router_data.request.currency,
                     )
                     .change_context(IntegrationError::AmountConversionFailed {
@@ -731,6 +731,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     })
                 };
                 Ok(Self {
@@ -766,6 +767,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     })
                 };
 
@@ -821,6 +823,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     }),
                     ..item.router_data
                 })
@@ -872,6 +875,10 @@ fn get_error_response<T>(
         network_advice_code: None,
         network_decline_code: None,
         network_error_message: None,
+        typed_connector_response: None,
+        raw_connector_response: None,
+        raw_connector_request: None,
+        typed_connector_request: None,
     }))
 }
 
@@ -891,6 +898,10 @@ fn create_failure_error_response<T: ToString>(
         network_advice_code: None,
         network_decline_code: None,
         network_error_message: None,
+        typed_connector_response: None,
+        raw_connector_response: None,
+        raw_connector_request: None,
+        typed_connector_request: None,
     }
 }
 
@@ -986,6 +997,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     })
                 };
                 Ok(Self {
@@ -1028,6 +1040,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     })
                 };
 
@@ -1084,6 +1097,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     }),
                     ..item.router_data
                 })
@@ -1240,7 +1254,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_refund_amount,
+                item.router_data.request.refund_amount.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -1330,6 +1344,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeRefundResponse, Self>>
                             connector_refund_id: refund_data.id.clone(),
                             refund_status,
                             status_code: item.http_code,
+                            acquirer_reference_number: None,
                         })
                     }
                 }
@@ -1532,6 +1547,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeRSyncResponse, Self>>
                     connector_refund_id: connector_refund_id.to_string(),
                     refund_status: enums::RefundStatus::from(edge_data.node.status.clone()),
                     status_code: item.http_code,
+                    acquirer_reference_number: None,
                 });
                 Ok(Self {
                     response,
@@ -1734,6 +1750,8 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                             .id
                             .expose()
                             .clone(),
+                        connector_payment_method_id: None,
+                        status_code: item.http_code,
                     })
                 }
             },
@@ -1775,7 +1793,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount_to_capture,
+                item.router_data.request.amount_to_capture.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -1849,6 +1867,7 @@ impl<F, T> TryFrom<ResponseRouterData<BraintreeCaptureResponse, Self>>
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     })
                 };
                 Ok(Self {
@@ -2086,7 +2105,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                                     total: AmountInfo {
                                         label: payment_request_data.label,
                                         total_type: None,
-                                        amount: item.router_data.request.amount,
+                                        amount: item.router_data.request.amount.amount,
                                     },
                                     merchant_capabilities: Some(
                                         payment_request_data.merchant_capabilities,
@@ -2153,7 +2172,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                                         ))?,
                                         currency_code: item.router_data.request.currency,
                                         total_price_status: GooglePayPriceStatus::Final.to_string(),
-                                        total_price: item.router_data.request.amount,
+                                        total_price: item.router_data.request.amount.amount,
                                     },
                                     secrets: Some(SecretInfoToInitiateSdk {
                                         display: res.data.create_client_token.client_token.clone(),
@@ -2197,7 +2216,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                                 transaction_info: Some(PaypalTransactionInfo {
                                     flow: PaypalFlow::Checkout.into(),
                                     currency_code: item.router_data.request.currency,
-                                    total_price: item.router_data.request.amount,
+                                    total_price: item.router_data.request.amount.amount,
                                 }),
                             },
                         ))
@@ -2299,6 +2318,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeCancelResponse, Self>>
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     })
                 };
                 Ok(Self {
@@ -2424,6 +2444,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreePSyncResponse, Self>>
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     })
                 };
                 Ok(Self {
@@ -2556,7 +2577,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
+                item.router_data.request.amount.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -2888,6 +2909,7 @@ pub(super) fn build_webhook_dispute_response(
             connector_response_reference_id: None,
             dispute_message: dispute_data.reason.clone(),
             connector_reason_code: dispute_data.reason_code.clone(),
+            additional_details: None,
             raw_connector_response: Some(String::from_utf8_lossy(raw_body).to_string()),
             status_code: 200,
             response_headers: None,
@@ -3073,6 +3095,7 @@ fn map_transaction_status_to_code(status: &common_enums::TransactionStatus) -> S
             "D".to_string()
         }
         common_enums::TransactionStatus::InformationOnly => "I".to_string(),
+        common_enums::TransactionStatus::SecurePaymentConfirmationRequired => "S".to_string(),
     }
 }
 
@@ -3125,6 +3148,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     })
                 };
                 Ok(Self {
@@ -3430,6 +3454,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     }),
                     ..item.router_data
                 })

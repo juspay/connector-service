@@ -99,7 +99,6 @@ pub enum SyncRequestType {
 
 #[derive(Debug, Default, Clone)]
 pub struct PaymentsCancelData {
-    pub amount: Option<i64>,
     pub currency: Option<Currency>,
     pub connector_transaction_id: String,
     pub cancellation_reason: Option<String>,
@@ -152,6 +151,25 @@ pub struct AuthenticationData {
     pub challenge_code_reason: Option<String>,
     pub message_extension: Option<Secret<serde_json::Value>>,
     pub authentication_type: Option<common_enums::DecoupledAuthenticationType>,
+}
+
+impl AuthenticationData {
+    /// Single-digit CAVV algorithm code (`"0".."4"`, `"A"`) from the Cartes Bancaires
+    /// network params, as expected by connectors like Travelhub. Returns `None` when
+    /// no CAVV algorithm is present.
+    pub fn get_cavv_algorithm(&self) -> Option<&'static str> {
+        self.network_params
+            .as_ref()
+            .and_then(|params| params.cartes_bancaires.as_ref())
+            .map(|cb| match cb.cavv_algorithm {
+                common_enums::CavvAlgorithm::Zero => "0",
+                common_enums::CavvAlgorithm::One => "1",
+                common_enums::CavvAlgorithm::Two => "2",
+                common_enums::CavvAlgorithm::Three => "3",
+                common_enums::CavvAlgorithm::Four => "4",
+                common_enums::CavvAlgorithm::A => "A",
+            })
+    }
 }
 
 impl TryFrom<payments::AuthenticationData> for AuthenticationData {
@@ -218,7 +236,7 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
                 field_name: "transaction_status",
                 context: errors::IntegrationErrorContext {
                     additional_context: Some(format!(
-                        "Invalid transaction status format. Expected one of: Y, N, U, A, R, C, D, I. Provided: '{}'",
+                        "Invalid transaction status format. Expected one of: Y, N, U, A, R, C, D, I, S. Provided: '{}'",
                         trans_status
                     )),
                     ..Default::default()
@@ -392,7 +410,7 @@ pub struct SetupMandateIntegrityObject {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct RepeatPaymentIntegrityObject {
     /// Payment amount
-    pub amount: i64,
+    pub amount: MinorUnit,
     /// Payment currency
     pub currency: Currency,
     /// Mandate reference
@@ -554,3 +572,7 @@ pub struct FrmChargebackReceivedIntegrityObject {}
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct PaymentMethodEligibilityIntegrityObject {}
+
+/// Refresh integrity object (no-op; kept for framework compatibility).
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct RefreshPaymentMethodIntegrityObject {}

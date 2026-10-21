@@ -533,7 +533,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             get_finix_fraud_session_id(router_data.request.connector_feature_data.as_ref());
 
         Ok(Self {
-            amount: router_data.request.amount,
+            amount: router_data.request.amount.amount,
             currency: router_data.request.currency,
             source,
             merchant: merchant_id,
@@ -602,6 +602,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             })
         } else {
             // Determine connector_transaction_id:
@@ -631,6 +635,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             })
         };
 
@@ -761,6 +766,7 @@ impl TryFrom<ResponseRouterData<FinixPSyncResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -803,7 +809,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            capture_amount: MinorUnit::new(item.router_data.request.amount_to_capture),
+            capture_amount: item.router_data.request.amount_to_capture.amount,
             idempotency_id: None,
         })
     }
@@ -864,6 +870,10 @@ impl TryFrom<ResponseRouterData<FinixCaptureResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             })
         } else {
             Ok(PaymentsResponseData::TransactionResponse {
@@ -889,6 +899,7 @@ impl TryFrom<ResponseRouterData<FinixCaptureResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             })
         };
 
@@ -952,6 +963,7 @@ impl TryFrom<ResponseRouterData<FinixRSyncResponse, Self>>
                 connector_refund_id: response.id,
                 refund_status,
                 status_code: item.http_code,
+                acquirer_reference_number: None,
             }),
             ..item.router_data
         })
@@ -1010,6 +1022,7 @@ impl TryFrom<ResponseRouterData<FinixVoidResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -1039,7 +1052,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            refund_amount: item.router_data.request.minor_refund_amount,
+            refund_amount: item.router_data.request.refund_amount.amount,
             idempotency_id: None,
         })
     }
@@ -1067,6 +1080,7 @@ impl TryFrom<ResponseRouterData<FinixRefundResponse, Self>>
                 connector_refund_id: response.id,
                 refund_status: status,
                 status_code: item.http_code,
+                acquirer_reference_number: None,
             }),
             ..item.router_data
         })
@@ -1351,13 +1365,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn try_from(
         item: ResponseRouterData<FinixInstrumentResponse, Self>,
     ) -> Result<Self, Self::Error> {
+        let http_code = item.http_code;
         let response = item.response;
+        let mut router_data = item.router_data;
+        // Finix `/payment_instruments` returns HTTP 201. Preserve the real status code so
+        // the proto response reports it (was hardcoded 200 → connector_http_status_code diff).
+        router_data.resource_common_data.connector_http_status_code = Some(http_code);
         Ok(Self {
             response: match (response.id.clone(), response.enabled) {
-                (Some(id), true) => Ok(PaymentMethodTokenResponse { token: id }),
-                _ => Err(disabled_instrument_error(&response, item.http_code)),
+                (Some(id), true) => Ok(PaymentMethodTokenResponse {
+                    token: id,
+                    connector_payment_method_id: None,
+                    status_code: http_code,
+                }),
+                _ => Err(disabled_instrument_error(&response, http_code)),
             },
-            ..item.router_data
+            ..router_data
         })
     }
 }
@@ -1386,6 +1409,10 @@ fn disabled_instrument_error(
         network_decline_code: None,
         network_advice_code: None,
         network_error_message: None,
+        typed_connector_response: None,
+        raw_connector_response: None,
+        raw_connector_request: None,
+        typed_connector_request: None,
     }
 }
 
@@ -1642,6 +1669,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     }),
                     ..item.router_data
                 })
@@ -1743,7 +1771,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             get_finix_fraud_session_id(router_data.request.connector_feature_data.as_ref());
 
         Ok(Self {
-            amount: router_data.request.minor_amount,
+            amount: router_data.request.amount.amount,
             currency: router_data.request.currency,
             source,
             merchant: merchant_id,
@@ -1778,34 +1806,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let connector_response_data =
             convert_to_additional_payment_method_connector_response(&item.response)
                 .map(ConnectorResponseData::with_additional_payment_method_data);
-
-        // Surface explicit Finix failure responses (failure_message present) directly.
-        if let Some(failure_message) = response.failure_message.clone() {
-            let code = response
-                .failure_code
-                .clone()
-                .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string());
-            return Ok(Self {
-                resource_common_data: PaymentFlowData {
-                    status: AttemptStatus::Failure,
-                    connector_response: connector_response_data,
-                    ..item.router_data.resource_common_data.clone()
-                },
-                response: Err(ErrorResponse {
-                    code,
-                    message: failure_message,
-                    reason: None,
-                    status_code: item.http_code,
-                    attempt_status: Some(FlowStatus::Payment(AttemptStatus::Failure)),
-                    connector_transaction_id: Some(response.id.clone()),
-                    network_decline_code: None,
-                    network_advice_code: None,
-                    network_error_message: None,
-                }),
-                ..item.router_data
-            });
-        }
-
         // Reuse Authorize's ID-aware status mapping: TR* → Charged, AU* → Authorized.
         let finix_id = FinixId::from(response.id.clone());
         let status = match (&finix_id, &response.state) {
@@ -1818,16 +1818,38 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             (_, FinixPaymentStatus::Unknown) => AttemptStatus::Pending,
         };
 
-        // Mirror the Authorize flow for shadow parity: surface the charged Payment
-        // Instrument (`source`) as the connector mandate id and attach the AVS / network
-        // details as the connector_response.
-        Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status,
-                connector_response: connector_response_data,
-                ..item.router_data.resource_common_data.clone()
-            },
-            response: Ok(PaymentsResponseData::TransactionResponse {
+        // Mirror HS `get_finix_response` (which every finix MIT/repeat charge is routed
+        // through on the HS side, via the Authorize flow): any FAILED/CANCELED/UNKNOWN
+        // state is a failure, not only when Finix happens to echo a failure_message.
+        let is_failure = matches!(
+            response.state,
+            FinixPaymentStatus::Failed | FinixPaymentStatus::Canceled | FinixPaymentStatus::Unknown
+        );
+
+        let flow_response = if is_failure {
+            Err(ErrorResponse {
+                code: response
+                    .failure_code
+                    .clone()
+                    .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
+                message: response
+                    .failure_message
+                    .clone()
+                    .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
+                reason: None,
+                status_code: item.http_code,
+                attempt_status: Some(FlowStatus::Payment(status)),
+                connector_transaction_id: Some(response.id.clone()),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
+            })
+        } else {
+            Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
                 redirection_data: None,
                 mandate_reference: Some(Box::new(MandateReference {
@@ -1843,7 +1865,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
-            }),
+                payment_account_reference: None,
+            })
+        };
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                connector_response: connector_response_data,
+                ..item.router_data.resource_common_data.clone()
+            },
+            response: flow_response,
             ..item.router_data
         })
     }
@@ -2148,6 +2180,7 @@ pub(super) fn get_finix_webhook_reference(
                 PaymentWebhookReference {
                     connector_transaction_id: Some(authorization.id),
                     merchant_transaction_id: None,
+                    connector_preprocessing_id: None,
                 },
             )))
         }
@@ -2160,6 +2193,7 @@ pub(super) fn get_finix_webhook_reference(
                         connector_refund_id: Some(transfer.id),
                         merchant_refund_id: None,
                         connector_transaction_id: None,
+                        merchant_transaction_id: None,
                     },
                 ))),
                 // finix platform fee ignored (HS: Err(WebhookEventTypeNotFound))
@@ -2170,6 +2204,7 @@ pub(super) fn get_finix_webhook_reference(
                     PaymentWebhookReference {
                         connector_transaction_id: Some(transfer.id),
                         merchant_transaction_id: None,
+                        connector_preprocessing_id: None,
                     },
                 ))),
             }
@@ -2251,6 +2286,7 @@ fn get_finix_webhook_dispute_status(state: &FinixDisputeState) -> common_enums::
 /// transfers. Status mapping ports HS `get_attempt_status` with
 /// `FinixFlow::Auth` / `FinixFlow::Transfer` respectively.
 pub(super) fn build_finix_payment_webhook_response(
+    connector: &dyn common_utils::types::AmountConvertor<Output = MinorUnit>,
     body: &FinixWebhookBody,
     raw_body: &[u8],
 ) -> Result<WebhookDetailsResponse, error_stack::Report<WebhookError>> {
@@ -2272,9 +2308,11 @@ pub(super) fn build_finix_payment_webhook_response(
     let status = get_finix_webhook_attempt_status(&resource.state, flow, resource.is_void);
 
     Ok(WebhookDetailsResponse {
+        connector_returned_payment_method_details: None,
         resource_id: Some(ResponseId::ConnectorTransactionId(resource.id.clone())),
         status,
-        connector_response_reference_id: Some(resource.id),
+        connector_response_reference_id: Some(resource.id.clone()),
+        connector_request_reference_id: Some(resource.id),
         mandate_reference: None,
         error_code: resource.failure_code,
         error_message: resource.failure_message.clone(),
@@ -2284,8 +2322,13 @@ pub(super) fn build_finix_payment_webhook_response(
         response_headers: None,
         amount_captured: resource
             .captured_amount
-            .map(|amount| amount.get_amount_as_i64()),
-        minor_amount_captured: resource.captured_amount,
+            .map(|amount| {
+                crate::utils::webhook_amount_to_money(
+                    connector.convert_back(amount, resource.currency),
+                    resource.currency,
+                )
+            })
+            .transpose()?,
         network_txn_id: None,
         payment_method_update: None,
         sender_payment_instrument_id: None,
@@ -2354,6 +2397,7 @@ pub(super) fn build_finix_dispute_webhook_response(
         connector_response_reference_id: None,
         dispute_message: dispute.reason,
         connector_reason_code: None,
+        additional_details: None,
         raw_connector_response: Some(String::from_utf8_lossy(raw_body).to_string()),
         status_code: 200,
         response_headers: None,

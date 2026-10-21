@@ -99,7 +99,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
+                item.router_data.request.amount.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -308,6 +308,10 @@ impl<
                     network_advice_code: None,
                     network_decline_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
             ),
             CashtocodePaymentsResponse::CashtoCodeData(response_data) => {
@@ -338,6 +342,7 @@ impl<
                         incremental_authorization_allowed: None,
                         status_code: http_code,
                         splits: None,
+                        payment_account_reference: None,
                     }),
                 )
             }

@@ -1,11 +1,12 @@
 use domain_types::connector_types::{ConnectorEnum, ConnectorVariant};
 use grpc_api_types::payments::{
     CompositeAuthorizeRequest, CompositeCaptureRequest, CompositeGetRequest,
-    CompositePaymentMethodCreateRequest, CompositePaymentMethodGetRequest,
-    CompositePaymentMethodRechargeRequest, CompositePreAuthenticateRequest,
-    CompositeRefundGetRequest, CompositeRefundRequest, CompositeVerifyRedirectResponseRequest,
-    CompositeVoidRequest, ConnectorState, CustomerServiceCreateRequest,
-    CustomerServiceCreateResponse, CustomerServiceGetRequest, CustomerServiceGetResponse,
+    CompositePaymentMethodCreateRequest, CompositePaymentMethodEligibilityRequest,
+    CompositePaymentMethodGetRequest, CompositePaymentMethodRechargeRequest,
+    CompositePreAuthenticateRequest, CompositeRefundGetRequest, CompositeRefundRequest,
+    CompositeVerifyRedirectResponseRequest, CompositeVoidRequest, ConnectorState,
+    CustomerServiceCreateRequest, CustomerServiceCreateResponse, CustomerServiceGetRequest,
+    CustomerServiceGetResponse,
     MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest,
     MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse,
     MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest,
@@ -16,15 +17,17 @@ use grpc_api_types::payments::{
     PaymentMethodAuthenticationServicePostAuthenticateResponse,
     PaymentMethodAuthenticationServicePreAuthenticateRequest,
     PaymentMethodAuthenticationServicePreAuthenticateResponse, PaymentMethodServiceCreateRequest,
-    PaymentMethodServiceGetRequest, PaymentMethodServiceRechargeRequest,
-    PaymentServiceAuthorizeRequest, PaymentServiceCaptureRequest, PaymentServiceCreateOrderRequest,
+    PaymentMethodServiceEligibilityRequest, PaymentMethodServiceGetRequest,
+    PaymentMethodServiceRechargeRequest, PaymentMethodServiceTokenizeRequest,
+    PaymentMethodServiceTokenizeResponse, PaymentServiceAuthorizeRequest,
+    PaymentServiceCaptureRequest, PaymentServiceCreateOrderRequest,
     PaymentServiceCreateOrderResponse, PaymentServiceGetRequest, PaymentServiceRefundRequest,
     PaymentServiceVerifyRedirectResponseResponse, PaymentServiceVoidRequest,
     RefundServiceGetRequest,
 };
 
 use crate::utils::{
-    get_access_token, get_connector_customer_id, get_session_token,
+    get_access_token, get_connector_customer_id, get_payment_method_token, get_session_token,
     grpc_connector_from_connector_variant,
 };
 
@@ -119,22 +122,6 @@ impl ForeignFrom<(&CompositeAuthorizeRequest, &ConnectorEnum)>
     }
 }
 
-impl ForeignFrom<&CompositeAuthorizeRequest> for PaymentServiceCreateOrderRequest {
-    fn foreign_from(item: &CompositeAuthorizeRequest) -> Self {
-        Self {
-            merchant_order_id: item.merchant_order_id.clone(),
-            amount: item.amount,
-            webhook_url: item.webhook_url.clone(),
-            metadata: item.metadata.clone(),
-            connector_feature_data: item.connector_feature_data.clone(),
-            state: item.state.clone(),
-            test_mode: item.test_mode,
-            payment_method_type: None,
-            order_details: item.order_details.clone(),
-        }
-    }
-}
-
 // Tuple variant: threads the freshly-created connector_customer_id from
 // `create_customer_response` into the outgoing state. Required for connectors
 // that do not cache the connector-side customer id externally (e.g. Glomopay),
@@ -144,12 +131,14 @@ impl
     ForeignFrom<(
         &CompositeAuthorizeRequest,
         Option<&CustomerServiceCreateResponse>,
+        interfaces::connector_types::MerchantOrderIdSource,
     )> for PaymentServiceCreateOrderRequest
 {
     fn foreign_from(
-        (item, create_customer_response): (
+        (item, create_customer_response, merchant_order_id_source): (
             &CompositeAuthorizeRequest,
             Option<&CustomerServiceCreateResponse>,
+            interfaces::connector_types::MerchantOrderIdSource,
         ),
     ) -> Self {
         let connector_customer_id_from_req = item
@@ -164,8 +153,17 @@ impl
             connector_customer_id,
         });
 
+        let merchant_order_id = match merchant_order_id_source {
+            interfaces::connector_types::MerchantOrderIdSource::OrderId => {
+                item.merchant_order_id.clone()
+            }
+            interfaces::connector_types::MerchantOrderIdSource::TransactionId => {
+                item.merchant_transaction_id.clone()
+            }
+        };
+
         Self {
-            merchant_order_id: item.merchant_order_id.clone(),
+            merchant_order_id,
             amount: item.amount,
             webhook_url: item.webhook_url.clone(),
             metadata: item.metadata.clone(),
@@ -174,11 +172,16 @@ impl
             test_mode: item.test_mode,
             payment_method_type: None,
             order_details: item.order_details.clone(),
+            // The order is created for this Authorize, so it carries the same
+            // customer and store-for-later intent the Authorize does.
+            customer: item.customer.clone(),
+            setup_future_usage: item.setup_future_usage,
         }
     }
 }
 
 impl ForeignFrom<&CompositeAuthorizeRequest> for CustomerServiceCreateRequest {
+    #[allow(deprecated)]
     fn foreign_from(item: &CompositeAuthorizeRequest) -> Self {
         let customer = item.customer.as_ref();
         Self {
@@ -249,6 +252,7 @@ impl
         Option<&PaymentMethodAuthenticationServicePostAuthenticateResponse>,
     )> for PaymentServiceAuthorizeRequest
 {
+    #[allow(deprecated)]
     fn foreign_from(
         (
             item,
@@ -306,6 +310,7 @@ impl
             .or_else(|| item.connector_order_id.clone());
 
         Self {
+            split_settlement: item.split_settlement.clone(),
             merchant_transaction_id: item.merchant_transaction_id.clone(),
             amount: item.amount,
             order_tax_amount: item.order_tax_amount,
@@ -355,6 +360,12 @@ impl
             domain_data: item.domain_data.clone(),
             split_payments: item.split_payments.clone(),
             partner_merchant_identifier_details: item.partner_merchant_identifier_details.clone(),
+            currency_conversion_data: item.currency_conversion_data.clone(),
+            is_account_funding_transaction: item.is_account_funding_transaction,
+            recipient_details: item.recipient_details.clone(),
+            additional_connector_details: item.additional_connector_details.clone(),
+            business_country: item.business_country.clone(),
+            enable_avs_check: item.enable_avs_check,
         }
     }
 }
@@ -380,6 +391,7 @@ impl
         Option<&MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse>,
     )> for PaymentServiceGetRequest
 {
+    #[allow(deprecated)]
     fn foreign_from(
         (item, access_token_response): (
             &CompositeGetRequest,
@@ -471,6 +483,7 @@ impl
         });
 
         Self {
+            split_settlement_refund: item.split_settlement_refund.clone(),
             merchant_refund_id: item.merchant_refund_id.clone(),
             connector_transaction_id: item.connector_transaction_id.clone(),
             payment_amount: item.payment_amount,
@@ -580,6 +593,7 @@ impl
         Option<&MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse>,
     )> for PaymentServiceVoidRequest
 {
+    #[allow(deprecated)]
     fn foreign_from(
         (item, access_token_response): (
             &CompositeVoidRequest,
@@ -627,12 +641,16 @@ impl
     ForeignFrom<(
         &CompositeAuthorizeRequest,
         Option<&MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse>,
+        Option<&MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenResponse>,
+        Option<&PaymentServiceCreateOrderResponse>,
     )> for PaymentMethodAuthenticationServicePreAuthenticateRequest
 {
     fn foreign_from(
-        (item, access_token_response): (
+        (item, access_token_response, session_token_response, create_order_response): (
             &CompositeAuthorizeRequest,
             Option<&MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse>,
+            Option<&MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenResponse>,
+            Option<&PaymentServiceCreateOrderResponse>,
         ),
     ) -> Self {
         // Resolve the access token the same way the Authorize/Capture/Refund
@@ -640,8 +658,7 @@ impl
         // the parent flow's freshly-created server-authentication token. OAuth-gated
         // connectors (should_do_access_token) need this both to avoid
         // FAILED_TO_OBTAIN_AUTH_TYPE and because the resolved token is the source
-        // of connector-side values derived from it during PreAuthenticate (e.g. the
-        // Kount DDC clientID, read from the token's JWT claims).
+        // of connector-side values derived from it during PreAuthenticate.
         let access_token_from_req = item
             .state
             .as_ref()
@@ -671,6 +688,17 @@ impl
             capture_method: item.capture_method,
             description: item.description.clone(),
             merchant_transaction_id: item.merchant_transaction_id.clone(),
+            test_mode: item.test_mode,
+            // Same precedence as the Authorize mapping: prefer the Order that CreateOrder
+            // just minted, then the caller-supplied one. Elavon PG's hosted payment page is
+            // opened against that Order, so taking only the request value leaves the fresh
+            // Order unreachable and PreAuthenticate fails on the missing field.
+            connector_order_id: create_order_response
+                .and_then(|r| r.connector_order_id.clone())
+                .or_else(|| item.connector_order_id.clone()),
+            // Session-token connectors (e.g. Nuvei initPayment) bind the pre-authentication
+            // call to the session minted for this composite flow, same precedence as Authorize.
+            session_token: get_session_token(item.session_token.clone(), session_token_response),
         }
     }
 }
@@ -712,6 +740,13 @@ impl
             capture_method: item.capture_method,
             webhook_url: item.webhook_url.clone(),
             domain_data: item.domain_data.clone(),
+            // Used by connectors whose Authenticate leg charges the payment (frictionless 3DS)
+            setup_future_usage: item.setup_future_usage,
+            customer_acceptance: item.customer_acceptance.clone(),
+            enable_partial_authorization: item.enable_partial_authorization,
+            payment_channel: item.payment_channel,
+            billing_descriptor: item.billing_descriptor.clone(),
+            l2_l3_data: item.l2_l3_data.clone(),
         }
     }
 }
@@ -778,6 +813,7 @@ impl
         Option<&MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse>,
     )> for PaymentServiceCaptureRequest
 {
+    #[allow(deprecated)]
     fn foreign_from(
         (item, access_token_response): (
             &CompositeCaptureRequest,
@@ -802,6 +838,7 @@ impl
         });
 
         Self {
+            split_settlement: item.split_settlement.clone(),
             merchant_capture_id: item.merchant_capture_id.clone(),
             connector_transaction_id: item.connector_transaction_id.clone(),
             amount_to_capture: item.amount_to_capture,
@@ -956,16 +993,36 @@ impl
     }
 }
 
-impl
-    ForeignFrom<(
-        &CompositePaymentMethodGetRequest,
-        Option<&MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse>,
-    )> for PaymentMethodServiceGetRequest
+impl ForeignFrom<(&CompositePaymentMethodEligibilityRequest, &ConnectorVariant)>
+    for MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest
 {
     fn foreign_from(
-        (item, access_token_response): (
-            &CompositePaymentMethodGetRequest,
+        (item, connector): (&CompositePaymentMethodEligibilityRequest, &ConnectorVariant),
+    ) -> Self {
+        Self {
+            merchant_access_token_id: item.merchant_access_token_id.clone(),
+            connector: grpc_connector_from_connector_variant(connector),
+            metadata: item.metadata.clone(),
+            connector_feature_data: item.connector_feature_data.clone(),
+            test_mode: item.test_mode,
+            merchant_request_id: item.merchant_request_id.clone(),
+        }
+    }
+}
+
+impl
+    ForeignFrom<(
+        &CompositePaymentMethodEligibilityRequest,
+        Option<&MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse>,
+        Option<&PaymentMethodServiceTokenizeResponse>,
+    )> for PaymentMethodServiceEligibilityRequest
+{
+    #[allow(deprecated)] // mirrors the deprecated scalar payment_method_type for back-compat
+    fn foreign_from(
+        (item, access_token_response, payment_method_tokenize_response): (
+            &CompositePaymentMethodEligibilityRequest,
             Option<&MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse>,
+            Option<&PaymentMethodServiceTokenizeResponse>,
         ),
     ) -> Self {
         let access_token_from_req = item
@@ -982,6 +1039,113 @@ impl
             connector_customer_id,
         });
 
+        // Caller-held token wins; else fall back to the token minted by the
+        // Tokenize pre-call this composite invocation just ran.
+        let payment_method_token = get_payment_method_token(
+            item.payment_method_token.clone(),
+            payment_method_tokenize_response,
+        );
+
+        Self {
+            amount: item.amount,
+            customer: item.customer.clone(),
+            address: item.address.clone(),
+            order_details: item.order_details.clone(),
+            country: item.country,
+            payment_method_type: item.payment_method_type,
+            payment_method_types: item.payment_method_types.clone(),
+            description: item.description.clone(),
+            metadata: item.metadata.clone(),
+            connector_feature_data: item.connector_feature_data.clone(),
+            test_mode: item.test_mode,
+            connector_payment_method_id: item.connector_payment_method_id.clone(),
+            payment_method_token,
+            state: resolved_state,
+        }
+    }
+}
+
+impl ForeignFrom<&CompositePaymentMethodGetRequest> for PaymentMethodServiceTokenizeRequest {
+    #[allow(deprecated)]
+    fn foreign_from(item: &CompositePaymentMethodGetRequest) -> Self {
+        Self {
+            merchant_payment_method_id: item.merchant_payment_method_id.clone(),
+            amount: item.amount,
+            payment_method: item.payment_method.clone(),
+            customer: item.customer.clone(),
+            address: item.address.clone(),
+            metadata: item.metadata.clone(),
+            connector_feature_data: item.connector_feature_data.clone(),
+            return_url: item.return_url.clone(),
+            test_mode: item.test_mode,
+            state: item.state.clone(),
+            split_payments: item.split_payments.clone(),
+            setup_future_usage: item.setup_future_usage,
+            customer_acceptance: item.customer_acceptance.clone(),
+            setup_mandate_details: item.setup_mandate_details.clone(),
+            browser_info: item.browser_info.clone(),
+        }
+    }
+}
+
+impl ForeignFrom<&CompositePaymentMethodEligibilityRequest>
+    for PaymentMethodServiceTokenizeRequest
+{
+    #[allow(deprecated)]
+    fn foreign_from(item: &CompositePaymentMethodEligibilityRequest) -> Self {
+        Self {
+            merchant_payment_method_id: item.merchant_payment_method_id.clone(),
+            amount: item.amount,
+            payment_method: item.payment_method.clone(),
+            customer: item.customer.clone(),
+            address: item.address.clone(),
+            metadata: item.metadata.clone(),
+            connector_feature_data: item.connector_feature_data.clone(),
+            return_url: item.return_url.clone(),
+            test_mode: item.test_mode,
+            state: item.state.clone(),
+            split_payments: item.split_payments.clone(),
+            setup_future_usage: item.setup_future_usage,
+            customer_acceptance: item.customer_acceptance.clone(),
+            setup_mandate_details: item.setup_mandate_details.clone(),
+            browser_info: item.browser_info.clone(),
+        }
+    }
+}
+
+impl
+    ForeignFrom<(
+        &CompositePaymentMethodGetRequest,
+        Option<&MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse>,
+        Option<&PaymentMethodServiceTokenizeResponse>,
+    )> for PaymentMethodServiceGetRequest
+{
+    fn foreign_from(
+        (item, access_token_response, payment_method_tokenize_response): (
+            &CompositePaymentMethodGetRequest,
+            Option<&MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse>,
+            Option<&PaymentMethodServiceTokenizeResponse>,
+        ),
+    ) -> Self {
+        let access_token_from_req = item
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.clone());
+        let access_token = get_access_token(access_token_from_req, access_token_response);
+        let connector_customer_id = item
+            .state
+            .as_ref()
+            .and_then(|state| state.connector_customer_id.clone());
+        let resolved_state = Some(ConnectorState {
+            access_token,
+            connector_customer_id,
+        });
+
+        let payment_method_token = get_payment_method_token(
+            item.payment_method_token.clone(),
+            payment_method_tokenize_response,
+        );
+
         Self {
             merchant_payment_method_id: item.merchant_payment_method_id.clone(),
             connector_payment_method_id: item.connector_payment_method_id.clone(),
@@ -991,7 +1155,7 @@ impl
             connector_feature_data: item.connector_feature_data.clone(),
             metadata: item.metadata.clone(),
             test_mode: item.test_mode,
-            payment_method_token: item.payment_method_token.clone(),
+            payment_method_token,
         }
     }
 }
@@ -1051,6 +1215,7 @@ impl
         Option<&MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenResponse>,
     )> for PaymentServiceAuthorizeRequest
 {
+    #[allow(deprecated)]
     fn foreign_from(
         (request, _verify_response, access_token_response, session_token_response): (
             &CompositeVerifyRedirectResponseRequest,
@@ -1078,6 +1243,7 @@ impl
         });
 
         Self {
+            split_settlement: request.split_settlement.clone(),
             merchant_transaction_id: request.merchant_transaction_id.clone(),
             merchant_order_id: request.merchant_order_id.clone(),
             amount: request.amount,
@@ -1129,6 +1295,12 @@ impl
             partner_merchant_identifier_details: request
                 .partner_merchant_identifier_details
                 .clone(),
+            currency_conversion_data: request.currency_conversion_data.clone(),
+            is_account_funding_transaction: request.is_account_funding_transaction,
+            recipient_details: request.recipient_details.clone(),
+            additional_connector_details: request.additional_connector_details.clone(),
+            business_country: request.business_country.clone(),
+            enable_avs_check: request.enable_avs_check,
         }
     }
 }
@@ -1231,12 +1403,14 @@ impl
     ForeignFrom<(
         &CompositePreAuthenticateRequest,
         Option<&MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse>,
+        Option<&PaymentServiceCreateOrderResponse>,
     )> for PaymentMethodAuthenticationServicePreAuthenticateRequest
 {
     fn foreign_from(
-        (item, access_token_response): (
+        (item, access_token_response, create_order_response): (
             &CompositePreAuthenticateRequest,
             Option<&MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse>,
+            Option<&PaymentServiceCreateOrderResponse>,
         ),
     ) -> Self {
         let access_token = get_access_token(
@@ -1269,6 +1443,15 @@ impl
             capture_method: item.capture_method,
             description: item.description.clone(),
             merchant_transaction_id: item.merchant_transaction_id.clone(),
+            test_mode: item.test_mode,
+            // Same precedence as the Authorize mapping: prefer the Order that CreateOrder
+            // just minted, then the caller-supplied one. Elavon PG's hosted payment page is
+            // opened against that Order, so taking only the request value leaves the fresh
+            // Order unreachable and PreAuthenticate fails on the missing field.
+            connector_order_id: create_order_response
+                .and_then(|r| r.connector_order_id.clone())
+                .or_else(|| item.connector_order_id.clone()),
+            session_token: item.session_token.clone(),
         }
     }
 }
@@ -1308,6 +1491,7 @@ impl
             payment_status: item.payment_status,
             connector_transaction_id: item.connector_transaction_id.clone(),
             payment_connector: item.payment_connector,
+            address: item.address.clone(),
             state: Some(ConnectorState {
                 access_token,
                 connector_customer_id,
@@ -1374,6 +1558,7 @@ impl
             content: item.content.clone(),
             timestamp: item.timestamp,
             state: resolved_state,
+            connector_feature_data: item.connector_feature_data.clone(),
         }
     }
 }

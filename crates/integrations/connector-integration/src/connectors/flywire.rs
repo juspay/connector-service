@@ -30,7 +30,7 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 use domain_types::errors::ConnectorError;
 use domain_types::errors::{IntegrationError, WebhookError};
 use error_stack::{report, ResultExt};
-use hyperswitch_masking::{Maskable, PeekInterface};
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::connector_types::{AuthenticationStep, RedirectState};
 use interfaces::{
     api::ConnectorCommon,
@@ -102,6 +102,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn process_redirect_response(
         &self,
         _request: &RequestDetails,
+        _connector_feature_data: Option<&hyperswitch_masking::Secret<String>>,
     ) -> CustomResult<RedirectDetailsResponse, IntegrationError> {
         Ok(RedirectDetailsResponse {
             resource_id: None,
@@ -112,6 +113,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             error_reason: None,
             response_amount: None,
             raw_connector_response: None,
+            connector_feature_data: None,
         })
     }
 }
@@ -318,7 +320,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         )?;
         Ok(vec![(
             headers::X_AUTHENTICATION_KEY.to_string(),
-            auth.api_key.peek().to_string().into(),
+            auth.api_key.peek().to_string().into_masked(),
         )])
     }
 
@@ -368,6 +370,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             FlowStatus::Payment(payment_status)
         };
 
+        let typed =
+            macros::serialize_typed_connector_payload(&response, "typed_connector_response");
         Ok(ErrorResponse {
             status_code: res.status_code,
             code: response
@@ -381,6 +385,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
+            typed_connector_response: typed,
+            raw_connector_response: None,
+            raw_connector_request: None,
+            typed_connector_request: None,
         })
     }
 }

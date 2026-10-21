@@ -462,7 +462,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let customer = get_customer_details(&item.router_data)?;
 
         Ok(Self {
-            amount: item.router_data.request.amount,
+            amount: item.router_data.request.amount.amount,
             description: item.router_data.resource_common_data.description,
             paymethod,
             customer,
@@ -576,6 +576,10 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             };
 
             Ok(Self {
@@ -618,6 +622,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                     incremental_authorization_allowed: None,
                     status_code: item.http_code,
                     splits: None,
+                    payment_account_reference: None,
                 }),
                 ..item.router_data
             })
@@ -677,7 +682,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let customer = get_customer_details(&item.router_data)?;
 
         Ok(Self {
-            amount: item.router_data.request.minor_amount,
+            amount: item.router_data.request.amount.amount,
             description: item.router_data.resource_common_data.description,
             paymethod,
             customer,
@@ -710,6 +715,10 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             };
 
             Ok(Self {
@@ -737,6 +746,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                     incremental_authorization_allowed: None,
                     status_code: item.http_code,
                     splits: None,
+                    payment_account_reference: None,
                 }),
                 ..item.router_data
             })
@@ -770,6 +780,10 @@ impl<F> TryFrom<ResponseRouterData<GivepaymentsPaymentResponseData, Self>>
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             };
 
             Ok(Self {
@@ -797,6 +811,7 @@ impl<F> TryFrom<ResponseRouterData<GivepaymentsPaymentResponseData, Self>>
                     incremental_authorization_allowed: None,
                     status_code: http_code,
                     splits: None,
+                    payment_account_reference: None,
                 }),
                 ..router_data
             })
@@ -839,7 +854,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             payment: item.router_data.request.connector_transaction_id.clone(),
-            amount: Some(item.router_data.request.minor_refund_amount),
+            amount: Some(item.router_data.request.refund_amount.amount),
             reason: item.router_data.request.reason.clone(),
             description: item.router_data.request.reason,
             external_reference: Some(item.router_data.request.refund_id.clone()),
@@ -870,6 +885,10 @@ impl TryFrom<ResponseRouterData<GivepaymentsRefundResponseData, Self>>
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             });
 
             Ok(Self {
@@ -882,6 +901,7 @@ impl TryFrom<ResponseRouterData<GivepaymentsRefundResponseData, Self>>
                     connector_refund_id: item.response.id,
                     refund_status,
                     status_code: item.http_code,
+                    acquirer_reference_number: None,
                 }),
                 ..item.router_data
             })
@@ -915,6 +935,10 @@ impl TryFrom<ResponseRouterData<GivepaymentsRefundResponseData, Self>>
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             });
 
             Ok(Self {
@@ -927,6 +951,7 @@ impl TryFrom<ResponseRouterData<GivepaymentsRefundResponseData, Self>>
                     connector_refund_id: response.id,
                     refund_status,
                     status_code: http_code,
+                    acquirer_reference_number: None,
                 }),
                 ..router_data
             })

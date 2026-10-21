@@ -94,7 +94,7 @@ impl TryFrom<&ConnectorSpecificConfig> for ImerchantsolutionsAuthType {
 #[serde(rename_all = "camelCase")]
 pub struct ImerchantsolutionsPaymentsRequestData<T: PaymentMethodDataTypes> {
     amount: MinorUnit,
-    currency: Currency,
+    pub currency: Currency,
     reference: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     card: Option<CardDetails<T>>,
@@ -397,7 +397,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     holder: card_data.get_optional_cardholder_name(),
                 });
                 Ok(Self {
-                    amount: item.router_data.request.amount,
+                    amount: item.router_data.request.amount.amount,
                     currency: item.router_data.request.currency,
                     reference: item
                         .router_data
@@ -481,7 +481,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         }
                     }?;
                     Ok(Self {
-                        amount: item.router_data.request.amount,
+                        amount: item.router_data.request.amount.amount,
                         currency: item.router_data.request.currency,
                         reference: item
                             .router_data
@@ -535,7 +535,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         }
                     }?;
                     Ok(Self {
-                        amount: item.router_data.request.amount,
+                        amount: item.router_data.request.amount.amount,
                         currency: item.router_data.request.currency,
                         reference: item
                             .router_data
@@ -564,7 +564,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 }
                 WalletData::AliPayRedirect(_)
                 | WalletData::AliPayHkRedirect(_)
-                | WalletData::DanaRedirect {}
+                | WalletData::DanaRedirect {} | WalletData::GrabpayRedirect {}
                 | WalletData::GcashRedirect(_)
                 | WalletData::GoPayRedirect(_)
                 | WalletData::KakaoPayRedirect(_)
@@ -603,7 +603,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletData::PayURedirect(_)
                 | WalletData::EaseBuzzRedirect(_)
                 | WalletData::QwikcilverWalletDirect(_)
-            | WalletData::Skrill(_) => {
+                | WalletData::Skrill(_)
+                | WalletData::Neteller(_)
+                | WalletData::PaymayaRedirect(_)
+                | WalletData::PayhereRedirect {} => {
                     Err(errors::IntegrationError::NotImplemented(
                         utils::get_unimplemented_payment_method_error_message("Imerchantsolutions"),
                         errors::IntegrationErrorContext {
@@ -668,7 +671,7 @@ pub struct ImerchantsolutionsPaymentsResponseData {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 struct AmountDetails {
     value: MinorUnit,
-    currency: Currency,
+    pub currency: Currency,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -722,13 +725,26 @@ pub enum CaptureMode {
 }
 
 impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<ResponseRouterData<ImerchantsolutionsPaymentsResponseData, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    TryFrom<
+        ResponseRouterData<
+            ImerchantsolutionsPaymentsResponseData,
+            ImerchantsolutionsRouterData<Self, T>,
+        >,
+    > for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<ImerchantsolutionsPaymentsResponseData, Self>,
+        item: ResponseRouterData<
+            ImerchantsolutionsPaymentsResponseData,
+            ImerchantsolutionsRouterData<Self, T>,
+        >,
     ) -> Result<Self, Self::Error> {
+        let connector = item.router_data.connector;
+        let item = ResponseRouterData {
+            response: item.response,
+            router_data: item.router_data.router_data,
+            http_code: item.http_code,
+        };
         let status = item.response.status.clone().into();
 
         if is_payment_failure(status) {
@@ -742,6 +758,10 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             };
 
             Ok(Self {
@@ -781,7 +801,13 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
             Ok(Self {
                 resource_common_data: PaymentFlowData {
                     status,
-                    minor_amount_capturable: Some(item.response.amount.value),
+                    amount_capturable: Some(utils::response_amount_to_money(
+                        &connector,
+                        item.response.amount.value,
+                        item.router_data.request.currency,
+                        item.http_code,
+                        domain_types::connector_types::ConnectorEnum::Imerchantsolutions,
+                    )?),
                     ..item.router_data.resource_common_data
                 },
                 response: Ok(PaymentsResponseData::TransactionResponse {
@@ -797,6 +823,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                     incremental_authorization_allowed: None,
                     status_code: item.http_code,
                     splits: None,
+                    payment_account_reference: None,
                 }),
                 ..item.router_data
             })
@@ -829,7 +856,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount = item.router_data.request.minor_amount;
+        let amount = item.router_data.request.amount.amount;
         let currency = item.router_data.request.currency;
         let reference = item
             .router_data
@@ -955,13 +982,26 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<ResponseRouterData<ImerchantsolutionsPaymentsResponseData, Self>>
-    for RouterDataV2<F, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
+    TryFrom<
+        ResponseRouterData<
+            ImerchantsolutionsPaymentsResponseData,
+            ImerchantsolutionsRouterData<Self, T>,
+        >,
+    > for RouterDataV2<F, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<ImerchantsolutionsPaymentsResponseData, Self>,
+        item: ResponseRouterData<
+            ImerchantsolutionsPaymentsResponseData,
+            ImerchantsolutionsRouterData<Self, T>,
+        >,
     ) -> Result<Self, Self::Error> {
+        let connector = item.router_data.connector;
+        let item = ResponseRouterData {
+            response: item.response,
+            router_data: item.router_data.router_data,
+            http_code: item.http_code,
+        };
         let status = item.response.status.clone().into();
 
         if is_payment_failure(status) {
@@ -975,6 +1015,10 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             };
 
             Ok(Self {
@@ -989,7 +1033,13 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
             Ok(Self {
                 resource_common_data: PaymentFlowData {
                     status,
-                    minor_amount_capturable: Some(item.response.amount.value),
+                    amount_capturable: Some(utils::response_amount_to_money(
+                        &connector,
+                        item.response.amount.value,
+                        item.router_data.request.currency,
+                        item.http_code,
+                        domain_types::connector_types::ConnectorEnum::Imerchantsolutions,
+                    )?),
                     ..item.router_data.resource_common_data
                 },
                 response: Ok(PaymentsResponseData::TransactionResponse {
@@ -1005,6 +1055,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                     incremental_authorization_allowed: None,
                     status_code: item.http_code,
                     splits: None,
+                    payment_account_reference: None,
                 }),
                 ..item.router_data
             })
@@ -1030,7 +1081,7 @@ pub struct ImerchantsolutionsPSyncResponseData {
     remaining_amount: Option<MinorUnit>,
     capture_closed: Option<bool>,
     captures: Vec<Captures>,
-    currency: Currency,
+    pub currency: Currency,
     status: ImerchantsolutionsPaymentStatus,
     capture_mode: CaptureMode,
     captured_at: Option<String>,
@@ -1105,7 +1156,7 @@ pub struct ImerchantsolutionsWebhookData {
     pub total_captured: Option<MinorUnit>,
     refunded_amount: Option<MinorUnit>,
     total_refunded: Option<MinorUnit>,
-    currency: Currency,
+    pub currency: Currency,
     processor: Option<String>,
     card_last4: Option<String>,
     card_brand: Option<String>,
@@ -1139,18 +1190,28 @@ pub enum ImerchantsolutionsWebhookStatus {
     Refused,
 }
 
-impl<F> TryFrom<ResponseRouterData<ImerchantsolutionsPaymentSyncResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        ResponseRouterData<
+            ImerchantsolutionsPaymentSyncResponse,
+            ImerchantsolutionsRouterData<Self, T>,
+        >,
+    > for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<ImerchantsolutionsPaymentSyncResponse, Self>,
+        item: ResponseRouterData<
+            ImerchantsolutionsPaymentSyncResponse,
+            ImerchantsolutionsRouterData<Self, T>,
+        >,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
             http_code,
         } = item;
+        let connector = router_data.connector;
+        let router_data = router_data.router_data;
 
         let is_multiple_capture_psync_flow = match router_data.request.sync_type {
             SyncRequestType::MultipleCaptureSync => true,
@@ -1160,10 +1221,6 @@ impl<F> TryFrom<ResponseRouterData<ImerchantsolutionsPaymentSyncResponse, Self>>
         match response {
             ImerchantsolutionsPaymentSyncResponse::ImerchantsolutionsPSyncResponse(response) => {
                 let status = response.status.clone().into();
-
-                let amount_captured = response
-                    .total_captured
-                    .map(|minor_amount| minor_amount.get_amount_as_i64());
 
                 if is_payment_failure(status) {
                     let error_response = ErrorResponse {
@@ -1176,6 +1233,10 @@ impl<F> TryFrom<ResponseRouterData<ImerchantsolutionsPaymentSyncResponse, Self>>
                         network_advice_code: None,
                         network_decline_code: None,
                         network_error_message: None,
+                        typed_connector_response: None,
+                        raw_connector_response: None,
+                        raw_connector_request: None,
+                        typed_connector_request: None,
                     };
 
                     Ok(Self {
@@ -1207,9 +1268,30 @@ impl<F> TryFrom<ResponseRouterData<ImerchantsolutionsPaymentSyncResponse, Self>>
                     Ok(Self {
                         resource_common_data: PaymentFlowData {
                             status: response.status.clone().into(),
-                            amount_captured,
-                            minor_amount_captured: response.total_captured,
-                            minor_amount_capturable: response.remaining_amount,
+                            amount_captured: response
+                                .total_captured
+                                .map(|amount| {
+                                    utils::response_amount_to_money(
+                                        &connector,
+                                        amount,
+                                        router_data.request.currency,
+                                        http_code,
+                                        domain_types::connector_types::ConnectorEnum::Imerchantsolutions,
+                                    )
+                                })
+                                .transpose()?,
+                            amount_capturable: response
+                                .remaining_amount
+                                .map(|amount| {
+                                    utils::response_amount_to_money(
+                                        &connector,
+                                        amount,
+                                        router_data.request.currency,
+                                        http_code,
+                                        domain_types::connector_types::ConnectorEnum::Imerchantsolutions,
+                                    )
+                                })
+                                .transpose()?,
                             ..router_data.resource_common_data
                         },
                         response: Ok(PaymentsResponseData::MultipleCaptureResponse {
@@ -1222,9 +1304,30 @@ impl<F> TryFrom<ResponseRouterData<ImerchantsolutionsPaymentSyncResponse, Self>>
                     Ok(Self {
                         resource_common_data: PaymentFlowData {
                             status,
-                            amount_captured,
-                            minor_amount_captured: response.total_captured,
-                            minor_amount_capturable: response.remaining_amount,
+                            amount_captured: response
+                                .total_captured
+                                .map(|amount| {
+                                    utils::response_amount_to_money(
+                                        &connector,
+                                        amount,
+                                        router_data.request.currency,
+                                        http_code,
+                                        domain_types::connector_types::ConnectorEnum::Imerchantsolutions,
+                                    )
+                                })
+                                .transpose()?,
+                            amount_capturable: response
+                                .remaining_amount
+                                .map(|amount| {
+                                    utils::response_amount_to_money(
+                                        &connector,
+                                        amount,
+                                        router_data.request.currency,
+                                        http_code,
+                                        domain_types::connector_types::ConnectorEnum::Imerchantsolutions,
+                                    )
+                                })
+                                .transpose()?,
                             ..router_data.resource_common_data
                         },
                         response: Ok(PaymentsResponseData::TransactionResponse {
@@ -1240,6 +1343,7 @@ impl<F> TryFrom<ResponseRouterData<ImerchantsolutionsPaymentSyncResponse, Self>>
                             incremental_authorization_allowed: None,
                             status_code: http_code,
                             splits: None,
+                            payment_account_reference: None,
                         }),
                         ..router_data
                     })
@@ -1261,6 +1365,10 @@ impl<F> TryFrom<ResponseRouterData<ImerchantsolutionsPaymentSyncResponse, Self>>
                         network_advice_code: None,
                         network_decline_code: None,
                         network_error_message: None,
+                        typed_connector_response: None,
+                        raw_connector_response: None,
+                        raw_connector_request: None,
+                        typed_connector_request: None,
                     };
 
                     Ok(Self {
@@ -1272,7 +1380,7 @@ impl<F> TryFrom<ResponseRouterData<ImerchantsolutionsPaymentSyncResponse, Self>>
                         ..router_data
                     })
                 } else {
-                    let (minor_amount_captured, minor_amount_capturable) = match status {
+                    let (amount_captured, amount_capturable) = match status {
                         AttemptStatus::Authorized => (None, response.amount),
                         AttemptStatus::Charged => (response.amount, None),
                         AttemptStatus::PartialCharged => {
@@ -1287,14 +1395,34 @@ impl<F> TryFrom<ResponseRouterData<ImerchantsolutionsPaymentSyncResponse, Self>>
                         }
                         _ => (None, None),
                     };
+                    let amount_captured = amount_captured
+                        .map(|amount| {
+                            utils::response_amount_to_money(
+                                &connector,
+                                amount,
+                                router_data.request.currency,
+                                http_code,
+                                domain_types::connector_types::ConnectorEnum::Imerchantsolutions,
+                            )
+                        })
+                        .transpose()?;
+                    let amount_capturable = amount_capturable
+                        .map(|amount| {
+                            utils::response_amount_to_money(
+                                &connector,
+                                amount,
+                                router_data.request.currency,
+                                http_code,
+                                domain_types::connector_types::ConnectorEnum::Imerchantsolutions,
+                            )
+                        })
+                        .transpose()?;
 
                     Ok(Self {
                         resource_common_data: PaymentFlowData {
                             status,
-                            amount_captured: minor_amount_captured
-                                .map(|minor_amount| minor_amount.get_amount_as_i64()),
-                            minor_amount_captured,
-                            minor_amount_capturable,
+                            amount_captured,
+                            amount_capturable,
                             ..router_data.resource_common_data
                         },
                         response: Ok(PaymentsResponseData::TransactionResponse {
@@ -1310,6 +1438,7 @@ impl<F> TryFrom<ResponseRouterData<ImerchantsolutionsPaymentSyncResponse, Self>>
                             incremental_authorization_allowed: None,
                             status_code: http_code,
                             splits: None,
+                            payment_account_reference: None,
                         }),
                         ..router_data
                     })
@@ -1393,6 +1522,7 @@ impl TryFrom<ResponseRouterData<ImerchantsolutionsVoidResponseData, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -1454,7 +1584,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         Ok(Self {
             psp_reference,
-            amount: item.router_data.request.minor_amount_to_capture,
+            amount: item.router_data.request.amount_to_capture.amount,
             currency: item.router_data.request.currency,
             final_capture,
         })
@@ -1517,6 +1647,7 @@ impl TryFrom<ResponseRouterData<ImerchantsolutionsCaptureResponseData, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -1555,7 +1686,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             psp_reference: item.router_data.request.connector_transaction_id.clone(),
-            amount: item.router_data.request.minor_refund_amount,
+            amount: item.router_data.request.refund_amount.amount,
             currency: item.router_data.request.currency,
             reference: Some(item.router_data.request.refund_id.clone()),
             reason: item.router_data.request.reason,
@@ -1599,6 +1730,7 @@ impl TryFrom<ResponseRouterData<ImerchantsolutionsRefundResponseData, Self>>
                 connector_refund_id: item.response.psp_reference.to_string(),
                 refund_status,
                 status_code: item.http_code,
+                acquirer_reference_number: None,
             }),
             ..item.router_data
         })
@@ -1662,6 +1794,7 @@ impl TryFrom<ResponseRouterData<ImerchantsolutionsRefundSyncResponse, Self>>
                         connector_refund_id,
                         refund_status,
                         status_code: http_code,
+                        acquirer_reference_number: None,
                     }),
                     ..router_data
                 })
@@ -1690,6 +1823,10 @@ impl TryFrom<ResponseRouterData<ImerchantsolutionsRefundSyncResponse, Self>>
                         network_advice_code: None,
                         network_decline_code: None,
                         network_error_message: None,
+                        typed_connector_response: None,
+                        raw_connector_response: None,
+                        raw_connector_request: None,
+                        typed_connector_request: None,
                     });
 
                     Ok(Self {
@@ -1702,6 +1839,7 @@ impl TryFrom<ResponseRouterData<ImerchantsolutionsRefundSyncResponse, Self>>
                             connector_refund_id,
                             refund_status,
                             status_code: http_code,
+                            acquirer_reference_number: None,
                         }),
                         ..router_data
                     })

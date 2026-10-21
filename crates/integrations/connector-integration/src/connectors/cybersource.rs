@@ -3,9 +3,10 @@ use std::fmt::Debug;
 
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
+    crypto::{self, VerifySignature},
     errors::CustomResult,
     events,
-    ext_traits::BytesExt,
+    ext_traits::{ByteSliceExt, BytesExt},
     types::StringMajorUnit,
     Method,
 };
@@ -16,13 +17,17 @@ use domain_types::{
         SetupMandate, Void, VoidPC,
     },
     connector_types::{
-        ClientAuthenticationTokenRequestData, MandateRevokeRequestData, MandateRevokeResponseData,
-        PaymentFlowData, PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
+        ClientAuthenticationTokenRequestData, ConnectorWebhookSecrets, EventContext, EventType,
+        MandateRevokeRequestData, MandateRevokeResponseData, PaymentFlowData, PaymentVoidData,
+        PaymentWebhookReference, PaymentsAuthenticateData, PaymentsAuthorizeData,
         PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, SetupMandateRequestData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
+        RefundWebhookReference, RefundsData, RefundsResponseData, RepeatPaymentData,
+        RequestDetails, ResponseId, SetupMandateRequestData, WebhookDetailsResponse,
+        WebhookResourceReference,
     },
+    errors::WebhookError,
     merchant_authentication_flow_data::MerchantAuthenticationFlowData,
     payment_method_data::PaymentMethodDataTypes,
     router_data::ErrorResponse,
@@ -67,7 +72,7 @@ use transformers::{
 };
 
 use super::macros;
-use crate::{types::ResponseRouterData, with_error_response_body};
+use crate::{finalize_connector_response, types::ResponseRouterData, with_error_response_body};
 use domain_types::errors::ConnectorError;
 use domain_types::errors::IntegrationError;
 
@@ -169,6 +174,210 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Cybersource<T>
 {
+    /// The Base64-decoded `sig` parameter of the `v-c-signature` header.
+    fn get_webhook_source_verification_signature(
+        &self,
+        request: &RequestDetails,
+        _connector_webhook_secret: &ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, Report<WebhookError>> {
+        let signature = get_cybersource_webhook_signature(request)?;
+
+        BASE64_ENGINE
+            .decode(signature.signature)
+            .change_context(WebhookError::WebhookSignatureNotFound)
+            .attach_printable("Cybersource webhook: `sig` is not valid Base64")
+    }
+
+    /// The signed payload is `<t>.<raw notification body>`; `t` is taken verbatim from the
+    /// header and the body is used byte for byte, never re-serialized.
+    fn get_webhook_source_verification_message(
+        &self,
+        request: &RequestDetails,
+        _connector_webhook_secret: &ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, Report<WebhookError>> {
+        let signature = get_cybersource_webhook_signature(request)?;
+
+        let mut message = signature.timestamp.into_bytes();
+        message.push(b'.');
+        message.extend_from_slice(&request.body);
+        Ok(message)
+    }
+
+    /// HMAC-SHA256 over `<t>.<raw body>` keyed with the Base64-decoded digital-signature key.
+    /// https://developer.cybersource.com/docs/cybs/en-us/webhooks/implementation/all/rest/webhooks/wh-fg-key-dig-sig-intro.html
+    /// A mismatch is `Ok(false)`; a missing secret or header is an error (the caller reports
+    /// both as an unverified source). Nothing here depends on the HTTP method.
+    fn verify_webhook_source(
+        &self,
+        request: RequestDetails,
+        connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
+    ) -> Result<bool, Report<WebhookError>> {
+        let connector_webhook_secret = connector_webhook_secret
+            .ok_or_else(|| Report::new(WebhookError::WebhookVerificationSecretNotFound))?;
+
+        let key = BASE64_ENGINE
+            .decode(&connector_webhook_secret.secret)
+            .change_context(WebhookError::WebhookVerificationSecretInvalid)
+            .attach_printable("Cybersource webhook: the webhook secret is not valid Base64")?;
+        // An empty key would make the HMAC computable by anyone.
+        if key.is_empty() {
+            return Err(Report::new(WebhookError::WebhookVerificationSecretInvalid))
+                .attach_printable("Cybersource webhook: the webhook secret is empty");
+        }
+
+        let signature =
+            self.get_webhook_source_verification_signature(&request, &connector_webhook_secret)?;
+        let message =
+            self.get_webhook_source_verification_message(&request, &connector_webhook_secret)?;
+
+        crypto::HmacSha256
+            .verify_signature(&key, &signature, &message)
+            .change_context(WebhookError::WebhookSourceVerificationFailed)
+    }
+
+    fn get_event_type(&self, request: RequestDetails) -> Result<EventType, Report<WebhookError>> {
+        let body = parse_cybersource_webhook_body(&request)?;
+
+        EventType::try_from(body.event_type)
+    }
+
+    /// Payment and refund events carry the PSP request id in `payload.data.id`. When the event
+    /// data also echoes `clientReferenceInformation.code`, prefer that caller-assigned id during
+    /// lookup; it is especially important for capture events, whose PSP id differs from the
+    /// authorization id. The merchant reference remains optional because the payments payload
+    /// schema is not published and live events are message-level encrypted.
+    fn get_webhook_event_reference(
+        &self,
+        request: RequestDetails,
+    ) -> Result<Option<WebhookResourceReference>, Report<WebhookError>> {
+        let body = parse_cybersource_webhook_body(&request)?;
+        let merchant_reference_id = body.merchant_reference_id();
+
+        if body.event_type.is_payment_event() {
+            Ok(Some(WebhookResourceReference::Payment(
+                PaymentWebhookReference {
+                    connector_transaction_id: Some(body.object_reference_id()?),
+                    merchant_transaction_id: merchant_reference_id,
+                    connector_preprocessing_id: None,
+                },
+            )))
+        } else if body.event_type.refund_status().is_some() {
+            Ok(Some(WebhookResourceReference::Refund(
+                RefundWebhookReference {
+                    connector_refund_id: Some(body.object_reference_id()?),
+                    merchant_refund_id: merchant_reference_id,
+                    connector_transaction_id: None,
+                    merchant_transaction_id: None,
+                },
+            )))
+        } else {
+            Err(Report::new(WebhookError::WebhookEventTypeNotFound))
+                .attach_printable("Cybersource webhook: unsupported eventType")
+        }
+    }
+
+    fn process_payment_webhook(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
+        event_context: Option<EventContext>,
+    ) -> Result<WebhookDetailsResponse, Report<WebhookError>> {
+        let body = parse_cybersource_webhook_body(&request)?;
+
+        // An accepted authorization is `Charged` for a sale and `Authorized` otherwise. A
+        // payment context without a capture method is read as the Authorize request reads it
+        // (a sale); only an event with no payment context at all is refused.
+        let status = body
+            .event_type
+            .payment_status(event_context.as_ref())
+            .attach_printable(
+                "Cybersource webhook: an accepted authorization is ambiguous without the payment \
+                 context: AUTOMATIC (or omitted) capture means the payment was Charged, MANUAL \
+                 means Authorized. Pass EventContext.payment from the original authorize request.",
+            )?
+            .ok_or_else(|| Report::new(WebhookError::WebhookEventTypeNotFound))
+            .attach_printable("Cybersource webhook: eventType is not a payment event")?;
+        let connector_transaction_id = body.object_reference_id()?;
+
+        // The notification carries no documented decline code or message, so none is reported.
+        Ok(WebhookDetailsResponse {
+            resource_id: Some(ResponseId::ConnectorTransactionId(connector_transaction_id)),
+            status,
+            connector_response_reference_id: None,
+            connector_request_reference_id: None,
+            mandate_reference: None,
+            error_code: None,
+            error_message: None,
+            error_reason: None,
+            raw_connector_response: Some(String::from_utf8_lossy(&request.body).into_owned()),
+            status_code: 200,
+            response_headers: None,
+            amount_captured: None,
+            network_txn_id: None,
+            payment_method_update: None,
+            sender_payment_instrument_id: None,
+            connector_returned_payment_method_details: None,
+        })
+    }
+
+    fn process_refund_webhook(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
+    ) -> Result<RefundWebhookDetailsResponse, Report<WebhookError>> {
+        let body = parse_cybersource_webhook_body(&request)?;
+
+        let status = body
+            .event_type
+            .refund_status()
+            .ok_or_else(|| Report::new(WebhookError::WebhookEventTypeNotFound))
+            .attach_printable("Cybersource webhook: eventType is not a refund event")?;
+        let connector_refund_id = body.object_reference_id()?;
+
+        Ok(RefundWebhookDetailsResponse {
+            connector_refund_id: Some(connector_refund_id),
+            merchant_transaction_id: None,
+            status,
+            connector_response_reference_id: None,
+            error_code: None,
+            error_message: None,
+            raw_connector_response: Some(String::from_utf8_lossy(&request.body).into_owned()),
+            status_code: 200,
+            response_headers: None,
+        })
+    }
+}
+
+/// Deserializes the notification envelope. A body that is not the plaintext JSON envelope
+/// (for example a message-level encrypted notification) is refused.
+fn parse_cybersource_webhook_body(
+    request: &RequestDetails,
+) -> Result<cybersource::CybersourceWebhookBody, Report<WebhookError>> {
+    request
+        .body
+        .parse_struct("CybersourceWebhookBody")
+        .change_context(WebhookError::WebhookBodyDecodingFailed)
+}
+
+/// Reads and parses the `v-c-signature` header. Header names are matched case-insensitively:
+/// the caller forwards them as received and proxies may lowercase them.
+fn get_cybersource_webhook_signature(
+    request: &RequestDetails,
+) -> Result<cybersource::CybersourceWebhookSignature, Report<WebhookError>> {
+    let header = request
+        .headers
+        .iter()
+        .find(|(name, _)| {
+            name.eq_ignore_ascii_case(cybersource::CYBERSOURCE_WEBHOOK_SIGNATURE_HEADER)
+        })
+        .map(|(_, value)| value.as_str())
+        .ok_or_else(|| Report::new(WebhookError::WebhookSignatureNotFound))
+        .attach_printable("Cybersource webhook: v-c-signature header is missing")?;
+
+    cybersource::parse_cybersource_webhook_signature(header)
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::VerifyRedirectResponse for Cybersource<T>
@@ -301,7 +510,7 @@ macros::create_all_prerequisites!(
             Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
             FCD: HasConnectors,
         {
-        let date = OffsetDateTime::now_utc();
+        let date = common_utils::date_time::now().assume_utc();
         let cybersource_req = self.get_request_body(req)?;
         let auth = cybersource::CybersourceAuthType::try_from(&req.connector_config)?;
         let merchant_account = auth.merchant_account.clone();
@@ -318,7 +527,7 @@ macros::create_all_prerequisites!(
             .collect();
         let sha256 = self.generate_digest(
             cybersource_req
-                .map(|req| req.get_inner_value().expose())
+                .map(|req| req.content.get_inner_value().expose())
                 .unwrap_or_default()
                 .as_bytes()
         );
@@ -460,6 +669,27 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         event_builder: Option<&mut events::Event>,
         _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
+        // An empty body carries no connector error to report. hyperswitch short-circuits
+        // here rather than letting `parse_struct` fail
+        // (crates/hyperswitch_connectors/src/connectors/cybersource.rs:181), so mirror it —
+        // otherwise the deserialization failure escalates past the error handler entirely.
+        if res.response.is_empty() {
+            return Ok(ErrorResponse {
+                status_code: res.status_code,
+                code: NO_ERROR_CODE.to_string(),
+                message: NO_ERROR_MESSAGE.to_string(),
+                reason: None,
+                attempt_status: None,
+                connector_transaction_id: None,
+                network_advice_code: None,
+                network_decline_code: None,
+                network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
+            });
+        }
         let response: Result<
             cybersource::CybersourceErrorResponse,
             Report<common_utils::errors::ParsingError>,
@@ -474,6 +704,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             Ok(transformers::CybersourceErrorResponse::StandardError(response)) => {
                 with_error_response_body!(event_builder, response);
 
+                let typed = macros::serialize_typed_connector_payload(
+                    &response,
+                    "typed_connector_response",
+                );
                 let (code, message, reason) = match response.error_information {
                     Some(ref error_info) => {
                         let detailed_error_info = error_info.details.as_ref().map(|details| {
@@ -529,6 +763,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     network_advice_code: None,
                     network_decline_code: None,
                     network_error_message: None,
+                    typed_connector_response: typed,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 })
             }
             Ok(transformers::CybersourceErrorResponse::AuthenticationError(response)) => {
@@ -543,6 +781,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     network_advice_code: None,
                     network_decline_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 })
             }
             Ok(transformers::CybersourceErrorResponse::NotAvailableError(response)) => {
@@ -569,6 +811,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     network_advice_code: None,
                     network_decline_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 })
             }
             Err(error_msg) => {
@@ -1047,16 +1293,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             ClientAuthenticationTokenRequestData,
             PaymentsResponseData,
         >,
-    ) -> CustomResult<Option<common_utils::request::RequestContent>, IntegrationError> {
+    ) -> CustomResult<Option<common_utils::request::ConnectorRequestData>, IntegrationError> {
         let bridge = self.client_authentication_token;
         let input_data = CybersourceRouterData {
             connector: self.to_owned(),
             router_data: req.clone(),
         };
         let request = bridge.request_body(input_data)?;
-        Ok(Some(common_utils::request::RequestContent::Json(Box::new(
-            request,
-        ))))
+        let typed =
+            events::MaskedSerdeValue::from_masked_optional(&request, "typed_connector_request");
+        Ok(Some(common_utils::request::ConnectorRequestData::new(
+            common_utils::request::RequestContent::Json(Box::new(request)),
+            typed,
+        )))
     }
     fn handle_response_v2(
         &self,
@@ -1138,23 +1387,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             client_library,
             client_library_integrity,
         };
-        event_builder.map(|i| i.set_connector_response(&response_body));
-
-        let response_router_data = ResponseRouterData {
-            response: response_body,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        };
-
-        let result = RouterDataV2::<
-            ClientAuthenticationToken,
-            MerchantAuthenticationFlowData,
-            ClientAuthenticationTokenRequestData,
-            PaymentsResponseData,
-        >::try_from(response_router_data)
-        .map_err(|e| e.change_context(ConnectorError::response_handling_failed(res.status_code)))?;
-
-        Ok(result)
+        finalize_connector_response!(event_builder, response_body, data, res.status_code)
     }
     fn get_error_response_v2(
         &self,
@@ -1262,7 +1495,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             MandateRevokeRequestData,
             MandateRevokeResponseData,
         >,
-    ) -> CustomResult<Option<common_utils::request::RequestContent>, IntegrationError> {
+    ) -> CustomResult<Option<common_utils::request::ConnectorRequestData>, IntegrationError> {
         Ok(None)
     }
     fn handle_response_v2(
@@ -1284,15 +1517,30 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
         ConnectorError,
     > {
+        use domain_types::connector_types::RawConnectorRequestResponse;
+
         if matches!(res.status_code, 204) {
-            event_builder.map(|i| i.set_connector_response(&serde_json::json!({"mandate_status": common_enums::MandateStatus::Revoked.to_string()})));
-            Ok(RouterDataV2 {
+            let synthetic_response = serde_json::json!({"mandate_status": common_enums::MandateStatus::Revoked.to_string()});
+            let masked = events::MaskedSerdeValue::from_masked_optional(
+                &synthetic_response,
+                "connector_response",
+            );
+            if let Some(ref msv) = masked {
+                if let Some(evt) = event_builder {
+                    evt.response_data = Some(msv.clone());
+                }
+            }
+            let mut result = RouterDataV2 {
                 response: Ok(MandateRevokeResponseData {
                     mandate_status: common_enums::MandateStatus::Revoked,
                     status_code: res.status_code,
                 }),
                 ..data.clone()
-            })
+            };
+            result
+                .resource_common_data
+                .set_typed_connector_response(masked.as_ref().map(|m| m.inner().to_string()));
+            Ok(result)
         } else {
             // If http_code != 204 || http_code != 4xx, we dont know any other response scenario yet.
             let response_value: serde_json::Value = serde_json::from_slice(&res.response)
@@ -1302,14 +1550,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 ))?;
             let response_string = response_value.to_string();
 
-            event_builder.map(|i| {
-                i.set_connector_response(
-                    &serde_json::json!({"response_string": response_string.clone()}),
-                )
-            });
+            let synthetic_response =
+                serde_json::json!({"response_string": response_string.clone()});
+            let masked = events::MaskedSerdeValue::from_masked_optional(
+                &synthetic_response,
+                "connector_response",
+            );
+            if let Some(ref msv) = masked {
+                if let Some(evt) = event_builder {
+                    evt.response_data = Some(msv.clone());
+                }
+            }
             tracing::info!(connector_response=?response_string);
 
-            Ok(RouterDataV2 {
+            let mut result = RouterDataV2 {
                 response: Err(ErrorResponse {
                     code: NO_ERROR_CODE.to_string(),
                     message: response_string.clone(),
@@ -1320,9 +1574,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     network_advice_code: None,
                     network_decline_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
                 ..data.clone()
-            })
+            };
+            result
+                .resource_common_data
+                .set_typed_connector_response(masked.as_ref().map(|m| m.inner().to_string()));
+            Ok(result)
         }
     }
     fn get_error_response_v2(

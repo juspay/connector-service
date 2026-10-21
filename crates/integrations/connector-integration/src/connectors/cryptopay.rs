@@ -111,6 +111,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         with_error_response_body!(event_builder, response);
 
+        let typed =
+            macros::serialize_typed_connector_payload(&response, "typed_connector_response");
         Ok(ErrorResponse {
             status_code: res.status_code,
             code: response.error.code,
@@ -121,6 +123,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
+            typed_connector_response: typed,
+            raw_connector_response: None,
+            raw_connector_request: None,
+            typed_connector_request: None,
         })
     }
 }
@@ -169,11 +175,13 @@ macros::create_all_prerequisites!(
             flow: Authorize,
             request_body: CryptopayPaymentsRequest,
             response_body: CryptopayPaymentsResponse,
+            response_router_data: connector,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
             flow: PSync,
             response_body: CryptopayPaymentsSyncResponse,
+            response_router_data: connector,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         )
     ],
@@ -192,7 +200,7 @@ macros::create_all_prerequisites!(
                 Method::Post | Method::Put | Method::Delete | Method::Patch => {
                     let body = self
                         .get_request_body(req)?
-                        .map(|content| content.get_inner_value().peek().to_owned())
+                        .map(|content| content.content.get_inner_value().peek().to_owned())
                         .unwrap_or_default();
                     let md5_payload = crypto::Md5
                         .generate_digest(body.as_bytes())

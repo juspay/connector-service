@@ -194,6 +194,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 WebhookResourceReference::Payment(PaymentWebhookReference {
                     connector_transaction_id: Some(webhook_body.psp_reference),
                     merchant_transaction_id: webhook_body.merchant_reference,
+                    connector_preprocessing_id: None,
                 })
             }
             ImerchantsolutionsWebhookEventType::PaymentRefunded => {
@@ -201,6 +202,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     connector_refund_id: Some(webhook_body.psp_reference.clone()),
                     merchant_refund_id: Some(webhook_body.psp_reference),
                     connector_transaction_id: webhook_body.original_reference,
+                    merchant_transaction_id: None,
                 })
             }
         };
@@ -228,18 +230,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             (None, None, None)
         };
 
-        let minor_amount_captured = match status {
+        let amount_captured = match status {
             AttemptStatus::Charged => webhook_body.amount,
             AttemptStatus::PartialCharged => webhook_body.total_captured,
             _ => None,
         };
 
         Ok(WebhookDetailsResponse {
+            connector_returned_payment_method_details: None,
             resource_id: Some(ResponseId::ConnectorTransactionId(
                 webhook_body.psp_reference,
             )),
             status,
-            connector_response_reference_id: Some(webhook_body.payment_id),
+            connector_response_reference_id: Some(webhook_body.payment_id.clone()),
+            connector_request_reference_id: Some(webhook_body.payment_id),
             mandate_reference: None,
             error_code,
             error_message,
@@ -247,9 +251,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
             status_code: 200,
             response_headers: None,
-            amount_captured: minor_amount_captured
-                .map(|minor_amount| minor_amount.get_amount_as_i64()),
-            minor_amount_captured,
+            amount_captured: amount_captured
+                .map(|amount| {
+                    crate::utils::webhook_amount_to_money(
+                        common_utils::types::AmountConvertor::convert_back(
+                            self,
+                            amount,
+                            webhook_body.currency,
+                        ),
+                        webhook_body.currency,
+                    )
+                })
+                .transpose()?,
             network_txn_id: None,
             payment_method_update: None,
             sender_payment_instrument_id: None,
@@ -313,6 +326,11 @@ pub(crate) mod headers {
     pub(crate) const X_MERCHANT_ID: &str = "X-Merchant-Id";
 }
 
+macros::create_amount_converter_wrapper!(
+    connector_name: Imerchantsolutions,
+    amount_type: MinorUnit
+);
+
 macros::create_all_prerequisites!(
     connector_name: Imerchantsolutions,
     generic_type: T,
@@ -321,12 +339,14 @@ macros::create_all_prerequisites!(
             flow: Authorize,
             request_body: ImerchantsolutionsPaymentsRequestData<T>,
             response_body: ImerchantsolutionsPaymentsResponseData,
+            response_router_data: connector,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
             flow: RepeatPayment,
             request_body: ImerchantsolutionsRepeatPaymentRequest<T>,
             response_body: ImerchantsolutionsRepeatPaymentResponse,
+            response_router_data: connector,
             router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
         ),
         (
@@ -338,6 +358,7 @@ macros::create_all_prerequisites!(
         (
             flow: PSync,
             response_body: ImerchantsolutionsPaymentSyncResponse,
+            response_router_data: connector,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
@@ -455,6 +476,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         with_error_response_body!(event_builder, response);
 
+        let typed =
+            macros::serialize_typed_connector_payload(&response, "typed_connector_response");
         Ok(ErrorResponse {
             status_code: res.status_code,
             code: response.code.unwrap_or(NO_ERROR_CODE.to_string()),
@@ -468,6 +491,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
+            typed_connector_response: typed,
+            raw_connector_response: None,
+            raw_connector_request: None,
+            typed_connector_request: None,
         })
     }
 }

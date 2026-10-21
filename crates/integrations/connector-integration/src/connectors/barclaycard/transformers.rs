@@ -175,6 +175,7 @@ fn wallet_data_label(wallet_data: &WalletData) -> &'static str {
         WalletData::ApplePayRedirect(_) => "apple_pay_redirect",
         WalletData::ApplePayThirdPartySdk(_) => "apple_pay_third_party_sdk",
         WalletData::DanaRedirect {} => "dana_redirect",
+        WalletData::GrabpayRedirect {} => "grabpay_redirect",
         WalletData::GooglePay(_) => "google_pay",
         WalletData::GooglePayRedirect(_) => "google_pay_redirect",
         WalletData::GooglePayThirdPartySdk(_) => "google_pay_third_party_sdk",
@@ -206,6 +207,9 @@ fn wallet_data_label(wallet_data: &WalletData) -> &'static str {
         WalletData::EaseBuzzRedirect(_) => "easebuzz_redirect",
         WalletData::QwikcilverWalletDirect(_) => "qwikcilver_wallet_direct",
         WalletData::Skrill(_) => "skrill",
+        WalletData::Neteller(_) => "neteller",
+        WalletData::PaymayaRedirect(_) => "paymaya_redirect",
+        WalletData::PayhereRedirect {} => "payhere_redirect",
     }
 }
 
@@ -271,7 +275,10 @@ fn get_barclaycard_card_type(card_network: common_enums::CardNetwork) -> Option<
         | common_enums::CardNetwork::Star
         | common_enums::CardNetwork::Accel
         | common_enums::CardNetwork::Pulse
-        | common_enums::CardNetwork::Nyce => None,
+        | common_enums::CardNetwork::Nyce
+        | common_enums::CardNetwork::Prop
+        | common_enums::CardNetwork::PrivateLabel
+        | common_enums::CardNetwork::Dinacard => None,
     }
 }
 
@@ -509,6 +516,7 @@ fn transform_payment_response<F, Req>(
                     incremental_authorization_allowed: None,
                     status_code: item.http_code,
                     splits: None,
+                    payment_account_reference: None,
                 })
             };
 
@@ -549,6 +557,10 @@ fn transform_payment_response<F, Req>(
                     network_advice_code: None,
                     network_decline_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
                 resource_common_data: PaymentFlowData {
                     status: common_enums::AttemptStatus::Failure,
@@ -621,6 +633,10 @@ fn get_error_response(
         network_advice_code,
         network_decline_code,
         network_error_message: None,
+        typed_connector_response: None,
+        raw_connector_response: None,
+        raw_connector_request: None,
+        typed_connector_request: None,
     }
 }
 
@@ -652,7 +668,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
         let amount = BarclaycardAmountConvertor::convert(
-            router_data.request.amount,
+            router_data.request.amount.amount,
             router_data.request.currency,
         )?;
 
@@ -945,7 +961,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let router_data = &value.router_data;
         let amount = BarclaycardAmountConvertor::convert(
-            router_data.request.minor_amount_to_capture,
+            router_data.request.amount_to_capture.amount,
             router_data.request.currency,
         )?;
 
@@ -1003,6 +1019,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data
                 .request
                 .amount
+                .as_ref()
+                .map(|money| money.amount)
                 .ok_or(IntegrationError::MissingRequiredField {
                     field_name: "amount",
                     context: Default::default(),
@@ -1059,7 +1077,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
         let amount = BarclaycardAmountConvertor::convert(
-            router_data.request.minor_refund_amount,
+            router_data.request.refund_amount.amount,
             router_data.request.currency,
         )?;
 
@@ -1171,6 +1189,7 @@ impl TryFrom<ResponseRouterData<responses::BarclaycardTransactionResponse, Self>
                             incremental_authorization_allowed: None,
                             status_code: item.http_code,
                             splits: None,
+                            payment_account_reference: None,
                         }),
                         resource_common_data: PaymentFlowData {
                             status,
@@ -1192,6 +1211,7 @@ impl TryFrom<ResponseRouterData<responses::BarclaycardTransactionResponse, Self>
                     incremental_authorization_allowed: None,
                     status_code: item.http_code,
                     splits: None,
+                    payment_account_reference: None,
                 }),
                 ..item.router_data
             }),
@@ -1230,6 +1250,7 @@ impl TryFrom<ResponseRouterData<responses::BarclaycardRefundResponse, Self>>
                 connector_refund_id: item.response.id,
                 refund_status,
                 status_code: item.http_code,
+                acquirer_reference_number: None,
             })
         };
 
@@ -1291,6 +1312,7 @@ impl TryFrom<ResponseRouterData<responses::BarclaycardRsyncResponse, Self>>
                         connector_refund_id: item.response.id,
                         refund_status,
                         status_code: item.http_code,
+                        acquirer_reference_number: None,
                     })
                 }
             }
@@ -1301,6 +1323,7 @@ impl TryFrom<ResponseRouterData<responses::BarclaycardRsyncResponse, Self>>
                     Err(_) => common_enums::RefundStatus::Pending,
                 },
                 status_code: item.http_code,
+                acquirer_reference_number: None,
             }),
         };
 
@@ -1507,6 +1530,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     })
                 };
 
@@ -1547,6 +1571,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         network_advice_code: None,
                         network_decline_code: None,
                         network_error_message: None,
+                        typed_connector_response: None,
+                        raw_connector_response: None,
+                        raw_connector_request: None,
+                        typed_connector_request: None,
                     }),
                     resource_common_data: PaymentFlowData {
                         status: common_enums::AttemptStatus::Failure,
@@ -1589,7 +1617,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
         let amount = BarclaycardAmountConvertor::convert(
-            router_data.request.minor_amount,
+            router_data.request.amount.amount,
             router_data.request.currency,
         )?;
 
@@ -1671,7 +1699,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 let pi = requests::RepeatPaymentInformation::Cards(Box::new(
                     requests::CardWithNtiPaymentInformation {
                         card: requests::CardWithNti {
-                            number: ccard.card_number.clone(),
+                            number: ccard.card_number.try_card_number("Barclaycard")?,
                             expiration_month: ccard.card_exp_month.clone(),
                             expiration_year: ccard.card_exp_year.clone(),
                             security_code: None,
@@ -1821,6 +1849,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     })
                 };
 
@@ -1861,6 +1890,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         network_advice_code: None,
                         network_decline_code: None,
                         network_error_message: None,
+                        typed_connector_response: None,
+                        raw_connector_response: None,
+                        raw_connector_request: None,
+                        typed_connector_request: None,
                     }),
                     resource_common_data: PaymentFlowData {
                         status: common_enums::AttemptStatus::Failure,
@@ -2079,6 +2112,10 @@ fn build_auth_error_response(
         network_advice_code: None,
         network_decline_code: None,
         network_error_message: None,
+        typed_connector_response: None,
+        raw_connector_response: None,
+        raw_connector_request: None,
+        typed_connector_request: None,
     }
 }
 
@@ -2250,7 +2287,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .currency
             .ok_or_else(|| missing_required_field_error(FIELD_CURRENCY, FLOW_AUTHENTICATE))?;
         let total_amount =
-            BarclaycardAmountConvertor::convert(router_data.request.amount, currency)?;
+            BarclaycardAmountConvertor::convert(router_data.request.amount.amount, currency)?;
 
         let email = router_data
             .resource_common_data
@@ -2402,6 +2439,9 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                                 authentication_data,
                                 connector_feature_data,
                                 status_code: item.http_code,
+                                mandate_reference: None,
+                                network_txn_id: None,
+                                network_txn_link_id: None,
                             }),
                             ..item.router_data
                         })
@@ -2480,7 +2520,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .currency
             .ok_or_else(|| missing_required_field_error(FIELD_CURRENCY, FLOW_POST_AUTHENTICATE))?;
         let total_amount =
-            BarclaycardAmountConvertor::convert(router_data.request.amount, currency)?;
+            BarclaycardAmountConvertor::convert(router_data.request.amount.amount, currency)?;
         let order_information = requests::OrderInformation {
             amount_details: requests::Amount {
                 total_amount,

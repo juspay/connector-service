@@ -234,12 +234,34 @@ impl SuiteDependency {
     }
 }
 
+/// `deny_unknown_fields` is deliberate: a key nobody reads is worse than a
+/// missing one, because it looks configured. The README documented an
+/// `additional_dependencies` key for a while that no code has ever read, so a
+/// `specs.json` setting it was silently ignored. A parse error is the only
+/// feedback loop that catches that.
 #[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ConnectorSuiteSpec {
     /// Connector name represented by this spec file.
     pub connector: String,
     /// Suites explicitly supported for this connector.
     pub supported_suites: Vec<String>,
+    /// Payment methods supported, as the `payment_method` oneof variant a
+    /// scenario populates (`card`, `klarna`, `upi_intent`).
+    ///
+    /// A scenario naming a method runs only if it appears here; one naming none
+    /// always runs. Empty or absent runs everything.
+    #[serde(default)]
+    pub supported_payment_methods: Vec<String>,
+    /// Scenarios this connector cannot support, as `suite -> scenario -> reason`.
+    /// They are skipped rather than run and failed.
+    ///
+    /// Kept here rather than in `override.json` because it states a capability,
+    /// not a test-data delta: a reviewer asking what a connector cannot do reads
+    /// one small file instead of several kilobytes of test cards. The reason is
+    /// the map value, so a declaration without one cannot be written.
+    #[serde(default)]
+    pub unsupported_scenarios: BTreeMap<String, BTreeMap<String, String>>,
     /// If set, the harness reads this request field as the connector request
     /// reference ID instead of generating the default `{suite}_{scenario}_ref`.
     /// Example: `"merchant_order_id"`.
@@ -259,6 +281,33 @@ pub struct ConnectorSuiteSpec {
     /// ~30s). Default: no polling (status returned on first call is final).
     #[serde(default)]
     pub sync_poll_until_terminal_seconds: Option<u64>,
+    /// Connector-scoped dependencies added around a global suite's
+    /// `depends_on`, as `suite -> { before, after, dependency_scope }`.
+    ///
+    /// For a connector whose flows need a prerequisite no other connector does
+    /// (for example a session token minted per order), without editing the
+    /// shared `global_suites/<suite>/suite_spec.json`. Absent or empty leaves
+    /// every suite exactly as the global spec defines it.
+    #[serde(default)]
+    pub suite_dependencies: BTreeMap<String, ConnectorSuiteDependencies>,
+}
+
+/// Dependencies one connector adds to one global suite (`specs.json`
+/// `suite_dependencies`). The effective chain is `before ++ global ++ after`;
+/// each entry takes the same shape as a `suite_spec.json` `depends_on` entry,
+/// `context_map` included.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ConnectorSuiteDependencies {
+    /// Run before the global suite's own dependencies.
+    #[serde(default)]
+    pub before: Vec<SuiteDependency>,
+    /// Run after the global suite's own dependencies.
+    #[serde(default)]
+    pub after: Vec<SuiteDependency>,
+    /// Replaces the global suite's `dependency_scope` when set.
+    #[serde(default)]
+    pub dependency_scope: Option<DependencyScope>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -340,6 +389,8 @@ pub enum ScenarioError {
         path: PathBuf,
         source: serde_json::Error,
     },
+    #[error("connector spec '{path}' is invalid: {message}")]
+    InvalidConnectorSpec { path: PathBuf, message: String },
     #[error("scenario skipped: {reason}")]
     Skipped { reason: String },
 }

@@ -169,7 +169,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             description: item.router_data.resource_common_data.get_description()?,
             amount: PlacetopayAmount {
                 currency: item.router_data.request.currency,
-                total: item.router_data.request.minor_amount,
+                total: item.router_data.request.amount.amount,
             },
         };
 
@@ -387,6 +387,7 @@ impl<F, T> TryFrom<ResponseRouterData<PlacetopayPaymentsResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             ..item.router_data
         })
@@ -559,8 +560,8 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        if item.router_data.request.minor_refund_amount
-            == item.router_data.request.minor_payment_amount
+        if item.router_data.request.refund_amount.amount
+            == item.router_data.request.payment_amount.amount
         {
             let auth = PlacetopayAuth::try_from(&item.router_data.connector_config)?;
 
@@ -649,6 +650,7 @@ impl<F> TryFrom<ResponseRouterData<PlacetopayRefundResponse, Self>>
                 connector_refund_id: item.response.internal_reference.to_string(),
                 refund_status: common_enums::RefundStatus::from(item.response.status.status),
                 status_code: item.http_code,
+                acquirer_reference_number: None,
             }),
             ..item.router_data
         })
@@ -705,6 +707,7 @@ impl<F> TryFrom<ResponseRouterData<PlacetopayRefundResponse, Self>>
                 connector_refund_id: item.response.internal_reference.to_string(),
                 refund_status: common_enums::RefundStatus::from(item.response.status.status),
                 status_code: item.http_code,
+                acquirer_reference_number: None,
             }),
             ..item.router_data
         })

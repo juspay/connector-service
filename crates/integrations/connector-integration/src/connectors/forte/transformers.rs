@@ -113,7 +113,9 @@ impl TryFrom<BankType> for ForteBankType {
             BankType::Bond
             | BankType::Transmission
             | BankType::Current
-            | BankType::SubscriptionShare => Err(IntegrationError::NotSupported {
+            | BankType::SubscriptionShare
+            | BankType::Salary
+            | BankType::Payment => Err(IntegrationError::NotSupported {
                 message: format!("Bank type {bank:?} is not supported by Forte"),
                 connector: "forte",
                 context: IntegrationErrorContext {
@@ -224,7 +226,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .connector
                     .amount_converter
                     .convert(
-                        item.router_data.request.minor_amount,
+                        item.router_data.request.amount.amount,
                         item.router_data.request.currency,
                     )
                     .change_context(IntegrationError::RequestEncodingFailed { context: Default::default() })?;
@@ -284,7 +286,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .connector
                         .amount_converter
                         .convert(
-                            item.router_data.request.minor_amount,
+                            item.router_data.request.amount.amount,
                             item.router_data.request.currency,
                         )
                         .change_context(IntegrationError::RequestEncodingFailed { context: Default::default() })?;
@@ -549,6 +551,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             ..item.router_data
         })
@@ -612,6 +615,7 @@ impl<F> TryFrom<ResponseRouterData<FortePaymentsSyncResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             ..item.router_data
         })
@@ -642,16 +646,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let minor_amount_authorized = item
+        let amount_authorized = item
             .router_data
             .resource_common_data
-            .minor_amount_capturable
+            .amount_capturable
+            .map(|amount| amount.amount)
             .ok_or(IntegrationError::MissingRequiredField {
                 field_name: "amount",
                 context: Default::default(),
             })?;
 
-        if item.router_data.request.minor_amount_to_capture != minor_amount_authorized {
+        if item.router_data.request.amount_to_capture.amount != amount_authorized {
             return Err(IntegrationError::NotSupported {
                 message: "Forte only supports full captures.".to_string(),
                 connector: "Forte",
@@ -730,6 +735,7 @@ impl<F, T> TryFrom<ResponseRouterData<ForteCaptureResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             ..item.router_data
         })
@@ -818,6 +824,7 @@ impl<F, T> TryFrom<ResponseRouterData<ForteCancelResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             ..item.router_data
         })
@@ -871,7 +878,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_refund_amount,
+                item.router_data.request.refund_amount.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -938,6 +945,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
                 connector_refund_id: item.response.transaction_id,
                 refund_status: enums::RefundStatus::from(item.response.response.response_code),
                 status_code: item.http_code,
+                acquirer_reference_number: None,
             }),
             ..item.router_data
         })
@@ -964,6 +972,7 @@ impl<F> TryFrom<ResponseRouterData<RefundSyncResponse, Self>>
                 connector_refund_id: item.response.transaction_id,
                 refund_status: enums::RefundStatus::from(item.response.status),
                 status_code: item.http_code,
+                acquirer_reference_number: None,
             }),
             ..item.router_data
         })

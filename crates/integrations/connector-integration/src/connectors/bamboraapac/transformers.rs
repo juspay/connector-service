@@ -146,7 +146,7 @@ impl TryFrom<&ConnectorSpecificConfig> for BamboraapacAuthType {
 }
 
 // Transaction Types for Bambora APAC
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize)]
 pub enum BamboraapacTrnType {
     Purchase = 1,
     PreAuth = 2,
@@ -168,7 +168,7 @@ impl From<BamboraapacTrnType> for i32 {
 }
 
 // Request Structure for SOAP/XML
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct BamboraapacPaymentRequest<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
@@ -282,7 +282,7 @@ impl Default for BamboraapacErrorResponse {
 // ============================================================================
 
 // Capture Request Structure
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct BamboraapacCaptureRequest {
     pub receipt: String,
     pub amount: MinorUnit,
@@ -326,7 +326,7 @@ pub struct CaptureResponse {
 // ============================================================================
 
 // Refund Request Structure
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct BamboraapacRefundRequest {
     pub cust_ref: String,
     pub receipt: String, // Original transaction receipt/ID to refund
@@ -371,7 +371,7 @@ pub struct RefundResponseInner {
 // ============================================================================
 
 // Sync Request Structure
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct BamboraapacSyncRequest {
     pub account_number: Secret<String>,
     pub receipt: String, // Transaction receipt/ID to query
@@ -474,7 +474,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
-            amount: router_data.request.minor_amount,
+            amount: router_data.request.amount.amount,
             trn_type,
             card_number: Secret::new(card_number_str),
             exp_month: card_data.card_exp_month.clone(),
@@ -556,6 +556,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     network_decline_code: response.declined_code.clone(),
                     network_advice_code: None,
                     network_error_message: response.declined_message.clone(),
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
                 ..router_data.clone()
             });
@@ -573,6 +577,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             incremental_authorization_allowed: None,
             status_code: item.http_code,
             splits: None,
+            payment_account_reference: None,
         };
 
         Ok(Self {
@@ -621,7 +626,7 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
 
         Ok(Self {
             receipt,
-            amount: router_data.request.minor_amount_to_capture,
+            amount: router_data.request.amount_to_capture.amount,
             username: auth.username,
             password: auth.password,
         })
@@ -685,6 +690,10 @@ impl TryFrom<ResponseRouterData<BamboraapacCaptureResponse, Self>>
                     network_decline_code: response.declined_code.clone(),
                     network_advice_code: None,
                     network_error_message: response.declined_message.clone(),
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
                 ..router_data.clone()
             });
@@ -702,6 +711,7 @@ impl TryFrom<ResponseRouterData<BamboraapacCaptureResponse, Self>>
             incremental_authorization_allowed: None,
             status_code: item.http_code,
             splits: None,
+            payment_account_reference: None,
         };
 
         Ok(Self {
@@ -798,6 +808,10 @@ impl TryFrom<ResponseRouterData<BamboraapacSyncResponse, Self>>
                         network_decline_code: None,
                         network_advice_code: None,
                         network_error_message: None,
+                        typed_connector_response: None,
+                        raw_connector_response: None,
+                        raw_connector_request: None,
+                        typed_connector_request: None,
                     }),
                     ..router_data.clone()
                 });
@@ -838,6 +852,10 @@ impl TryFrom<ResponseRouterData<BamboraapacSyncResponse, Self>>
                     network_decline_code: response.declined_code.clone(),
                     network_advice_code: None,
                     network_error_message: response.declined_message.clone(),
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
                 ..router_data.clone()
             });
@@ -855,6 +873,7 @@ impl TryFrom<ResponseRouterData<BamboraapacSyncResponse, Self>>
             incremental_authorization_allowed: None,
             status_code: item.http_code,
             splits: None,
+            payment_account_reference: None,
         };
 
         Ok(Self {
@@ -904,7 +923,7 @@ impl
                 .connector_request_reference_id
                 .clone(),
             receipt,
-            amount: router_data.request.minor_refund_amount,
+            amount: router_data.request.refund_amount.amount,
             username: auth.username,
             password: auth.password,
         })
@@ -973,6 +992,10 @@ impl TryFrom<ResponseRouterData<BamboraapacRefundResponse, Self>>
                     network_decline_code: response.declined_code.clone(),
                     network_advice_code: None,
                     network_error_message: response.declined_message.clone(),
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
                 ..router_data.clone()
             });
@@ -983,6 +1006,7 @@ impl TryFrom<ResponseRouterData<BamboraapacRefundResponse, Self>>
             connector_refund_id: response.receipt.clone(),
             refund_status,
             status_code: item.http_code,
+            acquirer_reference_number: None,
         };
 
         Ok(Self {
@@ -1070,6 +1094,10 @@ impl TryFrom<ResponseRouterData<BamboraapacSyncResponse, Self>>
                         network_decline_code: None,
                         network_advice_code: None,
                         network_error_message: None,
+                        typed_connector_response: None,
+                        raw_connector_response: None,
+                        raw_connector_request: None,
+                        typed_connector_request: None,
                     }),
                     ..router_data.clone()
                 });
@@ -1106,6 +1134,10 @@ impl TryFrom<ResponseRouterData<BamboraapacSyncResponse, Self>>
                     network_decline_code: response.declined_code.clone(),
                     network_advice_code: None,
                     network_error_message: response.declined_message.clone(),
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
                 ..router_data.clone()
             });
@@ -1116,6 +1148,7 @@ impl TryFrom<ResponseRouterData<BamboraapacSyncResponse, Self>>
             connector_refund_id: response.receipt.clone(),
             refund_status,
             status_code: item.http_code,
+            acquirer_reference_number: None,
         };
 
         Ok(Self {
@@ -1137,7 +1170,7 @@ use domain_types::connector_types::SetupMandateRequestData;
 use domain_types::router_data::FlowStatus;
 
 // SetupMandate Request Structure (Customer Registration without payment)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct BamboraapacSetupMandateRequest {
     pub customer_storage_number: Option<String>,
     pub cust_number: String,
@@ -1318,6 +1351,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: Some(error_message.to_string()),
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
                 ..router_data.clone()
             });
@@ -1353,6 +1390,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             incremental_authorization_allowed: None,
             status_code: item.http_code,
             splits: None,
+            payment_account_reference: None,
         };
 
         Ok(Self {
@@ -1371,7 +1409,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // ============================================================================
 
 // RepeatPayment Request Structure (Payment with tokenized card)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct BamboraapacRepeatPaymentRequest {
     pub account_number: Secret<String>,
     pub cust_ref: String,
@@ -1436,7 +1474,7 @@ impl<
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
-            amount: router_data.request.minor_amount,
+            amount: router_data.request.amount.amount,
             trn_type,
             card_token: token,
             username: auth.username,
@@ -1509,6 +1547,10 @@ impl<
                     network_decline_code: response.declined_code.clone(),
                     network_advice_code: None,
                     network_error_message: response.declined_message.clone(),
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
                 ..router_data.clone()
             });
@@ -1526,6 +1568,7 @@ impl<
             incremental_authorization_allowed: None,
             status_code: item.http_code,
             splits: None,
+            payment_account_reference: None,
         };
 
         Ok(Self {

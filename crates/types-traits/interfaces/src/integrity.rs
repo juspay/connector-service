@@ -14,9 +14,9 @@ use domain_types::connector_types::{
     PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
     PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
     PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsSyncData,
-    RechargeRequestData, RefundSyncData, RefundVoidPostRefundData, RefundsData, RepeatPaymentData,
-    ServerAuthenticationTokenRequestData, ServerSessionAuthenticationTokenRequestData,
-    SetupMandateRequestData, SubmitEvidenceData,
+    RechargeRequestData, RefreshPaymentMethodData, RefundSyncData, RefundVoidPostRefundData,
+    RefundsData, RepeatPaymentData, ServerAuthenticationTokenRequestData,
+    ServerSessionAuthenticationTokenRequestData, SetupMandateRequestData, SubmitEvidenceData,
 };
 use domain_types::frm::frm_types::{
     FrmChargebackReceivedRequest, FrmPaymentOutcomeRequest, FrmRefundProcessedRequest,
@@ -24,8 +24,8 @@ use domain_types::frm::frm_types::{
 };
 use domain_types::payouts::payouts_types::{
     PayoutCreateLinkRequest, PayoutCreateRecipientRequest, PayoutCreateRequest,
-    PayoutEnrollDisburseAccountRequest, PayoutGetRequest, PayoutStageRequest,
-    PayoutTransferRequest, PayoutVoidRequest,
+    PayoutEligibilityRequest, PayoutEnrollDisburseAccountRequest, PayoutGetRequest,
+    PayoutStageRequest, PayoutTransferRequest, PayoutVoidRequest,
 };
 use domain_types::router_request_types::VerifyWebhookSourceRequestData;
 use domain_types::surcharge::surcharge_types::{
@@ -37,9 +37,9 @@ use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
     payouts::router_request_types::{
         PayoutCreateIntegrityObject, PayoutCreateLinkIntegrityObject,
-        PayoutCreateRecipientIntegrityObject, PayoutEnrollDisburseAccountIntegrityObject,
-        PayoutGetIntegrityObject, PayoutStageIntegrityObject, PayoutTransferIntegrityObject,
-        PayoutVoidIntegrityObject,
+        PayoutCreateRecipientIntegrityObject, PayoutEligibilityIntegrityObject,
+        PayoutEnrollDisburseAccountIntegrityObject, PayoutGetIntegrityObject,
+        PayoutStageIntegrityObject, PayoutTransferIntegrityObject, PayoutVoidIntegrityObject,
     },
     router_request_types::{
         AcceptDisputeIntegrityObject, AccessTokenIntegrityObject, AuthenticateIntegrityObject,
@@ -52,9 +52,10 @@ use domain_types::{
         PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
         PaymentVoidPostCaptureIntegrityObject, PostAuthenticateIntegrityObject,
         PostRiskCheckIntegrityObject, PreAuthenticateIntegrityObject, PreRiskCheckIntegrityObject,
-        RechargeIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
-        RepeatPaymentIntegrityObject, SessionTokenIntegrityObject, SetupMandateIntegrityObject,
-        SubmitEvidenceIntegrityObject, VerifyWebhookSourceIntegrityObject,
+        RechargeIntegrityObject, RefreshPaymentMethodIntegrityObject, RefundIntegrityObject,
+        RefundSyncIntegrityObject, RepeatPaymentIntegrityObject, SessionTokenIntegrityObject,
+        SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
+        VerifyWebhookSourceIntegrityObject,
     },
 };
 
@@ -200,20 +201,22 @@ impl_check_integrity!(ClientAuthenticationTokenRequestData);
 impl_check_integrity!(PaymentsIncrementalAuthorizationData);
 impl_check_integrity!(MandateRevokeRequestData);
 impl_check_integrity!(VerifyWebhookSourceRequestData);
-impl_check_integrity!(PayoutCreateRequest);
-impl_check_integrity!(PayoutTransferRequest);
-impl_check_integrity!(PayoutStageRequest);
-impl_check_integrity!(PayoutCreateLinkRequest);
-impl_check_integrity!(PayoutCreateRecipientRequest);
-impl_check_integrity!(PayoutEnrollDisburseAccountRequest);
+impl_check_integrity!(PayoutCreateRequest<S>);
+impl_check_integrity!(PayoutTransferRequest<S>);
+impl_check_integrity!(PayoutStageRequest<S>);
+impl_check_integrity!(PayoutCreateLinkRequest<S>);
+impl_check_integrity!(PayoutCreateRecipientRequest<S>);
+impl_check_integrity!(PayoutEnrollDisburseAccountRequest<S>);
 impl_check_integrity!(PayoutGetRequest);
 impl_check_integrity!(PayoutVoidRequest);
+impl_check_integrity!(PayoutEligibilityRequest<S>);
 impl_check_integrity!(SurchargeCalculateRequest);
 impl_check_integrity!(SurchargePaymentSucceededRequest);
 impl_check_integrity!(SurchargeRefundSucceededRequest);
 impl_check_integrity!(RechargeRequestData);
 impl_check_integrity!(CreatePaymentMethodData);
 impl_check_integrity!(GetPaymentMethodData);
+impl_check_integrity!(RefreshPaymentMethodData<S>);
 impl_check_integrity!(PreRiskCheckRequest);
 impl_check_integrity!(PostRiskCheckRequest);
 impl_check_integrity!(FrmPaymentOutcomeRequest);
@@ -234,8 +237,8 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<AuthoriseIntegrityObject>
 
     fn get_request_integrity_object(&self) -> AuthoriseIntegrityObject {
         AuthoriseIntegrityObject {
-            amount: self.minor_amount,
-            currency: self.currency,
+            amount: self.amount.amount,
+            currency: self.amount.currency,
         }
     }
 }
@@ -247,7 +250,7 @@ impl GetIntegrityObject<CreateOrderIntegrityObject> for PaymentCreateOrderData {
 
     fn get_request_integrity_object(&self) -> CreateOrderIntegrityObject {
         CreateOrderIntegrityObject {
-            amount: self.amount,
+            amount: self.amount.amount,
             currency: self.currency,
         }
     }
@@ -262,7 +265,7 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<SetupMandateIntegrityObject>
 
     fn get_request_integrity_object(&self) -> SetupMandateIntegrityObject {
         SetupMandateIntegrityObject {
-            amount: self.minor_amount,
+            amount: self.amount.as_ref().map(|amount| amount.amount),
             currency: self.currency,
         }
     }
@@ -275,8 +278,8 @@ impl GetIntegrityObject<PaymentSynIntegrityObject> for PaymentsSyncData {
 
     fn get_request_integrity_object(&self) -> PaymentSynIntegrityObject {
         PaymentSynIntegrityObject {
-            amount: self.amount,
-            currency: self.currency,
+            amount: self.amount.amount,
+            currency: self.amount.currency,
         }
     }
 }
@@ -312,8 +315,8 @@ impl GetIntegrityObject<RefundIntegrityObject> for RefundsData {
 
     fn get_request_integrity_object(&self) -> RefundIntegrityObject {
         RefundIntegrityObject {
-            refund_amount: self.minor_refund_amount,
-            currency: self.currency,
+            refund_amount: self.refund_amount.amount,
+            currency: self.refund_amount.currency,
         }
     }
 }
@@ -325,8 +328,8 @@ impl GetIntegrityObject<CaptureIntegrityObject> for PaymentsCaptureData {
 
     fn get_request_integrity_object(&self) -> CaptureIntegrityObject {
         CaptureIntegrityObject {
-            amount_to_capture: self.minor_amount_to_capture,
-            currency: self.currency,
+            amount_to_capture: self.amount_to_capture.amount,
+            currency: self.amount_to_capture.currency,
         }
     }
 }
@@ -403,8 +406,8 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<RepeatPaymentIntegrityObject>
 
     fn get_request_integrity_object(&self) -> RepeatPaymentIntegrityObject {
         RepeatPaymentIntegrityObject {
-            amount: self.amount,
-            currency: self.currency,
+            amount: self.amount.amount,
+            currency: self.amount.currency,
             mandate_reference: match &self.mandate_reference {
                 domain_types::connector_types::MandateReferenceId::ConnectorMandateId(
                     mandate_ref,
@@ -445,6 +448,18 @@ impl GetIntegrityObject<PaymentMethodEligibilityIntegrityObject> for PaymentMeth
     }
 }
 
+impl<T: PaymentMethodDataTypes> GetIntegrityObject<RefreshPaymentMethodIntegrityObject>
+    for RefreshPaymentMethodData<T>
+{
+    fn get_response_integrity_object(&self) -> Option<RefreshPaymentMethodIntegrityObject> {
+        None
+    }
+
+    fn get_request_integrity_object(&self) -> RefreshPaymentMethodIntegrityObject {
+        RefreshPaymentMethodIntegrityObject {}
+    }
+}
+
 impl GetIntegrityObject<VerifyWebhookSourceIntegrityObject> for VerifyWebhookSourceRequestData {
     fn get_response_integrity_object(&self) -> Option<VerifyWebhookSourceIntegrityObject> {
         None // Webhook verification responses don't have integrity objects
@@ -467,7 +482,7 @@ impl GetIntegrityObject<SessionTokenIntegrityObject>
 
     fn get_request_integrity_object(&self) -> SessionTokenIntegrityObject {
         SessionTokenIntegrityObject {
-            amount: self.amount,
+            amount: self.amount.amount,
             currency: self.currency,
         }
     }
@@ -518,7 +533,7 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<PaymentMethodTokenIntegrityOb
 
     fn get_request_integrity_object(&self) -> PaymentMethodTokenIntegrityObject {
         PaymentMethodTokenIntegrityObject {
-            amount: self.amount,
+            amount: self.amount.amount,
             currency: self.currency,
         }
     }
@@ -533,7 +548,7 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<PreAuthenticateIntegrityObjec
 
     fn get_request_integrity_object(&self) -> PreAuthenticateIntegrityObject {
         PreAuthenticateIntegrityObject {
-            amount: self.amount,
+            amount: self.amount.amount,
             currency: self.currency.unwrap_or_default(),
         }
     }
@@ -548,7 +563,7 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<AuthenticateIntegrityObject>
 
     fn get_request_integrity_object(&self) -> AuthenticateIntegrityObject {
         AuthenticateIntegrityObject {
-            amount: self.amount,
+            amount: self.amount.amount,
             currency: self.currency.unwrap_or_default(),
         }
     }
@@ -563,7 +578,7 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<PostAuthenticateIntegrityObje
 
     fn get_request_integrity_object(&self) -> PostAuthenticateIntegrityObject {
         PostAuthenticateIntegrityObject {
-            amount: self.amount,
+            amount: self.amount.amount,
             currency: self.currency.unwrap_or_default(),
         }
     }
@@ -585,7 +600,9 @@ impl GetIntegrityObject<CreateConnectorCustomerIntegrityObject> for ConnectorCus
     }
 }
 
-impl GetIntegrityObject<PayoutCreateIntegrityObject> for PayoutCreateRequest {
+impl<T: PaymentMethodDataTypes> GetIntegrityObject<PayoutCreateIntegrityObject>
+    for PayoutCreateRequest<T>
+{
     fn get_response_integrity_object(&self) -> Option<PayoutCreateIntegrityObject> {
         None
     }
@@ -1015,6 +1032,18 @@ impl FlowIntegrity for PaymentMethodEligibilityIntegrityObject {
     }
 }
 
+impl FlowIntegrity for RefreshPaymentMethodIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        _req_integrity_object: Self,
+        _res_integrity_object: Self,
+        _connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        Ok(())
+    }
+}
+
 impl FlowIntegrity for VerifyWebhookSourceIntegrityObject {
     type IntegrityObject = Self;
 
@@ -1341,7 +1370,9 @@ impl FlowIntegrity for PayoutCreateIntegrityObject {
 
 // --- GENERATED GET INTEGRITY IMPLEMENTATIONS ---
 
-impl GetIntegrityObject<PayoutTransferIntegrityObject> for PayoutTransferRequest {
+impl<T: PaymentMethodDataTypes> GetIntegrityObject<PayoutTransferIntegrityObject>
+    for PayoutTransferRequest<T>
+{
     fn get_response_integrity_object(&self) -> Option<PayoutTransferIntegrityObject> {
         None
     }
@@ -1354,7 +1385,9 @@ impl GetIntegrityObject<PayoutTransferIntegrityObject> for PayoutTransferRequest
     }
 }
 
-impl GetIntegrityObject<PayoutStageIntegrityObject> for PayoutStageRequest {
+impl<T: PaymentMethodDataTypes> GetIntegrityObject<PayoutStageIntegrityObject>
+    for PayoutStageRequest<T>
+{
     fn get_response_integrity_object(&self) -> Option<PayoutStageIntegrityObject> {
         None
     }
@@ -1367,7 +1400,9 @@ impl GetIntegrityObject<PayoutStageIntegrityObject> for PayoutStageRequest {
     }
 }
 
-impl GetIntegrityObject<PayoutCreateLinkIntegrityObject> for PayoutCreateLinkRequest {
+impl<T: PaymentMethodDataTypes> GetIntegrityObject<PayoutCreateLinkIntegrityObject>
+    for PayoutCreateLinkRequest<T>
+{
     fn get_response_integrity_object(&self) -> Option<PayoutCreateLinkIntegrityObject> {
         None
     }
@@ -1380,7 +1415,9 @@ impl GetIntegrityObject<PayoutCreateLinkIntegrityObject> for PayoutCreateLinkReq
     }
 }
 
-impl GetIntegrityObject<PayoutCreateRecipientIntegrityObject> for PayoutCreateRecipientRequest {
+impl<T: PaymentMethodDataTypes> GetIntegrityObject<PayoutCreateRecipientIntegrityObject>
+    for PayoutCreateRecipientRequest<T>
+{
     fn get_response_integrity_object(&self) -> Option<PayoutCreateRecipientIntegrityObject> {
         None
     }
@@ -1393,8 +1430,8 @@ impl GetIntegrityObject<PayoutCreateRecipientIntegrityObject> for PayoutCreateRe
     }
 }
 
-impl GetIntegrityObject<PayoutEnrollDisburseAccountIntegrityObject>
-    for PayoutEnrollDisburseAccountRequest
+impl<T: PaymentMethodDataTypes> GetIntegrityObject<PayoutEnrollDisburseAccountIntegrityObject>
+    for PayoutEnrollDisburseAccountRequest<T>
 {
     fn get_response_integrity_object(&self) -> Option<PayoutEnrollDisburseAccountIntegrityObject> {
         None
@@ -1430,6 +1467,21 @@ impl GetIntegrityObject<PayoutVoidIntegrityObject> for PayoutVoidRequest {
         PayoutVoidIntegrityObject {
             merchant_payout_id: self.merchant_payout_id.clone(),
             connector_payout_id: self.connector_payout_id.clone(),
+        }
+    }
+}
+
+impl<T: PaymentMethodDataTypes> GetIntegrityObject<PayoutEligibilityIntegrityObject>
+    for PayoutEligibilityRequest<T>
+{
+    fn get_response_integrity_object(&self) -> Option<PayoutEligibilityIntegrityObject> {
+        None
+    }
+
+    fn get_request_integrity_object(&self) -> PayoutEligibilityIntegrityObject {
+        PayoutEligibilityIntegrityObject {
+            amount: self.amount.amount,
+            currency: self.amount.currency,
         }
     }
 }
@@ -1482,7 +1534,7 @@ impl GetIntegrityObject<RechargeIntegrityObject> for RechargeRequestData {
 
     fn get_request_integrity_object(&self) -> RechargeIntegrityObject {
         RechargeIntegrityObject {
-            amount: self.amount,
+            amount: self.amount.amount,
             currency: self.currency,
         }
     }
@@ -1753,6 +1805,36 @@ impl FlowIntegrity for PayoutVoidIntegrityObject {
                     .clone()
                     .unwrap_or_default(),
                 &res_integrity_object.merchant_payout_id.unwrap_or_default(),
+            ));
+        }
+
+        check_integrity_result(mismatched_fields, connector_transaction_id)
+    }
+}
+
+impl FlowIntegrity for PayoutEligibilityIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        req_integrity_object: Self,
+        res_integrity_object: Self,
+        connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        let mut mismatched_fields = Vec::new();
+
+        if req_integrity_object.amount != res_integrity_object.amount {
+            mismatched_fields.push(format_mismatch(
+                "amount",
+                &req_integrity_object.amount.to_string(),
+                &res_integrity_object.amount.to_string(),
+            ));
+        }
+
+        if req_integrity_object.currency != res_integrity_object.currency {
+            mismatched_fields.push(format_mismatch(
+                "currency",
+                &req_integrity_object.currency.to_string(),
+                &res_integrity_object.currency.to_string(),
             ));
         }
 

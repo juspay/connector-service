@@ -131,7 +131,7 @@ pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetReq
 #[allow(dead_code)]
 pub fn build_handle_event_request() -> EventServiceHandleRequest {
     EventServiceHandleRequest {
-        merchant_event_id: Some("probe_event_001".to_string()),  // Caller-supplied correlation key, echoed in the response. Not used by UCS for processing.
+        merchant_event_id: Some("probe_event_001".to_string()),
         request_details: Some(RequestDetails {
             method: HttpMethod::Post.into(),  // HTTP method of the request (e.g., GET, POST).
             uri: Some("https://example.com/webhook".to_string()),  // URI of the request.
@@ -148,7 +148,7 @@ pub fn build_incremental_authorization_request() -> PaymentServiceIncrementalAut
         merchant_authorization_id: Some("probe_auth_001".to_string()), // Identification.
         connector_transaction_id: "probe_connector_txn_001".to_string(),
         amount: Some(Money {
-            // new amount to be authorized (in minor currency units).
+            // New total authorized amount, including this increase.
             minor_amount: 1100, // Amount in minor units (e.g., 1000 = $10.00).
             currency: Currency::Usd.into(), // ISO 4217 currency code (e.g., "USD", "EUR").
         }),
@@ -263,6 +263,7 @@ pub fn build_recurring_charge_request() -> RecurringPaymentServiceChargeRequest 
             payment_method: Some(payment_method::PaymentMethod::Token(
                 TokenPaymentMethodType {
                     token: Some(Secret::new("probe_pm_token".to_string())), // The token string representing a payment method.
+                    ..Default::default()
                 },
             )),
             ..Default::default()

@@ -10,7 +10,7 @@ import sys
 from payments import PaymentClient
 from payments import RecurringPaymentClient
 from payments import RefundClient
-from payments.generated import sdk_config_pb2, payment_pb2, payment_methods_pb2
+from payments.generated import sdk_config_pb2, payment_pb2, events_pb2, payment_methods_pb2
 
 SUPPORTED_FLOWS = ["authorize", "capture", "get", "incremental_authorization", "proxy_authorize", "proxy_setup_recurring", "recurring_charge", "refund", "refund_get", "setup_recurring", "void"]
 
@@ -77,7 +77,7 @@ def _build_incremental_authorization_request():
     return payment_pb2.PaymentServiceIncrementalAuthorizationRequest(
         merchant_authorization_id="probe_auth_001",  # Identification.
         connector_transaction_id="probe_connector_txn_001",
-        amount=payment_pb2.Money(  # new amount to be authorized (in minor currency units).
+        amount=payment_pb2.Money(  # New total authorized amount, including this increase.
             minor_amount=1100,  # Amount in minor units (e.g., 1000 = $10.00).
             currency=payment_pb2.Currency.Value("USD"),  # ISO 4217 currency code (e.g., "USD", "EUR").
         ),

@@ -542,6 +542,10 @@ fn build_error_response(
             .and_then(|info| info.response_code.clone()),
         network_advice_code: None,
         network_error_message: None,
+        typed_connector_response: None,
+        raw_connector_response: None,
+        raw_connector_request: None,
+        typed_connector_request: None,
     }
 }
 
@@ -625,7 +629,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         };
 
         // Get amount and currency - amount is in minor units (cents)
-        let amount = request.minor_amount;
+        let amount = request.amount.amount;
         let currency = request.currency;
 
         // Convert amount using the framework's amount converter
@@ -762,7 +766,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let common_data = &router_data.resource_common_data;
 
         // Amount information
-        let amount = request.minor_amount_to_capture;
+        let amount = request.amount_to_capture.amount;
         let currency = request.currency;
 
         // Convert amount using the framework's amount converter
@@ -879,6 +883,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         // Amount information - must be provided in the request
         let amount = request
             .amount
+            .as_ref()
             .ok_or(IntegrationError::MissingRequiredField {
                 field_name: "amount",
                 context: Default::default(),
@@ -894,7 +899,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let total_amount = item
             .connector
             .amount_converter
-            .convert(amount, currency)
+            .convert(amount.amount, currency)
             .change_context(IntegrationError::AmountConversionFailed {
                 context: Default::default(),
             })
@@ -954,7 +959,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let request = &router_data.request;
 
         // Amount information
-        let amount = request.minor_refund_amount;
+        let amount = request.refund_amount.amount;
         let currency = request.currency;
 
         // Convert amount using the framework's amount converter
@@ -1191,6 +1196,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
                 incremental_authorization_allowed: Some(status == AttemptStatus::Authorized),
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             })
         } else {
             // Build error response using helper function
@@ -1266,6 +1272,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                 incremental_authorization_allowed: Some(status == AttemptStatus::Authorized),
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             })
         } else {
             // Build error response using helper function
@@ -1321,6 +1328,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                 incremental_authorization_allowed: Some(status == AttemptStatus::Authorized),
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             })
         } else {
             // Build error response using helper function
@@ -1376,6 +1384,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                 incremental_authorization_allowed: Some(status == AttemptStatus::Authorized),
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             })
         } else {
             // Build error response using helper function
@@ -1460,6 +1469,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
                 incremental_authorization_allowed: Some(status == AttemptStatus::Authorized),
                 splits: None,
                 status_code: item.http_code,
+                payment_account_reference: None,
             })
         } else {
             // Build error response using helper function
@@ -1509,6 +1519,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                 connector_refund_id: response.id.clone(),
                 refund_status: status,
                 status_code: item.http_code,
+                acquirer_reference_number: None,
             })
         } else {
             // Build error response using helper function
@@ -1565,6 +1576,10 @@ impl TryFrom<ResponseRouterData<WellsfargoRSyncResponse, Self>>
                             network_decline_code: None,
                             network_advice_code: None,
                             network_error_message: None,
+                            typed_connector_response: None,
+                            raw_connector_response: None,
+                            raw_connector_request: None,
+                            typed_connector_request: None,
                         })
                     } else {
                         // Other failure cases
@@ -1589,6 +1604,10 @@ impl TryFrom<ResponseRouterData<WellsfargoRSyncResponse, Self>>
                             network_decline_code: None,
                             network_advice_code: None,
                             network_error_message: None,
+                            typed_connector_response: None,
+                            raw_connector_response: None,
+                            raw_connector_request: None,
+                            typed_connector_request: None,
                         })
                     }
                 } else {
@@ -1597,6 +1616,7 @@ impl TryFrom<ResponseRouterData<WellsfargoRSyncResponse, Self>>
                         connector_refund_id: response.id.clone(),
                         refund_status: status,
                         status_code: item.http_code,
+                        acquirer_reference_number: None,
                     })
                 }
             }
@@ -1619,6 +1639,10 @@ impl TryFrom<ResponseRouterData<WellsfargoRSyncResponse, Self>>
                         network_decline_code: None,
                         network_advice_code: None,
                         network_error_message: None,
+                        typed_connector_response: None,
+                        raw_connector_response: None,
+                        raw_connector_request: None,
+                        typed_connector_request: None,
                     })
                 } else {
                     // No status and no error - return unknown status error
@@ -1632,6 +1656,10 @@ impl TryFrom<ResponseRouterData<WellsfargoRSyncResponse, Self>>
                         network_decline_code: None,
                         network_advice_code: None,
                         network_error_message: None,
+                        typed_connector_response: None,
+                        raw_connector_response: None,
+                        raw_connector_request: None,
+                        typed_connector_request: None,
                     })
                 }
             }

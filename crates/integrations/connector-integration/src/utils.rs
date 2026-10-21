@@ -10,13 +10,14 @@ use common_utils::{
     errors::{ParsingError, ReportSwitchExt},
     ext_traits::ValueExt,
     request::MultipartData,
-    types::MinorUnit,
+    types::{AmountConvertor, MinorUnit, Money},
     CustomResult,
 };
 use domain_types::{
     connector_types::{
-        CaptureSyncResponse, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsSyncData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        CaptureSyncResponse, ConnectorEnum, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsSyncData, RepeatPaymentData, ResponseId,
+        SetupMandateRequestData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -73,6 +74,38 @@ macro_rules! with_response_body {
             body.set_connector_response(&$response);
         }
     };
+}
+
+/// Serialize the connector response once, build `RouterDataV2` via `TryFrom<ResponseRouterData>`,
+/// set both event response data and `typed_connector_response`, and return `Ok(result)`.
+///
+/// Replaces the 12-line boilerplate block in every manual `handle_response_v2`.
+#[macro_export]
+macro_rules! finalize_connector_response {
+    ($event_builder:expr, $response:expr, $data:expr, $status_code:expr) => {{
+        use domain_types::connector_types::RawConnectorRequestResponse;
+        let masked = common_utils::events::MaskedSerdeValue::from_masked_optional(
+            &$response,
+            "connector_response",
+        );
+        if let Some(ref msv) = masked {
+            if let Some(evt) = $event_builder {
+                evt.response_data = Some(msv.clone());
+            }
+        }
+        let mut result = error_stack::ResultExt::change_context(
+            RouterDataV2::try_from(ResponseRouterData {
+                response: $response,
+                router_data: $data.clone(),
+                http_code: $status_code,
+            }),
+            $crate::ConnectorError::response_handling_failed($status_code),
+        )?;
+        result
+            .resource_common_data
+            .set_typed_connector_response(masked.as_ref().map(|m| m.inner().to_string()));
+        Ok(result)
+    }};
 }
 
 pub trait PaymentsAuthorizeRequestData {
@@ -184,6 +217,43 @@ pub fn response_handling_fail_for_connector(http_status: u16, connector: &str) -
     response_handling_fail(http_status, response_http_status_detail(connector))
 }
 
+/// Converts a connector response amount into domain money through the connector's amount converter.
+pub fn response_amount_to_money<AC>(
+    amount_converter: &AC,
+    amount: AC::Output,
+    currency: enums::Currency,
+    http_status: u16,
+    connector: ConnectorEnum,
+) -> Result<Money, Report<ConnectorError>>
+where
+    AC: AmountConvertor + ?Sized,
+{
+    let connector_name = connector.to_string();
+    let amount = amount_converter
+        .convert_back(amount, currency)
+        .change_context(response_handling_fail_for_connector(
+            http_status,
+            &connector_name,
+        ))?;
+
+    Ok(Money { amount, currency })
+}
+
+/// Converts a webhook amount conversion result into domain money while preserving parsing failures.
+pub fn webhook_amount_to_money(
+    amount: Result<MinorUnit, Report<ParsingError>>,
+    currency: enums::Currency,
+) -> Result<Money, Report<errors::WebhookError>> {
+    let amount = amount.change_context(errors::WebhookError::WebhookAmountConversionFailed {
+        reason: format!(
+            "Failed to convert amount to minor units: currency={}",
+            currency
+        ),
+    })?;
+
+    Ok(Money { amount, currency })
+}
+
 /// Response bytes could not be parsed into the expected response type (JSON/XML, schema drift).
 pub fn response_deserialization_fail(
     http_status: u16,
@@ -258,6 +328,10 @@ pub(crate) fn handle_json_response_deserialization_failure(
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
+            typed_connector_response: None,
+            raw_connector_response: None,
+            raw_connector_request: None,
+            typed_connector_request: None,
         }),
     }
 }
@@ -269,7 +343,8 @@ pub fn is_refund_failure(status: enums::RefundStatus) -> bool {
         }
         common_enums::RefundStatus::ManualReview
         | common_enums::RefundStatus::Pending
-        | common_enums::RefundStatus::Success => false,
+        | common_enums::RefundStatus::Success
+        | common_enums::RefundStatus::Unknown => false,
     }
 }
 
@@ -492,6 +567,14 @@ pub(crate) fn is_manual_capture(capture_method: Option<enums::CaptureMethod>) ->
         || capture_method == Some(enums::CaptureMethod::ManualMultiple)
 }
 
+/// True for mail-order / telephone-order (MOTO) payment channels.
+pub fn is_moto_payment_channel(payment_channel: Option<&enums::PaymentChannel>) -> bool {
+    matches!(
+        payment_channel,
+        Some(enums::PaymentChannel::MailOrder | enums::PaymentChannel::TelephoneOrder)
+    )
+}
+
 pub fn get_token_expiry_month_year_2_digit_with_delimiter(
     month: Secret<String>,
     year: Secret<String>,
@@ -636,6 +719,13 @@ pub fn build_card_holder_name(
     })
 }
 
+/// Card networks (notably Mastercard) require the cardholder name to contain only
+/// English (ASCII) characters; accented characters are transliterated to the
+/// closest ASCII equivalent.
+pub fn normalize_cardholder_name(name: Secret<String>) -> Secret<String> {
+    Secret::new(unidecode::unidecode(&name.expose()))
+}
+
 pub fn pad_expiry_year_to_four_digits(year: &Secret<String>) -> Secret<String> {
     domain_types::utils::expand_expiry_year_to_four_digits(year)
 }
@@ -704,5 +794,87 @@ pub fn build_error_response(
         network_decline_code: None,
         network_advice_code: None,
         network_error_message: None,
+        typed_connector_response: None,
+        raw_connector_response: None,
+        raw_connector_request: None,
+        typed_connector_request: None,
     }
+}
+
+/// Validates and normalizes a Chilean RUT (Rol Único Tributario).
+///
+/// A RUT is 7-8 body digits plus one check character (`0-9` or `K`), i.e. 8-9
+/// characters once dots and the hyphen are stripped. Returns the normalized
+/// form: separators removed and the check character upper-cased.
+///
+/// Both the shape **and** the mod-11 check digit are verified. Shape alone is
+/// not enough: a transposed digit keeps the length and the character classes
+/// intact, so it would still reach the connector and come back as an opaque
+/// validation error — which is exactly what this function exists to prevent.
+///
+/// `DocumentKind::Other` — the only spelling a RUT can arrive as, since
+/// `DocumentKind` has no `Rut` variant — skips the checksum validation that
+/// `Cpf`/`Cnpj` get, which is why it is done here.
+pub fn validate_and_normalize_chilean_rut(
+    document: &Secret<String>,
+) -> Result<Secret<String>, Report<IntegrationError>> {
+    let normalized: String = document
+        .peek()
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .map(|c| c.to_ascii_uppercase())
+        .collect();
+
+    let invalid = || {
+        error_stack::report!(IntegrationError::InvalidDataFormat {
+            field_name: "payer.document",
+            context: errors::IntegrationErrorContext::default(),
+        })
+    };
+
+    if !(8..=9).contains(&normalized.len()) {
+        return Err(invalid());
+    }
+
+    let (body, check) = normalized.split_at(normalized.len() - 1);
+    if !body.chars().all(|c| c.is_ascii_digit()) {
+        return Err(invalid());
+    }
+    if !check.chars().all(|c| c.is_ascii_digit() || c == 'K') {
+        return Err(invalid());
+    }
+
+    // Mod-11 check digit. Weights cycle 2,3,4,5,6,7 from the rightmost body
+    // digit; 11 - (sum mod 11) yields 11 => '0' and 10 => 'K'.
+    let sum: u32 = body
+        .chars()
+        .rev()
+        .zip((2..=7).cycle())
+        .map(|(digit, weight)| digit.to_digit(10).unwrap_or(0) * weight)
+        .sum();
+    let expected = match 11 - (sum % 11) {
+        11 => '0',
+        10 => 'K',
+        // 1..=9 are the only remaining values, so this cannot truncate.
+        other => char::from_digit(other, 10).unwrap_or('0'),
+    };
+    if !check.starts_with(expected) {
+        return Err(invalid());
+    }
+
+    Ok(Secret::new(normalized))
+}
+
+/// Serializes a [`common_enums::Currency`] as its ISO 4217 numeric code
+/// (e.g. `"840"` for USD). Use with `#[serde(serialize_with = "...")]` on
+/// connectors whose `currency_code` field expects the numeric code rather than
+/// the default UPPERCASE alpha-3 representation.
+pub fn serialize_currency_as_iso4217_numeric<S>(
+    currency: &common_enums::Currency,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    serializer.serialize_str(currency.iso_4217())
 }

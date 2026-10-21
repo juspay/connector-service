@@ -94,7 +94,7 @@ impl From<AxisbankAuthConfig> for SharedAuthConfig {
 }
 
 /// Error response structure from Axis Bank API.
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct AxisbankErrorResponse {
     pub status: String,
     #[serde(rename = "responseCode")]
@@ -165,7 +165,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = wrapper
             .connector
             .amount_converter
-            .convert(router_data.request.minor_amount, router_data.request.currency)
+            .convert(router_data.request.amount.amount, router_data.request.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: IntegrationErrorContext {
                     suggested_action: Some("Verify amount and currency values are valid".to_string()),

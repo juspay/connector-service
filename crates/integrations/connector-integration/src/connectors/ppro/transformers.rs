@@ -13,8 +13,9 @@ use domain_types::{
     connector_flow::{Capture, RSync, Refund, RepeatPayment, SetupMandate, Void},
     connector_types::{
         EventType, MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        PaymentsCaptureData, PaymentsResponseData, RawConnectorStatus, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
+        SetupMandateRequestData,
     },
     mandates::MandateDataType,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -22,7 +23,6 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
-use interfaces::webhooks::IncomingWebhookEvent;
 
 #[derive(Debug, Serialize, Default)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -165,7 +165,9 @@ where
 
         let amount = Amount {
             currency: router_data.request.currency.to_string(),
-            value: common_utils::MinorUnit::new(router_data.request.amount.get_amount_as_i64()),
+            value: common_utils::MinorUnit::new(
+                router_data.request.amount.amount.get_amount_as_i64(),
+            ),
         };
 
         let authentication_settings = match router_data.request.payment_method_type {
@@ -279,8 +281,9 @@ where
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, strum::Display)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum PproPaymentStatus {
     AuthorizationProcessing,
     CaptureProcessing,
@@ -342,8 +345,9 @@ impl From<PproPaymentStatus> for common_enums::RefundStatus {
 
 /// Statuses returned by the PPRO refund API endpoints (POST/GET /v1/payment-charges/{id}/refunds).
 /// These are distinct from payment charge statuses.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, strum::Display)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum PproRefundStatus {
     /// Refund has been settled / funds returned to the consumer.
     RefundSettled,
@@ -354,12 +358,15 @@ pub enum PproRefundStatus {
     Failed,
     Rejected,
     Declined,
-    #[serde(other)]
-    Unknown,
+    #[serde(untagged)]
+    #[strum(default)]
+    #[strum(to_string = "{0}")]
+    Unknown(String),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, strum::Display)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum PproAgreementStatus {
     Active,
     AuthenticationPending,
@@ -539,7 +546,7 @@ where
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            amount: item.router_data.request.minor_amount_to_capture,
+            amount: item.router_data.request.amount_to_capture.amount,
         })
     }
 }
@@ -571,12 +578,14 @@ where
             .router_data
             .request
             .amount
+            .map(|amount| amount.amount)
             .or(item
                 .router_data
                 .resource_common_data
-                .minor_amount_authorized)
+                .amount_authorized
+                .map(|amount| amount.amount))
             .ok_or(IntegrationError::MissingRequiredField {
-                field_name: "amount or minor_amount_authorized",
+                field_name: "amount or amount_authorized.amount",
                 context: Default::default(),
             })?;
 
@@ -608,7 +617,7 @@ where
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            amount: item.router_data.request.minor_refund_amount,
+            amount: item.router_data.request.refund_amount.amount,
             merchant_refund_reference: item.router_data.request.refund_id.clone(),
             refund_reason: item
                 .router_data
@@ -627,6 +636,28 @@ pub struct PproFailure {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub failure_code: Option<String>,
     pub failure_message: String,
+}
+
+/// Fills the opt-in `raw_connector_status` channel with PPRO's granular raw status
+/// (charge `paymentChargeStatus`, agreement `paymentAgreementStatus`, or refund `status`),
+/// alongside the unified attempt/refund status, plus the `failure` block details when
+/// present — for callers that consume the typed connector status codes.
+/// Mirrors grabpay's `grabpay_raw_connector_status`.
+fn ppro_raw_connector_status<S: std::fmt::Display>(
+    status: &S,
+    failure: Option<&PproFailure>,
+) -> RawConnectorStatus {
+    RawConnectorStatus {
+        code: Some(status.to_string()),
+        message: failure.map(|f| f.failure_message.clone()),
+        reason: failure.map(|f| {
+            format!(
+                "{}: {}",
+                f.failure_type,
+                f.failure_code.as_deref().unwrap_or(consts::NO_ERROR_CODE)
+            )
+        }),
+    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
@@ -692,37 +723,6 @@ impl TryFrom<PproWebhookType> for EventType {
     }
 }
 
-impl TryFrom<PproWebhookType> for IncomingWebhookEvent {
-    type Error = error_stack::Report<WebhookError>;
-
-    fn try_from(event_type: PproWebhookType) -> Result<Self, Self::Error> {
-        match event_type {
-            PproWebhookType::PaymentChargeCreated
-            | PproWebhookType::PaymentChargeProviderConfirmationPending => {
-                Ok(Self::PaymentIntentProcessing)
-            }
-            PproWebhookType::PaymentChargeAuthenticationPending => Ok(Self::PaymentActionRequired),
-            PproWebhookType::PaymentChargeAuthorizationSucceeded
-            | PproWebhookType::PaymentChargeSuccess => Ok(Self::PaymentIntentSuccess),
-            PproWebhookType::PaymentChargeAuthorizationFailed
-            | PproWebhookType::PaymentChargeFailed
-            | PproWebhookType::PaymentChargeDiscarded => Ok(Self::PaymentIntentFailure),
-            PproWebhookType::PaymentChargeCaptureSucceeded => Ok(Self::PaymentIntentCaptureSuccess),
-            PproWebhookType::PaymentChargeCaptureFailed => Ok(Self::PaymentIntentCaptureFailure),
-            PproWebhookType::PaymentChargeVoidSucceeded => Ok(Self::PaymentIntentCancelled),
-            PproWebhookType::PaymentChargeVoidFailed => Ok(Self::PaymentIntentCancelFailure),
-            PproWebhookType::PaymentChargeRefundPending => Ok(Self::RefundProcessing),
-            PproWebhookType::PaymentChargeRefundSucceeded => Ok(Self::RefundSuccess),
-            PproWebhookType::PaymentChargeRefundFailed => Ok(Self::RefundFailure),
-            PproWebhookType::PaymentAgreementActive => Ok(Self::MandateActive),
-            PproWebhookType::PaymentAgreementFailed
-            | PproWebhookType::PaymentAgreementRevokedByConsumer
-            | PproWebhookType::PaymentAgreementRevokedByMerchant
-            | PproWebhookType::PaymentAgreementRevokedByProvider => Ok(Self::MandateRevoked),
-        }
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PproWebhookEvent {
@@ -765,13 +765,50 @@ pub enum PproWebhookData {
     Agreement(PproWebhookAgreementData),
 }
 
-impl<F, Req> TryFrom<ResponseRouterData<PproPaymentsResponse, Self>>
+/// Parse the `ppro-signature` header into its key/value elements.
+///
+/// PPRO signs webhooks with a header of the form `t=<unix_timestamp>,s=<hex_hmac_sha256>`.
+/// We split on `,` and then on the first `=` of each element, mirroring stripe's
+/// `get_signature_elements_from_header`. The lookup is case-insensitive because
+/// HTTP intermediaries may normalise header casing.
+pub(crate) fn get_ppro_signature_elements_from_header(
+    headers: &std::collections::HashMap<String, String>,
+) -> Result<std::collections::HashMap<String, String>, error_stack::Report<WebhookError>> {
+    let security_header = headers
+        .iter()
+        .find(|(key, _)| key.eq_ignore_ascii_case(super::headers::PPRO_SIGNATURE))
+        .map(|(_, value)| value.clone())
+        .ok_or_else(|| error_stack::report!(WebhookError::WebhookSignatureNotFound))?;
+
+    let mut signature_elements = std::collections::HashMap::new();
+    for prop_str in security_header.split(',') {
+        let (prop_key, prop_value) = prop_str
+            .split_once('=')
+            .ok_or_else(|| error_stack::report!(WebhookError::WebhookSignatureNotFound))?;
+        signature_elements.insert(prop_key.to_string(), prop_value.to_string());
+    }
+
+    Ok(signature_elements)
+}
+
+impl<F, Req, T> TryFrom<ResponseRouterData<PproPaymentsResponse, PproRouterData<Self, T>>>
     for RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>
 where
     Req: GetOptionalPaymentMethodType,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<PproPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<PproPaymentsResponse, PproRouterData<Self, T>>,
+    ) -> Result<Self, Self::Error> {
+        let connector = item.router_data.connector;
+        let item = ResponseRouterData {
+            response: item.response,
+            router_data: item.router_data.router_data,
+            http_code: item.http_code,
+        };
+        let raw_connector_status =
+            ppro_raw_connector_status(&item.response.status, item.response.failure.as_ref());
         let status = common_enums::AttemptStatus::from(item.response.status);
 
         let mut error_response = None;
@@ -800,6 +837,10 @@ where
                     network_advice_code: None,
                     network_decline_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 });
             }
         }
@@ -842,10 +883,18 @@ where
                     .map(|m| m.currency)
             });
 
-        let response_amount = resolved_minor_amount.map(|minor| common_utils::types::Money {
-            amount: minor,
-            currency: resolved_currency.unwrap_or_default(),
-        });
+        let response_amount = resolved_minor_amount
+            .map(|minor| {
+                let currency = resolved_currency.unwrap_or_default();
+                crate::utils::response_amount_to_money(
+                    &connector,
+                    minor,
+                    currency,
+                    item.http_code,
+                    domain_types::connector_types::ConnectorEnum::Ppro,
+                )
+            })
+            .transpose()?;
 
         let connector_response_reference_id = item
             .response
@@ -866,7 +915,7 @@ where
             .captures
             .as_ref()
             .and_then(|c| c.last())
-            .map(|c| c.amount.get_amount_as_i64());
+            .map(|c| c.amount);
 
         let response = if let Some(err) = error_response {
             Err(err)
@@ -887,14 +936,34 @@ where
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             })
         };
+
+        let response_currency = item
+            .router_data
+            .resource_common_data
+            .amount
+            .as_ref()
+            .map(|money| money.currency)
+            .unwrap_or_default();
 
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
+                raw_connector_status: Some(raw_connector_status),
                 amount: response_amount.or(item.router_data.resource_common_data.amount),
                 amount_captured: captured_amount
+                    .map(|amount| {
+                        crate::utils::response_amount_to_money(
+                            &connector,
+                            amount,
+                            response_currency,
+                            item.http_code,
+                            domain_types::connector_types::ConnectorEnum::Ppro,
+                        )
+                    })
+                    .transpose()?
                     .or(item.router_data.resource_common_data.amount_captured),
                 ..item.router_data.resource_common_data
             },
@@ -904,11 +973,13 @@ where
     }
 }
 
-impl<F, Req, T> TryFrom<ResponseRouterData<PproRefundResponse, Self>>
-    for RouterDataV2<F, Req, T, RefundsResponseData>
+impl<F, T> TryFrom<ResponseRouterData<PproRefundResponse, Self>>
+    for RouterDataV2<F, RefundFlowData, T, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: ResponseRouterData<PproRefundResponse, Self>) -> Result<Self, Self::Error> {
+        let raw_connector_status =
+            ppro_raw_connector_status(&item.response.status, item.response.failure.as_ref());
         let refund_status = match item.response.status {
             PproRefundStatus::RefundSettled | PproRefundStatus::Refunded => {
                 common_enums::RefundStatus::Success
@@ -916,7 +987,7 @@ impl<F, Req, T> TryFrom<ResponseRouterData<PproRefundResponse, Self>>
             PproRefundStatus::Failed | PproRefundStatus::Rejected | PproRefundStatus::Declined => {
                 common_enums::RefundStatus::Failure
             }
-            PproRefundStatus::Pending | PproRefundStatus::Unknown => {
+            PproRefundStatus::Pending | PproRefundStatus::Unknown(_) => {
                 common_enums::RefundStatus::Pending
             }
         };
@@ -952,17 +1023,26 @@ impl<F, Req, T> TryFrom<ResponseRouterData<PproRefundResponse, Self>>
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             })
         } else {
             Ok(RefundsResponseData {
                 connector_refund_id: item.response.id.clone(),
                 refund_status,
                 status_code: item.http_code,
+                acquirer_reference_number: None,
             })
         };
 
         Ok(Self {
             response,
+            resource_common_data: RefundFlowData {
+                raw_connector_status: Some(raw_connector_status),
+                ..item.router_data.resource_common_data
+            },
             ..item.router_data
         })
     }
@@ -976,49 +1056,63 @@ impl TryFrom<ResponseRouterData<PproRSyncResponse, Self>>
     fn try_from(item: ResponseRouterData<PproRSyncResponse, Self>) -> Result<Self, Self::Error> {
         let connector_refund_id = &item.router_data.request.connector_refund_id;
         let refunds = &item.response.refunds;
-        let refund_status =
-            if let Some(entry) = refunds.iter().find(|r| &r.id == connector_refund_id) {
-                match entry.status {
-                    PproRefundStatus::RefundSettled | PproRefundStatus::Refunded => {
-                        common_enums::RefundStatus::Success
-                    }
-                    PproRefundStatus::Failed
-                    | PproRefundStatus::Rejected
-                    | PproRefundStatus::Declined => common_enums::RefundStatus::Failure,
-                    PproRefundStatus::Pending | PproRefundStatus::Unknown => {
-                        common_enums::RefundStatus::Pending
-                    }
+        let refund_entry = refunds.iter().find(|r| &r.id == connector_refund_id);
+        // Raw status: the matched refund entry's status (the flow-relevant
+        // resource). When the refund isn't in the response there is no
+        // refund-level status to report — leave the code empty rather than
+        // falling back to the charge-level status (e.g. CAPTURED).
+        let raw_status_code = refund_entry.map(|entry| entry.status.to_string());
+        let refund_status = if let Some(entry) = refund_entry {
+            match entry.status {
+                PproRefundStatus::RefundSettled | PproRefundStatus::Refunded => {
+                    common_enums::RefundStatus::Success
                 }
-            } else if refunds.iter().any(|r| {
+                PproRefundStatus::Failed
+                | PproRefundStatus::Rejected
+                | PproRefundStatus::Declined => common_enums::RefundStatus::Failure,
+                PproRefundStatus::Pending | PproRefundStatus::Unknown(_) => {
+                    common_enums::RefundStatus::Pending
+                }
+            }
+        } else if refunds.iter().any(|r| {
+            matches!(
+                r.status,
+                PproRefundStatus::Refunded | PproRefundStatus::RefundSettled
+            )
+        }) {
+            common_enums::RefundStatus::Success
+        } else if !refunds.is_empty()
+            && refunds.iter().all(|r| {
                 matches!(
                     r.status,
-                    PproRefundStatus::Refunded | PproRefundStatus::RefundSettled
+                    PproRefundStatus::Failed
+                        | PproRefundStatus::Rejected
+                        | PproRefundStatus::Declined
                 )
-            }) {
-                common_enums::RefundStatus::Success
-            } else if !refunds.is_empty()
-                && refunds.iter().all(|r| {
-                    matches!(
-                        r.status,
-                        PproRefundStatus::Failed
-                            | PproRefundStatus::Rejected
-                            | PproRefundStatus::Declined
-                    )
-                })
-            {
-                common_enums::RefundStatus::Failure
-            } else {
-                common_enums::RefundStatus::Pending
-            };
+            })
+        {
+            common_enums::RefundStatus::Failure
+        } else {
+            common_enums::RefundStatus::Pending
+        };
 
         let response = Ok(RefundsResponseData {
             connector_refund_id: connector_refund_id.clone(),
             refund_status,
             status_code: item.http_code,
+            acquirer_reference_number: None,
         });
 
         Ok(Self {
             response,
+            resource_common_data: RefundFlowData {
+                raw_connector_status: Some(RawConnectorStatus {
+                    code: raw_status_code,
+                    message: None,
+                    reason: None,
+                }),
+                ..item.router_data.resource_common_data
+            },
             ..item.router_data
         })
     }
@@ -1224,7 +1318,9 @@ where
             value: common_utils::MinorUnit::new(
                 router_data
                     .request
-                    .minor_amount
+                    .amount
+                    .as_ref()
+                    .map(|money| money.amount)
                     .map(|a| a.get_amount_as_i64())
                     .unwrap_or(0),
             ),
@@ -1454,6 +1550,8 @@ impl<F, Req> TryFrom<ResponseRouterData<PproAgreementResponse, Self>>
     fn try_from(
         item: ResponseRouterData<PproAgreementResponse, Self>,
     ) -> Result<Self, Self::Error> {
+        let raw_connector_status =
+            ppro_raw_connector_status(&item.response.status, item.response.failure.as_ref());
         let status = match item.response.status {
             PproAgreementStatus::Active => common_enums::AttemptStatus::Charged,
             PproAgreementStatus::AuthenticationPending | PproAgreementStatus::Initializing => {
@@ -1483,6 +1581,10 @@ impl<F, Req> TryFrom<ResponseRouterData<PproAgreementResponse, Self>>
                     network_advice_code: None,
                     network_decline_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 });
             }
         }
@@ -1517,12 +1619,14 @@ impl<F, Req> TryFrom<ResponseRouterData<PproAgreementResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             })
         };
 
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
+                raw_connector_status: Some(raw_connector_status),
                 ..item.router_data.resource_common_data
             },
             response,
@@ -1615,7 +1719,7 @@ where
         let amount = Amount {
             currency: router_data.request.currency.to_string(),
             value: common_utils::MinorUnit::new(
-                router_data.request.minor_amount.get_amount_as_i64(),
+                router_data.request.amount.amount.get_amount_as_i64(),
             ),
         };
 
@@ -1628,8 +1732,15 @@ where
         Ok(Self {
             amount,
             schedule_type: Some(match router_data.request.mit_category {
-                Some(common_enums::MitCategory::Recurring) => PproScheduleType::Recurring,
-                _ => PproScheduleType::Unscheduled,
+                Some(
+                    common_enums::MitCategory::Recurring | common_enums::MitCategory::Subscription,
+                ) => PproScheduleType::Recurring,
+                Some(
+                    common_enums::MitCategory::Installment
+                    | common_enums::MitCategory::Unscheduled
+                    | common_enums::MitCategory::Resubmission,
+                )
+                | None => PproScheduleType::Unscheduled,
             }),
             auto_capture: matches!(
                 router_data.request.capture_method,

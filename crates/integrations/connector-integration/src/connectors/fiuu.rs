@@ -5,6 +5,7 @@ use std::{any::type_name, borrow::Cow, collections::HashMap, fmt::Debug};
 use bytes::Bytes;
 use common_enums::CurrencyUnit;
 use common_utils::{
+    consts,
     crypto::{self, GenerateDigest, VerifySignature},
     errors::CustomResult,
     events,
@@ -51,8 +52,8 @@ use transformers::{
 
 use super::macros;
 use crate::{
-    types::ResponseRouterData, utils::xml_utils::flatten_json_structure, with_error_response_body,
-    with_response_body,
+    finalize_connector_response, types::ResponseRouterData,
+    utils::xml_utils::flatten_json_structure, with_error_response_body,
 };
 use domain_types::errors::ConnectorError;
 use domain_types::errors::{IntegrationError, WebhookError};
@@ -303,28 +304,64 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         event_builder: Option<&mut events::Event>,
         _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
-        let response: fiuu::FiuuErrorResponse = res
-            .response
-            .parse_struct("fiuu::FiuuErrorResponse")
-            .change_context(
-                crate::utils::response_deserialization_fail(
-                    res.status_code,
-                "fiuu: response body did not match the expected format; confirm API version and connector documentation."),
-            )?;
+        if res.response.is_empty() {
+            return Ok(ErrorResponse {
+                status_code: res.status_code,
+                code: consts::NO_ERROR_CODE.to_string(),
+                message: consts::NO_ERROR_MESSAGE.to_string(),
+                reason: None,
+                attempt_status: None,
+                connector_transaction_id: None,
+                network_advice_code: None,
+                network_decline_code: None,
+                network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
+            });
+        }
 
-        with_error_response_body!(event_builder, response);
+        let response: Result<
+            fiuu::FiuuErrorResponse,
+            error_stack::Report<common_utils::errors::ParsingError>,
+        > = res.response.parse_struct("FiuuErrorResponse");
 
-        Ok(ErrorResponse {
-            status_code: res.status_code,
-            code: response.error_code.clone(),
-            message: response.error_desc.clone(),
-            reason: Some(response.error_desc.clone()),
-            attempt_status: None,
-            connector_transaction_id: None,
-            network_advice_code: None,
-            network_decline_code: None,
-            network_error_message: None,
-        })
+        match response {
+            Ok(response) => {
+                with_error_response_body!(event_builder, response);
+
+                let typed = macros::serialize_typed_connector_payload(
+                    &response,
+                    "typed_connector_response",
+                );
+                Ok(ErrorResponse {
+                    status_code: res.status_code,
+                    code: response.error_code.clone(),
+                    message: response.error_desc.clone(),
+                    reason: Some(response.error_desc.clone()),
+                    attempt_status: None,
+                    connector_transaction_id: None,
+                    network_advice_code: None,
+                    network_decline_code: None,
+                    network_error_message: None,
+                    typed_connector_response: typed,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
+                })
+            }
+            Err(error_msg) => {
+                if let Some(event) = event_builder {
+                    event.set_connector_response(&serde_json::json!({
+                        "error": "Error response parsing failed",
+                        "status_code": res.status_code
+                    }));
+                }
+                error!(deserialization_error =? error_msg);
+                crate::utils::handle_json_response_deserialization_failure(res, "fiuu")
+            }
+        }
     }
 }
 
@@ -596,15 +633,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn get_request_body(
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<Option<macro_types::RequestContent>, IntegrationError> {
+    ) -> CustomResult<Option<common_utils::request::ConnectorRequestData>, IntegrationError> {
         let bridge = self.p_sync;
         let input_data = FiuuRouterData {
             connector: self.to_owned(),
             router_data: req.clone(),
         };
         let request = bridge.request_body(input_data)?;
+        let typed =
+            events::MaskedSerdeValue::from_masked_optional(&request, "typed_connector_request");
         let form_data = <FiuuPaymentSyncRequest as GetFormData>::get_form_data(&request);
-        Ok(Some(macro_types::RequestContent::FormData(form_data)))
+        Ok(Some(common_utils::request::ConnectorRequestData::new(
+            macro_types::RequestContent::FormData(form_data),
+            typed,
+        )))
     }
 
     fn handle_response_v2(
@@ -634,16 +676,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     Err(error_stack::Report::from(crate::utils::response_deserialization_fail(res.status_code, "fiuu: response body did not match the expected format; confirm API version and connector documentation.")))
                         .attach_printable(format!("Expected content type to be text/plain;charset=UTF-8 , but received different content type as {content_header} in response"))?
                 }?;
-                with_response_body!(event_builder, response);
-
-                RouterDataV2::try_from(ResponseRouterData {
-                    response,
-                    router_data: data.clone(),
-                    http_code: res.status_code,
-                })
-                .change_context(
-                    crate::utils::response_handling_fail_for_connector(res.status_code, "fiuu"),
-                )
+                finalize_connector_response!(event_builder, response, data, res.status_code)
             }
             None => {
                 // We don't get headers for payment webhook response handling
@@ -655,16 +688,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                             res.status_code,
                         "fiuu: response body did not match the expected format; confirm API version and connector documentation."),
                     )?;
-                with_response_body!(event_builder, response);
-
-                RouterDataV2::try_from(ResponseRouterData {
-                    response,
-                    router_data: data.clone(),
-                    http_code: res.status_code,
-                })
-                .change_context(
-                    crate::utils::response_handling_fail_for_connector(res.status_code, "fiuu"),
-                )
+                finalize_connector_response!(event_builder, response, data, res.status_code)
             }
         }
     }
@@ -811,6 +835,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
     ) -> Result<EventType, error_stack::Report<WebhookError>> {
+        if request.body.is_empty() {
+            return Ok(EventType::EndpointVerification);
+        }
         let header = request
             .headers
             .get("content-type")
@@ -899,6 +926,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     connector_transaction_id: Some(p.tran_id),
                     // order_id is the merchant-assigned order reference echoed back by Fiuu.
                     merchant_transaction_id: Some(p.order_id),
+                    connector_preprocessing_id: None,
                 })
             }
             FiuuWebhooksResponse::FiuuWebhookRefundResponse(r) => {
@@ -907,6 +935,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     merchant_refund_id: None,
                     // txn_id is the connector ID of the original payment.
                     connector_transaction_id: Some(r.txn_id),
+                    merchant_transaction_id: None,
                 })
             }
         };
@@ -977,13 +1006,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let error_code = webhook_payment.error_code.clone();
         let error_message = webhook_payment.error_desc.clone();
         Ok(WebhookDetailsResponse {
+            connector_returned_payment_method_details: None,
             resource_id: Some(
                 domain_types::connector_types::ResponseId::ConnectorTransactionId(
                     webhook_payment.tran_id.clone(),
                 ),
             ),
             status,
-            connector_response_reference_id: Some(webhook_payment.order_id),
+            connector_response_reference_id: Some(webhook_payment.order_id.clone()),
+            connector_request_reference_id: Some(webhook_payment.order_id),
             error_code: error_code.clone(),
             error_message: error_message.clone(),
             raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
@@ -1005,7 +1036,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                             })
                         })
                 }),
-            minor_amount_captured: None,
             amount_captured: None,
             error_reason: error_message,
             network_txn_id: None,
@@ -1104,12 +1134,66 @@ where
 
     let response: T = serde_json::from_value(Value::Object(json)).map_err(|e| {
         error!("Error in Deserializing Response Data: {:?}", e);
+        log_unparsable_plain_text_response::<T>(&response_str);
         error_stack::Report::from(
             crate::utils::response_deserialization_fail(http_status, "fiuu: response body did not match the expected format; confirm API version and connector documentation."),
         )
     })?;
 
     Ok(response)
+}
+
+fn log_unparsable_plain_text_response<T>(response_str: &str) {
+    const LOGGABLE_KEYS: [&str; 8] = [
+        "StatCode",
+        "StatName",
+        "TranID",
+        "Amount",
+        "Currency",
+        "Channel",
+        "ErrorCode",
+        "ErrorDesc",
+    ];
+    // Both apply only to lines without `=` (e.g. a bare error message or an HTML page).
+    // Cap on how much of such a line is logged.
+    const MAX_UNSTRUCTURED_LINE_LEN: usize = 200;
+    // Purely alphanumeric tokens at least this long are redacted: catches 32-char hex
+    // hashes like `skey`/`VrfKey` echoed in an error, while keeping a 10-digit `TranID`.
+    const MIN_REDACTED_TOKEN_LEN: usize = 16;
+
+    let redact_tokens = |line: &str| {
+        line.chars()
+            .take(MAX_UNSTRUCTURED_LINE_LEN)
+            .collect::<String>()
+            .split(' ')
+            .map(|token| {
+                if token.len() >= MIN_REDACTED_TOKEN_LEN
+                    && token.chars().all(|c| c.is_ascii_alphanumeric())
+                {
+                    "<redacted>"
+                } else {
+                    token
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+
+    let lines: Vec<String> = response_str
+        .lines()
+        .map(|line| match line.split_once('=') {
+            Some((key, value)) if LOGGABLE_KEYS.contains(&key) => format!("{key:?}={value:?}"),
+            Some((key, _)) => format!("{key:?}=SECRET"),
+            None => format!("<no '='> {:?}", redact_tokens(line)),
+        })
+        .collect();
+    error!(
+        "Unparsable {} response: {} bytes, {} lines\n{:?}",
+        type_name::<T>(),
+        response_str.len(),
+        lines.len(),
+        lines
+    );
 }
 
 pub fn parse_and_log_keys_in_url_encoded_response<T>(data: &[u8]) {

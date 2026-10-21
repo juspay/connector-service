@@ -335,6 +335,10 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<PaymePaymentResponse,
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
                 ..item.router_data.clone()
             })
@@ -358,6 +362,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<PaymePaymentResponse,
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             };
 
             Ok(Self {
@@ -494,6 +499,10 @@ impl TryFrom<ResponseRouterData<PaymeSyncResponse, Self>>
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
                 ..router_data.clone()
             })
@@ -524,6 +533,7 @@ impl TryFrom<ResponseRouterData<PaymeSyncResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             };
 
             Ok(Self {
@@ -574,7 +584,7 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
         Ok(Self {
             seller_payme_id: auth.seller_payme_id,
             payme_sale_id,
-            sale_price: item.request.minor_amount_to_capture,
+            sale_price: item.request.amount_to_capture.amount,
         })
     }
 }
@@ -637,6 +647,10 @@ impl TryFrom<ResponseRouterData<PaymeCaptureResponse, Self>>
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
                 ..item.router_data.clone()
             })
@@ -660,6 +674,7 @@ impl TryFrom<ResponseRouterData<PaymeCaptureResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             };
 
             Ok(Self {
@@ -719,7 +734,7 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
         Ok(Self {
             seller_payme_id: auth.seller_payme_id,
             payme_sale_id,
-            sale_refund_amount: item.request.minor_refund_amount,
+            sale_refund_amount: item.request.refund_amount.amount,
             language: LANGUAGE.to_string(),
         })
     }
@@ -774,6 +789,10 @@ impl TryFrom<ResponseRouterData<PaymeRefundResponse, Self>>
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
                 ..item.router_data.clone()
             })
@@ -797,6 +816,7 @@ impl TryFrom<ResponseRouterData<PaymeRefundResponse, Self>>
                 connector_refund_id,
                 refund_status,
                 status_code: item.http_code,
+                acquirer_reference_number: None,
             };
 
             Ok(Self {
@@ -899,6 +919,7 @@ impl TryFrom<ResponseRouterData<PaymeRSyncResponse, Self>>
             connector_refund_id: transaction_item.payme_transaction_id.clone(),
             refund_status,
             status_code: item.http_code,
+            acquirer_reference_number: None,
         };
 
         Ok(Self {
@@ -1011,6 +1032,10 @@ impl TryFrom<ResponseRouterData<PaymeVoidResponse, Self>>
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
                 ..item.router_data.clone()
             })
@@ -1036,6 +1061,7 @@ impl TryFrom<ResponseRouterData<PaymeVoidResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             };
 
             Ok(Self {
@@ -1108,7 +1134,7 @@ impl
         Ok(Self {
             seller_payme_id: auth.seller_payme_id,
             sale_type: sale_type.to_string(),
-            sale_price: item.request.amount,
+            sale_price: item.request.amount.amount,
             currency: item.request.currency,
             sale_payment_method: "credit-card".to_string(), // Only card for no3ds
             product_name: item
@@ -1198,6 +1224,10 @@ impl TryFrom<ResponseRouterData<PaymeGenerateSaleResponse, Self>>
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
                 ..item.router_data.clone()
             })

@@ -19,7 +19,9 @@ use domain_types::{
     },
     merchant_authentication_flow_data::MerchantAuthenticationFlowData,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::ConnectorSpecificConfig,
+    router_data::{
+        ConnectorResponseData, ConnectorSpecificConfig, ExtendedAuthorizationResponseData,
+    },
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
     utils::split_full_name,
@@ -645,6 +647,17 @@ pub struct AirwallexPaymentOptions {
 #[derive(Debug, Serialize)]
 pub struct AirwallexCardOptions {
     pub auto_capture: Option<bool>,
+    // Omitted entirely unless extended authorization was requested, so ordinary
+    // card payments keep the exact request body they had before this field existed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authorization_type: Option<AirwallexCardAuthorizationType>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum AirwallexCardAuthorizationType {
+    PreAuth,
+    FinalAuth,
 }
 
 #[derive(Debug, Serialize)]
@@ -1036,6 +1049,7 @@ fn get_payment_method_details<T: PaymentMethodDataTypes>(
 fn build_payment_method_options(
     payment_method: &AirwallexPaymentMethod,
     auto_capture: bool,
+    authorization_type: Option<AirwallexCardAuthorizationType>,
 ) -> Option<AirwallexPaymentOptions> {
     match payment_method {
         AirwallexPaymentMethod::PayLater(paylater) => {
@@ -1055,9 +1069,12 @@ fn build_payment_method_options(
                 },
             })
         }
+        // Extended authorization (pre-auth hold) is a card-only option, so the
+        // authorization_type only ever reaches Airwallex through this arm.
         AirwallexPaymentMethod::Card(_) => Some(AirwallexPaymentOptions {
             card: Some(AirwallexCardOptions {
                 auto_capture: Some(auto_capture),
+                authorization_type,
             }),
             klarna: None,
             atome: None,
@@ -1116,7 +1133,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | None
         );
 
-        let payment_method_options = build_payment_method_options(&payment_method, auto_capture);
+        // Extended authorization (pre-auth hold); build_payment_method_options only
+        // applies it on the card arm, which is the only place Airwallex accepts it.
+        let authorization_type = matches!(
+            item.router_data.request.request_extended_authorization,
+            Some(true)
+        )
+        .then_some(AirwallexCardAuthorizationType::PreAuth);
+
+        let payment_method_options =
+            build_payment_method_options(&payment_method, auto_capture, authorization_type);
 
         // Generate unique request_id for Authorize/confirm step
         // Different from CreateOrder to avoid Airwallex duplicate_request error
@@ -1235,7 +1261,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 // then after the challenge). Airwallex rejects a reused request_id with
                 // "duplicate_request", so use a fresh UUID like native HS (not the deterministic
                 // connector_request_reference_id).
-                let request_id = uuid::Uuid::new_v4().to_string();
+                let request_id = common_utils::fp_utils::generate_uuid_v4();
                 Ok(Self::ConfirmContinue(AirwallexCompleteRequest {
                     request_id,
                     three_ds: AirwallexThreeDsData { acs_response },
@@ -1427,6 +1453,33 @@ fn get_payment_status(
     }
 }
 
+// Extended-authorization result for the authorize response: applied only when it
+// was requested AND the payment method is card (mirrors hyperswitch airwallex)
+fn build_airwallex_connector_response_data(
+    extended_authorization_requested: bool,
+    payment_method: common_enums::PaymentMethod,
+) -> Option<ConnectorResponseData> {
+    let extended_authentication_applicable =
+        matches!(payment_method, common_enums::PaymentMethod::Card);
+    let extended_authentication_applied =
+        if extended_authorization_requested && extended_authentication_applicable {
+            Some(true)
+        } else if extended_authorization_requested {
+            Some(false)
+        } else {
+            None
+        };
+    Some(ConnectorResponseData::new(
+        None,
+        None,
+        Some(ExtendedAuthorizationResponseData {
+            extended_authentication_applied,
+            extended_authorization_last_applied_at: None,
+            capture_before: None,
+        }),
+    ))
+}
+
 // New response transformer that addresses PR #240 critical issues
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<AirwallexPaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
@@ -1450,6 +1503,19 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<AirwallexPaymentsResp
 
         // Following hyperswitch pattern - no connector_metadata
         let connector_metadata = None;
+
+        // Report whether the requested extended authorization was applied;
+        // absent entirely when the flag was never sent
+        let connector_response = item
+            .router_data
+            .request
+            .request_extended_authorization
+            .and_then(|requested| {
+                build_airwallex_connector_response_data(
+                    requested,
+                    item.router_data.resource_common_data.payment_method,
+                )
+            });
 
         // Surface the Airwallex PaymentConsent as the connector mandate reference for CIT payments,
         // so HS stores connector_mandate_id (payment_consent_id) + payment_method.id and can run
@@ -1495,9 +1561,11 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<AirwallexPaymentsResp
                 incremental_authorization_allowed: Some(false), // Airwallex doesn't support incremental auth
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
+                connector_response,
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -1571,6 +1639,7 @@ impl TryFrom<ResponseRouterData<AirwallexSyncResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -1610,16 +1679,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         // Extract capture amount from the capture data
-        let capture_amount = item.router_data.request.amount_to_capture;
+        let capture_amount = item.router_data.request.amount_to_capture.amount;
 
         // Use connector amount converter for proper amount formatting in major units (hyperswitch pattern)
         let amount = item
             .connector
             .amount_converter
-            .convert(
-                common_utils::MinorUnit::new(capture_amount),
-                item.router_data.request.currency,
-            )
+            .convert(capture_amount, item.router_data.request.currency)
             .map_err(|_| IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -1679,6 +1745,7 @@ impl TryFrom<ResponseRouterData<AirwallexCaptureResponse, Self>>
                 incremental_authorization_allowed: Some(false), // Airwallex doesn't support incremental auth
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -1748,14 +1815,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let payment_intent_id = item.router_data.request.connector_transaction_id.clone();
 
         // Extract refund amount from RefundsData and convert to major units (hyperswitch pattern)
-        let refund_amount = item.router_data.request.refund_amount;
+        let refund_amount = item.router_data.request.refund_amount.amount;
         let amount = item
             .connector
             .amount_converter
-            .convert(
-                common_utils::MinorUnit::new(refund_amount),
-                item.router_data.request.currency,
-            )
+            .convert(refund_amount, item.router_data.request.currency)
             .map_err(|_| IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -1793,6 +1857,7 @@ impl TryFrom<ResponseRouterData<AirwallexRefundResponse, Self>>
                 connector_refund_id: item.response.id,
                 refund_status: status,
                 status_code: item.http_code,
+                acquirer_reference_number: None,
             }),
             resource_common_data: RefundFlowData {
                 status,
@@ -1824,6 +1889,7 @@ impl TryFrom<ResponseRouterData<AirwallexRefundSyncResponse, Self>>
                 connector_refund_id: item.response.id,
                 refund_status: status,
                 status_code: item.http_code,
+                acquirer_reference_number: None,
             }),
             resource_common_data: RefundFlowData {
                 status,
@@ -1939,6 +2005,7 @@ impl TryFrom<ResponseRouterData<AirwallexVoidResponse, Self>>
                 incremental_authorization_allowed: Some(false), // Airwallex doesn't support incremental auth
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -1998,7 +2065,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | None
         );
 
-        let payment_method_options = build_payment_method_options(&payment_method, auto_capture);
+        // Extended authorization (pre-auth hold); build_payment_method_options only
+        // applies it on the card arm, which is the only place Airwallex accepts it.
+        let authorization_type = matches!(
+            item.router_data.request.request_extended_authorization,
+            Some(true)
+        )
+        .then_some(AirwallexCardAuthorizationType::PreAuth);
+
+        let payment_method_options =
+            build_payment_method_options(&payment_method, auto_capture, authorization_type);
 
         let device_data = get_device_data(&item.router_data.request)?;
 
@@ -2125,7 +2201,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.amount,
+                item.router_data.request.amount.amount,
                 item.router_data.request.currency,
             )
             .map_err(|_| IntegrationError::RequestEncodingFailed {
@@ -2382,6 +2458,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let payment_method_options = Some(AirwallexPaymentOptions {
             card: Some(AirwallexCardOptions {
                 auto_capture: Some(false),
+                authorization_type: None,
             }),
             klarna: None,
             atome: None,
@@ -2486,6 +2563,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<AirwallexSetupMandate
                 incremental_authorization_allowed: Some(false),
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -2640,6 +2718,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<AirwallexRepeatPaymen
                 incremental_authorization_allowed: Some(false),
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,

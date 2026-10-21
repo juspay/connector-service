@@ -67,6 +67,7 @@ mod tests {
                     attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
                     status: AttemptStatus::Pending,
                     payment_method: PaymentMethod::Card,
+                    payment_method_type: None,
                     description: None,
                     return_url: None,
                     order_details: None,
@@ -86,10 +87,9 @@ mod tests {
                     auth_type: AuthenticationType::NoThreeDs,
                     connector_feature_data: None,
                     amount_captured: None,
-                    minor_amount_captured: None,
-                    minor_amount_capturable: None,
+                    amount_capturable: None,
                     amount: None,
-                    minor_amount_authorized: None,
+                    amount_authorized: None,
                     access_token: None,
                     session_token: None,
                     reference_id: Some("order_QMSVrXxHS9sBmu".to_string()),
@@ -108,17 +108,21 @@ mod tests {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }
+                    .into(),
                     vault_headers: None,
                     connector_response_headers: None,
                     raw_connector_request: None,
+                    typed_connector_request: None,
                     connector_response: None,
                     recurring_mandate_payment_data: None,
                     l2_l3_data: None,
 
                     merchant_request_id: None,
                     sender_payment_instrument_id: None,
+                    connector_returned_payment_method_details: None,
                     settlement_status: None,
+                    typed_connector_response: None,
                 },
                 connector_config: ConnectorSpecificConfig::Razorpay {
                     api_key: "dummy_api_key".to_string().into(),
@@ -126,10 +130,13 @@ mod tests {
                     base_url: None,
                 },
                 request: PaymentsAuthorizeData {
+                    split_settlement: None,
                     customer_document_details: None,
+                    customer_date_of_birth: None,
                     payment_channel: None,
                     authentication_data: None,
                     connector_testing_data: None,
+                    currency_conversion_data: None,
                     payment_method_data: PaymentMethodData::Card(Card {
                         card_number: RawCardNumber(
                             CardNumber::from_str("5123456789012346").unwrap(),
@@ -146,7 +153,10 @@ mod tests {
                         card_holder_name: Some("Test User".to_string().into()),
                         co_badged_card_data: None,
                     }),
-                    amount: MinorUnit::new(1000),
+                    amount: common_utils::types::Money {
+                        amount: MinorUnit::new(1000),
+                        currency: Currency::USD,
+                    },
                     order_tax_amount: None,
                     surcharge_amount: None,
                     email: Some(email.clone()),
@@ -193,7 +203,6 @@ mod tests {
                     customer_id: None,
                     request_incremental_authorization: Some(false),
                     metadata: None,
-                    minor_amount: MinorUnit::new(1000),
                     merchant_order_id: None,
                     shipping_cost: None,
                     merchant_account_id: None,
@@ -215,6 +224,12 @@ mod tests {
                     mit_category: None,
                     domain_data: None,
                     partner_merchant_identifier_details: None,
+                    is_account_funding_transaction: None,
+                    recipient_details: None,
+                    business_country: None,
+                    enable_avs_check: None,
+                    additional_connector_details: None,
+                    customer: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -226,6 +241,10 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
             };
 
@@ -233,7 +252,7 @@ mod tests {
             let result = connector.get_request_body(&test_router_data);
             let request_content = result.unwrap();
 
-            let actual_json: Value = match request_content {
+            let actual_json: Value = match request_content.map(|d| d.content) {
                 Some(RequestContent::Json(payload)) => {
                     to_value(&payload).expect("Failed to serialize payload to JSON")
                 }
@@ -281,14 +300,14 @@ mod tests {
                     attempt_id: "MISSING_CARD_ID".to_string(),
                     status: AttemptStatus::Pending,
                     payment_method: PaymentMethod::Card,
+                    payment_method_type: None,
                     description: None,
                     return_url: None,
                     address: PaymentAddress::new(None, None, None, None),
                     auth_type: AuthenticationType::NoThreeDs,
                     connector_feature_data: None,
                     amount_captured: None,
-                    minor_amount_captured: None,
-                    minor_amount_authorized: None,
+                    amount_authorized: None,
                     access_token: None,
                     session_token: None,
                     reference_id: Some("order_missing".to_string()),
@@ -307,19 +326,23 @@ mod tests {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }
+                    .into(),
                     vault_headers: None,
                     connector_response_headers: None,
                     raw_connector_request: None,
+                    typed_connector_request: None,
                     connector_response: None,
                     recurring_mandate_payment_data: None,
                     order_details: None,
-                    minor_amount_capturable: None,
+                    amount_capturable: None,
                     amount: None,
                     l2_l3_data: None,
                     sender_payment_instrument_id: None,
+                    connector_returned_payment_method_details: None,
                     settlement_status: None,
                     merchant_request_id: None,
+                    typed_connector_response: None,
                 },
                 connector_config: ConnectorSpecificConfig::Razorpay {
                     api_key: "dummy_api_key".to_string().into(),
@@ -327,10 +350,13 @@ mod tests {
                     base_url: None,
                 },
                 request: PaymentsAuthorizeData {
+                    split_settlement: None,
                     customer_document_details: None,
+                    customer_date_of_birth: None,
                     payment_channel: None,
                     authentication_data: None,
                     connector_testing_data: None,
+                    currency_conversion_data: None,
                     payment_method_data: PaymentMethodData::Card(Card {
                         card_number: RawCardNumber(CardNumber::from_str("").unwrap_or_default()),
                         card_exp_month: "".to_string().into(),
@@ -345,7 +371,10 @@ mod tests {
                         card_holder_name: Some("Test User".to_string().into()),
                         co_badged_card_data: None,
                     }),
-                    amount: MinorUnit::new(1000),
+                    amount: common_utils::types::Money {
+                        amount: MinorUnit::new(1000),
+                        currency: Currency::USD,
+                    },
                     order_tax_amount: None,
                     surcharge_amount: None,
                     email: None,
@@ -371,7 +400,6 @@ mod tests {
                     customer_id: None,
                     request_incremental_authorization: Some(false),
                     metadata: None,
-                    minor_amount: MinorUnit::new(1000),
                     merchant_order_id: None,
                     shipping_cost: None,
                     merchant_account_id: None,
@@ -393,6 +421,12 @@ mod tests {
                     mit_category: None,
                     domain_data: None,
                     partner_merchant_identifier_details: None,
+                    is_account_funding_transaction: None,
+                    recipient_details: None,
+                    business_country: None,
+                    enable_avs_check: None,
+                    additional_connector_details: None,
+                    customer: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_01".to_string(),
@@ -404,6 +438,10 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
             };
 
@@ -433,14 +471,14 @@ mod tests {
                     attempt_id: "INVALID_ATTEMPT".to_string(),
                     status: AttemptStatus::Pending,
                     payment_method: PaymentMethod::Card,
+                    payment_method_type: None,
                     description: None,
                     return_url: None,
                     address: PaymentAddress::new(None, None, None, None),
                     auth_type: AuthenticationType::NoThreeDs,
                     connector_feature_data: None,
                     amount_captured: None,
-                    minor_amount_captured: None,
-                    minor_amount_authorized: None,
+                    amount_authorized: None,
                     access_token: None,
                     session_token: None,
                     reference_id: Some("invalid_id".to_string()),
@@ -459,19 +497,23 @@ mod tests {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }
+                    .into(),
                     vault_headers: None,
                     connector_response_headers: None,
                     raw_connector_request: None,
+                    typed_connector_request: None,
                     connector_response: None,
                     recurring_mandate_payment_data: None,
                     order_details: None,
-                    minor_amount_capturable: None,
+                    amount_capturable: None,
                     amount: None,
                     l2_l3_data: None,
                     sender_payment_instrument_id: None,
+                    connector_returned_payment_method_details: None,
                     settlement_status: None,
                     merchant_request_id: None,
+                    typed_connector_response: None,
                 },
                 connector_config: ConnectorSpecificConfig::Razorpay {
                     api_key: "dummy_api_key".to_string().into(),
@@ -479,10 +521,13 @@ mod tests {
                     base_url: None,
                 },
                 request: PaymentsAuthorizeData {
+                    split_settlement: None,
                     customer_document_details: None,
+                    customer_date_of_birth: None,
                     payment_channel: None,
                     authentication_data: None,
                     connector_testing_data: None,
+                    currency_conversion_data: None,
                     payment_method_data: PaymentMethodData::Card(Card {
                         card_number: RawCardNumber(CardNumber::from_str("123").unwrap_or_default()),
                         card_exp_month: "99".to_string().into(),
@@ -497,7 +542,10 @@ mod tests {
                         card_holder_name: Some("Test User".to_string().into()),
                         co_badged_card_data: None,
                     }),
-                    amount: MinorUnit::new(1000),
+                    amount: common_utils::types::Money {
+                        amount: MinorUnit::new(1000),
+                        currency: Currency::USD,
+                    },
                     order_tax_amount: None,
                     surcharge_amount: None,
                     email: Some(email),
@@ -522,7 +570,6 @@ mod tests {
                     customer_id: None,
                     request_incremental_authorization: Some(false),
                     metadata: None,
-                    minor_amount: MinorUnit::new(1000),
                     merchant_order_id: None,
                     shipping_cost: None,
                     merchant_account_id: None,
@@ -545,6 +592,12 @@ mod tests {
                     mit_category: None,
                     domain_data: None,
                     partner_merchant_identifier_details: None,
+                    is_account_funding_transaction: None,
+                    recipient_details: None,
+                    business_country: None,
+                    enable_avs_check: None,
+                    additional_connector_details: None,
+                    customer: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_02".to_string(),
@@ -556,6 +609,10 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
             };
 
@@ -595,6 +652,7 @@ mod tests {
                     attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
                     status: AttemptStatus::Pending,
                     payment_method: PaymentMethod::Card,
+                    payment_method_type: None,
                     description: None,
                     return_url: None,
                     address: PaymentAddress::new(
@@ -613,8 +671,7 @@ mod tests {
                     auth_type: AuthenticationType::NoThreeDs,
                     connector_feature_data: None,
                     amount_captured: None,
-                    minor_amount_captured: None,
-                    minor_amount_authorized: None,
+                    amount_authorized: None,
                     access_token: None,
                     session_token: None,
                     reference_id: Some("order_QMsUrrLPdwNxPG".to_string()),
@@ -633,19 +690,23 @@ mod tests {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }
+                    .into(),
                     vault_headers: None,
                     connector_response_headers: None,
                     raw_connector_request: None,
+                    typed_connector_request: None,
                     connector_response: None,
                     recurring_mandate_payment_data: None,
                     order_details: None,
-                    minor_amount_capturable: None,
+                    amount_capturable: None,
                     amount: None,
                     l2_l3_data: None,
                     merchant_request_id: None,
                     sender_payment_instrument_id: None,
+                    connector_returned_payment_method_details: None,
                     settlement_status: None,
+                    typed_connector_response: None,
                 },
                 connector_config: ConnectorSpecificConfig::Razorpay {
                     api_key: "dummy_api_key".to_string().into(),
@@ -653,10 +714,13 @@ mod tests {
                     base_url: None,
                 },
                 request: PaymentsAuthorizeData {
+                    split_settlement: None,
                     customer_document_details: None,
+                    customer_date_of_birth: None,
                     payment_channel: None,
                     authentication_data: None,
                     connector_testing_data: None,
+                    currency_conversion_data: None,
                     payment_method_data: PaymentMethodData::Card(Card {
                         card_number: RawCardNumber(
                             CardNumber::from_str("5123450000000008").unwrap(),
@@ -673,7 +737,10 @@ mod tests {
                         card_holder_name: Some("Test User".to_string().into()),
                         co_badged_card_data: None,
                     }),
-                    amount: MinorUnit::new(1000),
+                    amount: common_utils::types::Money {
+                        amount: MinorUnit::new(1000),
+                        currency: Currency::USD,
+                    },
                     order_tax_amount: None,
                     surcharge_amount: None,
                     email: Some(email),
@@ -719,7 +786,6 @@ mod tests {
                     customer_id: None,
                     request_incremental_authorization: Some(false),
                     metadata: None,
-                    minor_amount: MinorUnit::new(1000),
                     merchant_order_id: None,
                     shipping_cost: None,
                     merchant_account_id: None,
@@ -742,6 +808,12 @@ mod tests {
                     mit_category: None,
                     domain_data: None,
                     partner_merchant_identifier_details: None,
+                    is_account_funding_transaction: None,
+                    recipient_details: None,
+                    business_country: None,
+                    enable_avs_check: None,
+                    additional_connector_details: None,
+                    customer: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -753,6 +825,10 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
             };
 
@@ -837,7 +913,11 @@ mod tests {
                 "connector_transaction_id": null,
                 "network_advice_code": null,
                 "network_decline_code": null,
-                "network_error_message": null
+                "network_error_message": null,
+                "typed_connector_response": actual_json["typed_connector_response"].clone(),
+                "raw_connector_response": null,
+                "raw_connector_request": null,
+                "typed_connector_request": null
             });
 
             assert_eq!(actual_json, expected_json);
@@ -967,6 +1047,7 @@ mod tests {
                 attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
                 status: AttemptStatus::Pending,
                 payment_method: PaymentMethod::Card,
+                payment_method_type: None,
                 description: None,
                 return_url: None,
                 address: PaymentAddress::new(
@@ -984,10 +1065,9 @@ mod tests {
                 ),
                 auth_type: AuthenticationType::NoThreeDs,
                 connector_feature_data: None,
-                amount_captured: None,
                 amount: None,
-                minor_amount_captured: None,
-                minor_amount_authorized: None,
+                amount_captured: None,
+                amount_authorized: None,
                 access_token: None,
                 session_token: None,
                 reference_id: Some("order_QMsUrrLPdwNxPG".to_string()),
@@ -1006,18 +1086,22 @@ mod tests {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }
+                .into(),
                 vault_headers: None,
                 connector_response_headers: None,
                 raw_connector_request: None,
+                typed_connector_request: None,
                 connector_response: None,
                 recurring_mandate_payment_data: None,
                 order_details: None,
-                minor_amount_capturable: None,
+                amount_capturable: None,
                 l2_l3_data: None,
                 sender_payment_instrument_id: None,
+                connector_returned_payment_method_details: None,
                 settlement_status: None,
                 merchant_request_id: None,
+                typed_connector_response: None,
             },
             connector_config: ConnectorSpecificConfig::Razorpay {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1025,10 +1109,13 @@ mod tests {
                 base_url: None,
             },
             request: PaymentsAuthorizeData {
+                split_settlement: None,
                 customer_document_details: None,
+                customer_date_of_birth: None,
                 payment_channel: None,
                 authentication_data: None,
                 connector_testing_data: None,
+                currency_conversion_data: None,
                 payment_method_data: PaymentMethodData::Card(Card {
                     card_number: RawCardNumber(CardNumber::from_str("5123450000000008").unwrap()),
                     card_exp_month: "12".to_string().into(),
@@ -1043,7 +1130,10 @@ mod tests {
                     card_holder_name: Some("Test User".to_string().into()),
                     co_badged_card_data: None,
                 }),
-                amount: MinorUnit::new(1000),
+                amount: common_utils::types::Money {
+                    amount: MinorUnit::new(1000),
+                    currency: Currency::USD,
+                },
                 order_tax_amount: None,
                 surcharge_amount: None,
                 email: Some(email),
@@ -1086,7 +1176,6 @@ mod tests {
                 customer_id: None,
                 request_incremental_authorization: Some(false),
                 metadata: None,
-                minor_amount: MinorUnit::new(1000),
                 merchant_order_id: None,
                 shipping_cost: None,
                 integrity_object: None,
@@ -1110,6 +1199,12 @@ mod tests {
                 mit_category: None,
                 domain_data: None,
                 partner_merchant_identifier_details: None,
+                is_account_funding_transaction: None,
+                recipient_details: None,
+                business_country: None,
+                enable_avs_check: None,
+                additional_connector_details: None,
+                customer: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1121,6 +1216,10 @@ mod tests {
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             }),
         };
 
@@ -1175,6 +1274,7 @@ mod tests {
                 attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
                 status: AttemptStatus::Pending,
                 payment_method: PaymentMethod::Card,
+                payment_method_type: None,
                 description: None,
                 return_url: None,
                 address: PaymentAddress::new(
@@ -1194,8 +1294,7 @@ mod tests {
                 connector_feature_data: None,
                 amount: None,
                 amount_captured: None,
-                minor_amount_captured: None,
-                minor_amount_authorized: None,
+                amount_authorized: None,
                 access_token: None,
                 session_token: None,
                 reference_id: Some("order_QMsUrrLPdwNxPG".to_string()),
@@ -1214,18 +1313,22 @@ mod tests {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }
+                .into(),
                 vault_headers: None,
                 connector_response_headers: None,
                 raw_connector_request: None,
-                minor_amount_capturable: None,
+                typed_connector_request: None,
+                amount_capturable: None,
                 connector_response: None,
                 recurring_mandate_payment_data: None,
                 order_details: None,
                 l2_l3_data: None,
                 merchant_request_id: None,
                 sender_payment_instrument_id: None,
+                connector_returned_payment_method_details: None,
                 settlement_status: None,
+                typed_connector_response: None,
             },
             connector_config: ConnectorSpecificConfig::Razorpay {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1233,10 +1336,13 @@ mod tests {
                 base_url: None,
             },
             request: PaymentsAuthorizeData {
+                split_settlement: None,
                 customer_document_details: None,
+                customer_date_of_birth: None,
                 payment_channel: None,
                 authentication_data: None,
                 connector_testing_data: None,
+                currency_conversion_data: None,
                 payment_method_data: PaymentMethodData::Card(Card {
                     card_number: RawCardNumber(CardNumber::from_str("5123450000000008").unwrap()),
                     card_exp_month: "12".to_string().into(),
@@ -1251,7 +1357,10 @@ mod tests {
                     card_holder_name: Some("Test User".to_string().into()),
                     co_badged_card_data: None,
                 }),
-                amount: MinorUnit::new(1000),
+                amount: common_utils::types::Money {
+                    amount: MinorUnit::new(1000),
+                    currency: Currency::USD,
+                },
                 order_tax_amount: None,
                 surcharge_amount: None,
                 email: Some(email),
@@ -1294,7 +1403,6 @@ mod tests {
                 customer_id: None,
                 request_incremental_authorization: Some(false),
                 metadata: None,
-                minor_amount: MinorUnit::new(1000),
                 merchant_order_id: None,
                 shipping_cost: None,
                 integrity_object: None,
@@ -1318,6 +1426,12 @@ mod tests {
                 mit_category: None,
                 domain_data: None,
                 partner_merchant_identifier_details: None,
+                is_account_funding_transaction: None,
+                recipient_details: None,
+                business_country: None,
+                enable_avs_check: None,
+                additional_connector_details: None,
+                customer: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1329,6 +1443,10 @@ mod tests {
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             }),
         };
 
@@ -1385,6 +1503,7 @@ mod tests {
                     attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
                     status: common_enums::AttemptStatus::Pending,
                     payment_method: common_enums::PaymentMethod::Card,
+                    payment_method_type: None,
                     description: None,
                     return_url: None,
                     address: PaymentAddress::new(
@@ -1403,10 +1522,9 @@ mod tests {
                     auth_type: common_enums::AuthenticationType::NoThreeDs,
                     connector_feature_data: None,
                     amount_captured: None,
-                    minor_amount_captured: None,
-                    minor_amount_capturable: None,
+                    amount_capturable: None,
                     amount: None,
-                    minor_amount_authorized: None,
+                    amount_authorized: None,
                     access_token: None,
                     session_token: None,
                     reference_id: None,
@@ -1425,17 +1543,21 @@ mod tests {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }
+                    .into(),
                     vault_headers: None,
                     connector_response_headers: None,
                     raw_connector_request: None,
+                    typed_connector_request: None,
                     connector_response: None,
                     recurring_mandate_payment_data: None,
                     order_details: None,
                     l2_l3_data: None,
                     sender_payment_instrument_id: None,
+                    connector_returned_payment_method_details: None,
                     settlement_status: None,
                     merchant_request_id: None,
+                    typed_connector_response: None,
                 },
                 connector_config: ConnectorSpecificConfig::Razorpay {
                     api_key: "dummy_api_key".to_string().into(),
@@ -1443,13 +1565,18 @@ mod tests {
                     base_url: None,
                 },
                 request: PaymentCreateOrderData {
-                    amount: MinorUnit::new(1000),
+                    amount: common_utils::types::Money {
+                        amount: MinorUnit::new(1000),
+                        currency: Currency::USD,
+                    },
                     currency: Currency::USD,
                     integrity_object: None,
                     metadata: None,
                     webhook_url: None,
                     payment_method_type: None,
                     order_details: None,
+                    setup_future_usage: None,
+                    customer_id: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -1461,13 +1588,17 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
             };
 
             let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
             let result = connector.get_request_body(&test_router_data).unwrap();
 
-            let actual_json: Value = match result {
+            let actual_json: Value = match result.map(|d| d.content) {
                 Some(RequestContent::Json(payload)) => {
                     to_value(&payload).expect("Failed to serialize payload")
                 }
@@ -1521,16 +1652,16 @@ mod tests {
                     attempt_id: "".to_string(),
                     status: common_enums::AttemptStatus::Pending,
                     payment_method: common_enums::PaymentMethod::Card,
+                    payment_method_type: None,
                     description: None,
                     return_url: None,
                     address: PaymentAddress::default(),
                     auth_type: common_enums::AuthenticationType::NoThreeDs,
                     connector_feature_data: None,
                     amount_captured: None,
-                    minor_amount_captured: None,
-                    minor_amount_capturable: None,
+                    amount_capturable: None,
                     amount: None,
-                    minor_amount_authorized: None,
+                    amount_authorized: None,
                     access_token: None,
                     session_token: None,
                     reference_id: Some("order_QMsUrrLPdwNxPG".to_string()),
@@ -1549,17 +1680,21 @@ mod tests {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }
+                    .into(),
                     vault_headers: None,
                     connector_response_headers: None,
                     raw_connector_request: None,
+                    typed_connector_request: None,
                     connector_response: None,
                     recurring_mandate_payment_data: None,
                     order_details: None,
                     l2_l3_data: None,
                     merchant_request_id: None,
                     sender_payment_instrument_id: None,
+                    connector_returned_payment_method_details: None,
                     settlement_status: None,
+                    typed_connector_response: None,
                 },
                 connector_config: ConnectorSpecificConfig::Razorpay {
                     api_key: "dummy_api_key".to_string().into(),
@@ -1567,13 +1702,18 @@ mod tests {
                     base_url: None,
                 },
                 request: PaymentCreateOrderData {
-                    amount: MinorUnit::new(0),
-                    currency: Currency::default(),
+                    amount: common_utils::types::Money {
+                        amount: MinorUnit::new(0),
+                        currency: Currency::USD,
+                    },
+                    currency: Currency::USD,
                     integrity_object: None,
                     metadata: None,
                     webhook_url: None,
                     payment_method_type: None,
                     order_details: None,
+                    setup_future_usage: None,
+                    customer_id: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_01".to_string(),
@@ -1585,6 +1725,10 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
             };
 
@@ -1592,7 +1736,7 @@ mod tests {
             let result = connector.get_request_body(&test_router_data);
             let req = result.unwrap();
 
-            let actual_json: Value = match req {
+            let actual_json: Value = match req.map(|d| d.content) {
                 Some(RequestContent::Json(payload)) => {
                     to_value(&payload).expect("Failed to serialize payload")
                 }
@@ -1648,16 +1792,16 @@ mod tests {
                     attempt_id: "invalid_attempt_id".to_string(),
                     status: AttemptStatus::Pending,
                     payment_method: PaymentMethod::Card,
+                    payment_method_type: None,
                     description: None,
                     return_url: None,
                     address: PaymentAddress::new(None, None, None, None),
                     auth_type: AuthenticationType::NoThreeDs,
                     connector_feature_data: None,
                     amount_captured: None,
-                    minor_amount_captured: None,
-                    minor_amount_capturable: None,
+                    amount_capturable: None,
                     amount: None,
-                    minor_amount_authorized: None,
+                    amount_authorized: None,
                     access_token: None,
                     session_token: None,
                     reference_id: Some("order_QMsUrrLPdwNxPG".to_string()),
@@ -1676,17 +1820,21 @@ mod tests {
                             ..Default::default()
                         },
                         ..Default::default()
-                    },
+                    }
+                    .into(),
                     vault_headers: None,
                     connector_response_headers: None,
                     raw_connector_request: None,
+                    typed_connector_request: None,
                     connector_response: None,
                     recurring_mandate_payment_data: None,
                     order_details: None,
                     l2_l3_data: None,
                     sender_payment_instrument_id: None,
+                    connector_returned_payment_method_details: None,
                     settlement_status: None,
                     merchant_request_id: None,
+                    typed_connector_response: None,
                 },
                 connector_config: ConnectorSpecificConfig::Razorpay {
                     api_key: "invalid_key".to_string().into(),
@@ -1694,10 +1842,13 @@ mod tests {
                     base_url: None,
                 },
                 request: PaymentsAuthorizeData {
+                    split_settlement: None,
                     customer_document_details: None,
+                    customer_date_of_birth: None,
                     payment_channel: None,
                     authentication_data: None,
                     connector_testing_data: None,
+                    currency_conversion_data: None,
                     payment_method_data: PaymentMethodData::Card(Card {
                         card_number: Default::default(),
                         card_exp_month: "".to_string().into(),
@@ -1712,7 +1863,10 @@ mod tests {
                         card_holder_name: Some("Test User".to_string().into()),
                         co_badged_card_data: None,
                     }),
-                    amount: MinorUnit::new(1000),
+                    amount: common_utils::types::Money {
+                        amount: MinorUnit::new(1000),
+                        currency: Currency::USD,
+                    },
                     order_tax_amount: None,
                     surcharge_amount: None,
                     email: None,
@@ -1738,7 +1892,6 @@ mod tests {
                     request_incremental_authorization: Some(false),
                     metadata: None,
                     integrity_object: None,
-                    minor_amount: MinorUnit::new(1000),
                     merchant_order_id: None,
                     shipping_cost: None,
                     merchant_account_id: None,
@@ -1760,6 +1913,12 @@ mod tests {
                     mit_category: None,
                     domain_data: None,
                     partner_merchant_identifier_details: None,
+                    is_account_funding_transaction: None,
+                    recipient_details: None,
+                    business_country: None,
+                    enable_avs_check: None,
+                    additional_connector_details: None,
+                    customer: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_INVALID".to_string(),
@@ -1771,6 +1930,10 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
             };
 
@@ -1809,6 +1972,7 @@ mod tests {
                 attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
                 status: AttemptStatus::Pending,
                 payment_method: PaymentMethod::Card,
+                payment_method_type: None,
                 description: None,
                 return_url: None,
                 address: PaymentAddress::new(
@@ -1828,8 +1992,7 @@ mod tests {
                 connector_feature_data: None,
                 amount: None,
                 amount_captured: None,
-                minor_amount_captured: None,
-                minor_amount_authorized: None,
+                amount_authorized: None,
                 access_token: None,
                 session_token: None,
                 reference_id: None,
@@ -1848,18 +2011,22 @@ mod tests {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }
+                .into(),
                 vault_headers: None,
                 connector_response_headers: None,
                 raw_connector_request: None,
+                typed_connector_request: None,
                 connector_response: None,
                 recurring_mandate_payment_data: None,
                 order_details: None,
-                minor_amount_capturable: None,
+                amount_capturable: None,
                 l2_l3_data: None,
                 merchant_request_id: None,
                 sender_payment_instrument_id: None,
+                connector_returned_payment_method_details: None,
                 settlement_status: None,
+                typed_connector_response: None,
             },
             connector_config: ConnectorSpecificConfig::Razorpay {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1867,13 +2034,18 @@ mod tests {
                 base_url: None,
             },
             request: PaymentCreateOrderData {
-                amount: MinorUnit::new(1000),
+                amount: common_utils::types::Money {
+                    amount: MinorUnit::new(1000),
+                    currency: Currency::USD,
+                },
                 currency: Currency::USD,
                 integrity_object: None,
                 metadata: None,
                 webhook_url: None,
                 payment_method_type: None,
                 order_details: None,
+                setup_future_usage: None,
+                customer_id: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1885,6 +2057,10 @@ mod tests {
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             }),
         };
 
@@ -1945,6 +2121,7 @@ mod tests {
                 attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
                 status: AttemptStatus::Pending,
                 payment_method: PaymentMethod::Card,
+                payment_method_type: None,
                 description: None,
                 return_url: None,
                 address: PaymentAddress::new(
@@ -1964,9 +2141,8 @@ mod tests {
                 connector_feature_data: None,
                 amount: None,
                 amount_captured: None,
-                minor_amount_captured: None,
-                minor_amount_capturable: None,
-                minor_amount_authorized: None,
+                amount_capturable: None,
+                amount_authorized: None,
                 access_token: None,
                 session_token: None,
                 reference_id: None,
@@ -1985,17 +2161,21 @@ mod tests {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }
+                .into(),
                 vault_headers: None,
                 connector_response_headers: None,
                 raw_connector_request: None,
+                typed_connector_request: None,
                 connector_response: None,
                 recurring_mandate_payment_data: None,
                 order_details: None,
                 l2_l3_data: None,
                 sender_payment_instrument_id: None,
+                connector_returned_payment_method_details: None,
                 settlement_status: None,
                 merchant_request_id: None,
+                typed_connector_response: None,
             },
             connector_config: ConnectorSpecificConfig::Razorpay {
                 api_key: "dummy_api_key".to_string().into(),
@@ -2003,13 +2183,18 @@ mod tests {
                 base_url: None,
             },
             request: PaymentCreateOrderData {
-                amount: MinorUnit::new(1000),
+                amount: common_utils::types::Money {
+                    amount: MinorUnit::new(1000),
+                    currency: Currency::USD,
+                },
                 currency: Currency::USD,
                 integrity_object: None,
                 metadata: None,
                 webhook_url: None,
                 payment_method_type: None,
                 order_details: None,
+                setup_future_usage: None,
+                customer_id: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -2021,6 +2206,10 @@ mod tests {
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             }),
         };
 
@@ -2070,6 +2259,7 @@ mod tests {
                 attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
                 status: AttemptStatus::Pending,
                 payment_method: PaymentMethod::Card,
+                payment_method_type: None,
                 description: None,
                 return_url: None,
                 address: PaymentAddress::new(
@@ -2089,9 +2279,8 @@ mod tests {
                 connector_feature_data: None,
                 amount: None,
                 amount_captured: None,
-                minor_amount_captured: None,
-                minor_amount_capturable: None,
-                minor_amount_authorized: None,
+                amount_capturable: None,
+                amount_authorized: None,
                 access_token: None,
                 session_token: None,
                 reference_id: None,
@@ -2110,17 +2299,21 @@ mod tests {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }
+                .into(),
                 vault_headers: None,
                 connector_response_headers: None,
                 raw_connector_request: None,
+                typed_connector_request: None,
                 connector_response: None,
                 recurring_mandate_payment_data: None,
                 order_details: None,
                 l2_l3_data: None,
                 sender_payment_instrument_id: None,
+                connector_returned_payment_method_details: None,
                 settlement_status: None,
                 merchant_request_id: None,
+                typed_connector_response: None,
             },
             connector_config: ConnectorSpecificConfig::Razorpay {
                 api_key: "dummy_api_key".to_string().into(),
@@ -2128,13 +2321,18 @@ mod tests {
                 base_url: None,
             },
             request: PaymentCreateOrderData {
-                amount: MinorUnit::new(1000),
+                amount: common_utils::types::Money {
+                    amount: MinorUnit::new(1000),
+                    currency: Currency::USD,
+                },
                 currency: Currency::USD,
                 integrity_object: None,
                 metadata: None,
                 webhook_url: None,
                 payment_method_type: None,
                 order_details: None,
+                setup_future_usage: None,
+                customer_id: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -2146,6 +2344,10 @@ mod tests {
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             }),
         };
 
@@ -2219,7 +2421,11 @@ mod tests {
             "connector_transaction_id": null,
             "network_advice_code": null,
             "network_decline_code": null,
-            "network_error_message": null
+            "network_error_message": null,
+            "typed_connector_response": actual_json["typed_connector_response"].clone(),
+            "raw_connector_response": null,
+            "raw_connector_request": null,
+            "typed_connector_request": null
         });
         assert_eq!(actual_json, expected_json);
     }
@@ -2296,7 +2502,11 @@ mod tests {
             "connector_transaction_id": null,
             "network_advice_code": null,
             "network_decline_code": null,
-            "network_error_message": null
+            "network_error_message": null,
+            "typed_connector_response": actual_json["typed_connector_response"].clone(),
+            "raw_connector_response": null,
+            "raw_connector_request": null,
+            "typed_connector_request": null
         });
         assert_eq!(actual_json, expected_json);
     }

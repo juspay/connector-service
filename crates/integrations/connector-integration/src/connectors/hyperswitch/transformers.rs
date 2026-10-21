@@ -124,7 +124,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                router_data.request.minor_amount,
+                router_data.request.amount.amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -264,6 +264,10 @@ fn build_payments_response(
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
+            typed_connector_response: None,
+            raw_connector_response: None,
+            raw_connector_request: None,
+            typed_connector_request: None,
         })
     } else {
         Ok(PaymentsResponseData::TransactionResponse {
@@ -277,6 +281,7 @@ fn build_payments_response(
             incremental_authorization_allowed: None,
             status_code: http_code,
             splits: None,
+            payment_account_reference: None,
         })
     }
 }
@@ -439,6 +444,7 @@ pub fn get_webhook_reference(
                 PaymentWebhookReference {
                     connector_transaction_id: payment.connector_transaction_id,
                     merchant_transaction_id: Some(payment.payment_id),
+                    connector_preprocessing_id: None,
                 },
             )))
         }
@@ -456,11 +462,13 @@ pub fn build_webhook_payment_response(
     // for status mapping (succeeded -> Charged, requires_capture -> Authorized).
     let status = map_intent_status(&payment.status, true);
     Ok(WebhookDetailsResponse {
+        connector_returned_payment_method_details: None,
         resource_id: Some(ResponseId::ConnectorTransactionId(
             payment.payment_id.clone(),
         )),
         status,
-        connector_response_reference_id: Some(payment.payment_id),
+        connector_response_reference_id: Some(payment.payment_id.clone()),
+        connector_request_reference_id: Some(payment.payment_id),
         mandate_reference: None,
         error_code: payment.error_code,
         error_message: payment.error_message.clone(),
@@ -469,7 +477,6 @@ pub fn build_webhook_payment_response(
         status_code: 200,
         response_headers: None,
         amount_captured: None,
-        minor_amount_captured: None,
         network_txn_id: payment.connector_transaction_id,
         payment_method_update: None,
         sender_payment_instrument_id: None,

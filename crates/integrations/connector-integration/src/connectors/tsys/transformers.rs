@@ -269,7 +269,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     transaction_amount: item_data
                         .connector
                         .amount_converter
-                        .convert(item.request.minor_amount, item.request.currency)
+                        .convert(item.request.amount.amount, item.request.currency)
                         .change_context(IntegrationError::AmountConversionFailed {
                             context: Default::default(),
                         })?,
@@ -379,6 +379,7 @@ fn get_payments_response(connector_response: TsysResponse, http_code: u16) -> Pa
         incremental_authorization_allowed: None,
         status_code: http_code,
         splits: None,
+        payment_account_reference: None,
     }
 }
 
@@ -726,6 +727,7 @@ fn get_payments_sync_response(
         incremental_authorization_allowed: None,
         status_code: http_code,
         splits: None,
+        payment_account_reference: None,
     }
 }
 
@@ -818,7 +820,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             transaction_amount: item_data
                 .connector
                 .amount_converter
-                .convert(item.request.minor_amount_to_capture, item.request.currency)
+                .convert(item.request.amount_to_capture.amount, item.request.currency)
                 .change_context(IntegrationError::AmountConversionFailed {
                     context: Default::default(),
                 })?,
@@ -925,7 +927,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             transaction_amount: item_data
                 .connector
                 .amount_converter
-                .convert(MinorUnit(item.request.refund_amount), item.request.currency)
+                .convert(item.request.refund_amount.amount, item.request.currency)
                 .change_context(IntegrationError::AmountConversionFailed {
                     context: Default::default(),
                 })?,
@@ -974,6 +976,7 @@ impl TryFrom<ResponseRouterData<RefundResponse, Self>>
                 connector_refund_id: return_response.transaction_id,
                 refund_status: common_enums::enums::RefundStatus::from(return_response.status),
                 status_code: item.http_code,
+                acquirer_reference_number: None,
             }),
             TsysResponseTypes::ErrorResponse(error_response) => {
                 Err(get_error_response(&error_response, item.http_code))
@@ -1043,6 +1046,7 @@ impl TryFrom<ResponseRouterData<TsysRSyncResponse, Self>>
                     search_response.transaction_details,
                 ),
                 status_code: item.http_code,
+                acquirer_reference_number: None,
             }),
             SearchResponseTypes::ErrorResponse(error_response) => {
                 Err(get_error_response(&error_response, item.http_code))
@@ -1109,7 +1113,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 // to 1 minor unit if the request does not carry one.
                 let minor_amount = item
                     .request
-                    .minor_amount
+                    .amount
+                    .as_ref()
+                    .map(|money| money.amount)
                     .unwrap_or_else(|| MinorUnit::new(1));
                 let transaction_amount = item_data
                     .connector
@@ -1174,6 +1180,7 @@ fn get_setup_mandate_response(
         incremental_authorization_allowed: None,
         status_code: http_code,
         splits: None,
+        payment_account_reference: None,
     }
 }
 
@@ -1323,7 +1330,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let transaction_amount = item_data
             .connector
             .amount_converter
-            .convert(item.request.minor_amount, item.request.currency)
+            .convert(item.request.amount.amount, item.request.currency)
             .change_context(IntegrationError::AmountConversionFailed {
                 context: Default::default(),
             })?;
@@ -1473,5 +1480,9 @@ fn get_error_response(
         network_decline_code: None,
         network_advice_code: None,
         network_error_message: None,
+        typed_connector_response: None,
+        raw_connector_response: None,
+        raw_connector_request: None,
+        typed_connector_request: None,
     }
 }

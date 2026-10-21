@@ -120,7 +120,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             .connector
                             .amount_converter
                             .convert(
-                                item.router_data.request.minor_amount,
+                                item.router_data.request.amount.amount,
                                 item.router_data.request.currency,
                             )
                             .change_context(IntegrationError::RequestEncodingFailed {
@@ -206,6 +206,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletData::ApplePayRedirect(_)
                 | WalletData::ApplePayThirdPartySdk(_)
                 | WalletData::DanaRedirect {}
+                | WalletData::GrabpayRedirect {}
                 | WalletData::GooglePay(_)
                 | WalletData::GooglePayRedirect(_)
                 | WalletData::GooglePayThirdPartySdk(_)
@@ -234,8 +235,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletData::CashfreeRedirect(_)
                 | WalletData::PayURedirect(_)
                 | WalletData::EaseBuzzRedirect(_)
+                | WalletData::PaymayaRedirect(_)
+                | WalletData::PayhereRedirect {}
                 | WalletData::QwikcilverWalletDirect(_)
-                | WalletData::Skrill(_) => Err(IntegrationError::NotImplemented(
+                | WalletData::Skrill(_)
+                | WalletData::Neteller(_) => Err(IntegrationError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("Mifinity"),
                     Default::default(),
                 )
@@ -339,6 +343,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     }),
                     resource_common_data: PaymentFlowData {
                         status: enums::AttemptStatus::AuthenticationPending,
@@ -359,6 +364,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                     incremental_authorization_allowed: None,
                     status_code: item.http_code,
                     splits: None,
+                    payment_account_reference: None,
                 }),
                 resource_common_data: PaymentFlowData {
                     status: enums::AttemptStatus::AuthenticationPending,
@@ -433,6 +439,7 @@ impl<F> TryFrom<ResponseRouterData<MifinityPsyncResponse, Self>>
                                 incremental_authorization_allowed: None,
                                 status_code: item.http_code,
                                 splits: None,
+                                payment_account_reference: None,
                             }),
                             resource_common_data: PaymentFlowData {
                                 status: enums::AttemptStatus::from(status),
@@ -453,6 +460,7 @@ impl<F> TryFrom<ResponseRouterData<MifinityPsyncResponse, Self>>
                             incremental_authorization_allowed: None,
                             status_code: item.http_code,
                             splits: None,
+                            payment_account_reference: None,
                         }),
                         resource_common_data: PaymentFlowData {
                             status: enums::AttemptStatus::from(status),
@@ -474,6 +482,7 @@ impl<F> TryFrom<ResponseRouterData<MifinityPsyncResponse, Self>>
                     incremental_authorization_allowed: None,
                     status_code: item.http_code,
                     splits: None,
+                    payment_account_reference: None,
                 }),
                 resource_common_data: PaymentFlowData {
                     status: enums::AttemptStatus::Unspecified,

@@ -195,7 +195,7 @@ fn paco_require_merchant_request_id(
 
 impl ApiRequestEnvelope {
     fn new(request_message_id: String) -> Self {
-        let now = time::OffsetDateTime::now_utc();
+        let now = common_utils::date_time::now().assume_utc();
         let formatted = now
             .format(&time::format_description::well_known::Rfc3339)
             .unwrap_or_else(|_| String::from("1970-01-01T00:00:00Z"));
@@ -288,6 +288,8 @@ pub struct PacoBillingAddress {
     pub bill_addr_line3: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bill_addr_post_code: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bill_addr_state: Option<Secret<String>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -363,6 +365,21 @@ impl PacoBrowserInfo {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct PacoGeneralPayerDetails {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<common_utils::pii::Email>,
+}
+
+impl PacoGeneralPayerDetails {
+    fn from_billing_email(email: Option<common_utils::pii::Email>) -> Option<Self> {
+        Some(Self {
+            email: Some(email?),
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TwocTwopPacoCardAuthorizeRequest {
     pub api_request: ApiRequestEnvelope,
     pub office_id: Secret<String>,
@@ -373,6 +390,8 @@ pub struct TwocTwopPacoCardAuthorizeRequest {
     #[serde(rename = "notificationURLs")]
     pub notification_urls: PacoNotificationUrls,
     pub credit_card_details: PacoCreditCardDetails,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub general_payer_details: Option<PacoGeneralPayerDetails>,
     #[serde(rename = "request3dsFlag")]
     pub request3ds_flag: PacoRequest3dsFlag,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -887,7 +906,7 @@ where
         .unwrap_or_else(|| order_no.clone());
     let request_message_id =
         paco_require_merchant_request_id(item.resource_common_data.get_merchant_request_id())?;
-    let amount = PacoTransactionAmount::new(item.request.minor_amount, item.request.currency)?;
+    let amount = PacoTransactionAmount::new(item.request.amount.amount, item.request.currency)?;
     let notification_urls = PacoNotificationUrls {
         confirmation_url: item.request.router_return_url.clone(),
         failed_url: item.request.router_return_url.clone(),
@@ -908,6 +927,9 @@ where
             bill_addr_line2: common.get_optional_billing_line2(),
             bill_addr_line3: common.get_optional_billing_line3(),
             bill_addr_post_code: common.get_optional_billing_zip(),
+            bill_addr_state: common
+                .get_optional_billing_state()
+                .filter(|state| state.peek().chars().count() <= 3),
         });
 
     let paco_shipping_address = common
@@ -981,6 +1003,27 @@ where
                 .as_ref()
                 .and_then(|bi| bi.user_agent.clone())
                 .map(PacoDeviceDetails::from_user_agent);
+            let general_payer_details = PacoGeneralPayerDetails::from_billing_email(
+                item.resource_common_data.get_optional_billing_email(),
+            );
+            let card_holder_name = card
+                .get_optional_cardholder_name()
+                .filter(|name| {
+                    let n = name.peek().trim();
+                    !n.is_empty() && !n.eq_ignore_ascii_case("name")
+                })
+                .or_else(|| {
+                    let first = item.resource_common_data.get_optional_billing_first_name();
+                    let last = item.resource_common_data.get_optional_billing_last_name();
+                    match (first, last) {
+                        (Some(first), Some(last)) => {
+                            Some(Secret::new(format!("{} {}", first.peek(), last.peek())))
+                        }
+                        (Some(first), None) => Some(first),
+                        (None, Some(last)) => Some(last),
+                        (None, None) => None,
+                    }
+                });
             let body = TwocTwopPacoCardAuthorizeRequest {
                 api_request: ApiRequestEnvelope::new(request_message_id),
                 office_id,
@@ -993,7 +1036,7 @@ where
                     card_number: Secret::new(card.card_number.peek().to_string()),
                     card_expiry_mmyy: mmyy,
                     cvv_code: card.card_cvc.clone(),
-                    card_holder_name: card.get_optional_cardholder_name(),
+                    card_holder_name,
                     card_type,
                 },
                 request3ds_flag,
@@ -1002,6 +1045,7 @@ where
                 billing_address: paco_billing_address,
                 shipping_address: paco_shipping_address,
                 airline_data: airline_data.clone(),
+                general_payer_details,
             };
             Ok(TwocTwopPacoAuthorizeRequest::Card(body))
         }
@@ -1075,7 +1119,7 @@ pub fn build_capture_request(
     let office_id = auth.office_id.clone();
     let invoice_no = item.request.get_connector_transaction_id()?;
     let amount =
-        PacoTransactionAmount::new(item.request.minor_amount_to_capture, item.request.currency)?;
+        PacoTransactionAmount::new(item.request.amount_to_capture.amount, item.request.currency)?;
     let request_message_id =
         paco_require_merchant_request_id(item.resource_common_data.get_merchant_request_id())?;
     Ok(TwocTwopPacoCaptureRequest {
@@ -1178,7 +1222,7 @@ pub fn build_refund_request(
 ) -> Result<TwocTwopPacoRefundRequest, error_stack::Report<errors::IntegrationError>> {
     let office_id = auth.office_id.clone();
     let amount =
-        PacoTransactionAmount::new(item.request.minor_refund_amount, item.request.currency)?;
+        PacoTransactionAmount::new(item.request.refund_amount.amount, item.request.currency)?;
     let original_order_no = item.request.get_connector_order_id().change_context(
         errors::IntegrationError::MissingRequiredField {
             field_name: "connector_order_id",
@@ -1747,6 +1791,10 @@ where
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             };
             return Ok(Self {
                 resource_common_data: PaymentFlowData {
@@ -1783,6 +1831,7 @@ where
                 incremental_authorization_allowed: None,
                 status_code: http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             ..router_data
         })
@@ -1819,6 +1868,10 @@ impl TryFrom<ResponseRouterData<TwocTwopPacoNonUiResponse, Self>>
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             };
             return Ok(Self {
                 resource_common_data: PaymentFlowData {
@@ -1854,6 +1907,7 @@ impl TryFrom<ResponseRouterData<TwocTwopPacoNonUiResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             ..router_data
         })
@@ -1890,6 +1944,10 @@ impl TryFrom<ResponseRouterData<TwocTwopPacoNonUiResponse, Self>>
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             };
             return Ok(Self {
                 resource_common_data: PaymentFlowData {
@@ -1925,6 +1983,7 @@ impl TryFrom<ResponseRouterData<TwocTwopPacoNonUiResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             ..router_data
         })
@@ -1961,6 +2020,10 @@ impl TryFrom<ResponseRouterData<TwocTwopPacoNonUiResponse, Self>>
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             };
             return Ok(Self {
                 resource_common_data: PaymentFlowData {
@@ -1996,6 +2059,7 @@ impl TryFrom<ResponseRouterData<TwocTwopPacoNonUiResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             ..router_data
         })
@@ -2042,6 +2106,10 @@ impl TryFrom<ResponseRouterData<TwocTwopPacoNonUiResponse, Self>>
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             };
             return Ok(Self {
                 resource_common_data: RefundFlowData {
@@ -2067,6 +2135,7 @@ impl TryFrom<ResponseRouterData<TwocTwopPacoNonUiResponse, Self>>
                 connector_refund_id,
                 refund_status,
                 status_code: http_code,
+                acquirer_reference_number: None,
             }),
             ..router_data
         })
@@ -2211,6 +2280,10 @@ impl TryFrom<ResponseRouterData<TwocTwopPacoInquiryResponse, Self>>
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             };
             return Ok(Self {
                 resource_common_data: PaymentFlowData {
@@ -2247,6 +2320,7 @@ impl TryFrom<ResponseRouterData<TwocTwopPacoInquiryResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             ..router_data
         })
@@ -2316,6 +2390,10 @@ impl TryFrom<ResponseRouterData<TwocTwopPacoInquiryResponse, Self>>
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             };
             return Ok(Self {
                 resource_common_data: RefundFlowData {
@@ -2341,6 +2419,7 @@ impl TryFrom<ResponseRouterData<TwocTwopPacoInquiryResponse, Self>>
                 connector_refund_id,
                 refund_status,
                 status_code: http_code,
+                acquirer_reference_number: None,
             }),
             ..router_data
         })
@@ -2489,7 +2568,7 @@ pub struct PacoJoseClaims<'a> {
 
 impl<'a> PacoJoseClaims<'a> {
     pub fn new(access_token: &'a str, request: serde_json::Value) -> Self {
-        let now = time::OffsetDateTime::now_utc().unix_timestamp();
+        let now = common_utils::date_time::now_unix_timestamp();
         Self {
             iss: access_token,
             aud: PACO_AUDIENCE,

@@ -153,7 +153,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .clone(),
             "transaction_id",
         )?;
-        let amount = item.router_data.request.minor_amount;
+        let amount = item.router_data.request.amount.amount;
 
         // Extract report group from metadata or use default
         let report_group = extract_report_group(&item.router_data.connector_config)
@@ -1365,6 +1365,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         network_decline_code: None,
                         network_advice_code: None,
                         network_error_message: None,
+                        typed_connector_response: None,
+            raw_connector_response: None,
+            raw_connector_request: None,
+            typed_connector_request: None,
                     };
 
                     Ok(Self {
@@ -1392,6 +1396,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     };
 
                     Ok(Self {
@@ -1419,6 +1424,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         network_decline_code: None,
                         network_advice_code: None,
                         network_error_message: None,
+                        typed_connector_response: None,
+            raw_connector_response: None,
+            raw_connector_request: None,
+            typed_connector_request: None,
                     };
 
                     Ok(Self {
@@ -1446,6 +1455,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     };
 
                     Ok(Self {
@@ -1469,6 +1479,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+            raw_connector_response: None,
+            raw_connector_request: None,
+            typed_connector_request: None,
                 };
 
                 Ok(Self {
@@ -1791,6 +1805,7 @@ impl TryFrom<ResponseRouterData<VantivSyncResponse, Self>>
             incremental_authorization_allowed: None,
             status_code: item.http_code,
             splits: None,
+            payment_account_reference: None,
         };
 
         Ok(Self {
@@ -1849,7 +1864,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             id: format!("{}_{}", OperationId::Capture, merchant_txn_id),
             report_group,
             cnp_txn_id,
-            amount: item.router_data.request.minor_amount_to_capture,
+            amount: item.router_data.request.amount_to_capture.amount,
             enhanced_data: None,
         };
 
@@ -1979,7 +1994,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             id: format!("{}_{}", OperationId::Refund, merchant_txn_id),
             customer_id,
             cnp_txn_id,
-            amount: item.router_data.request.minor_refund_amount,
+            amount: item.router_data.request.refund_amount.amount,
         };
 
         let cnp_request = CnpOnlineRequest {
@@ -2087,6 +2102,7 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, Self>>
                 connector_refund_id: credit_response.cnp_txn_id.clone(),
                 refund_status: status,
                 status_code: item.http_code,
+                acquirer_reference_number: None,
             };
 
             Ok(Self {
@@ -2108,6 +2124,10 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             };
 
             Ok(Self {
@@ -2142,6 +2162,7 @@ impl TryFrom<ResponseRouterData<VantivSyncResponse, Self>>
                 .unwrap_or_else(|| "unknown".to_string()),
             refund_status: status,
             status_code: item.http_code,
+            acquirer_reference_number: None,
         };
 
         Ok(Self {
@@ -2199,7 +2220,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             id: format!("{}_{}", OperationId::Capture, merchant_txn_id),
             report_group,
             cnp_txn_id,
-            amount: item.router_data.request.minor_amount_to_capture,
+            amount: item.router_data.request.amount_to_capture.amount,
             enhanced_data: None,
         };
 
@@ -2240,6 +2261,10 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, Self>>
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 };
 
                 Ok(Self {
@@ -2264,6 +2289,7 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, Self>>
                     incremental_authorization_allowed: None,
                     status_code: item.http_code,
                     splits: None,
+                    payment_account_reference: None,
                 };
 
                 Ok(Self {
@@ -2288,6 +2314,10 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             };
 
             Ok(Self {
@@ -2380,6 +2410,10 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, Self>>
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 };
 
                 Ok(Self {
@@ -2404,6 +2438,7 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, Self>>
                     incremental_authorization_allowed: None,
                     status_code: item.http_code,
                     splits: None,
+                    payment_account_reference: None,
                 };
 
                 Ok(Self {
@@ -2431,6 +2466,10 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, Self>>
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 };
 
                 Ok(Self {
@@ -2455,6 +2494,7 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, Self>>
                     incremental_authorization_allowed: None,
                     status_code: item.http_code,
                     splits: None,
+                    payment_account_reference: None,
                 };
 
                 Ok(Self {
@@ -2477,6 +2517,10 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             };
 
             Ok(Self {
@@ -2512,6 +2556,10 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, Self>>
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 };
 
                 Ok(Self {
@@ -2554,6 +2602,10 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             };
 
             Ok(Self {
@@ -2640,7 +2692,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             customer_id: None,
             cnp_txn_id: Some(connector_transaction_id),
             order_id: None,
-            amount: item.router_data.request.minor_amount,
+            amount: item.router_data.request.amount.amount,
             order_source: None,
             bill_to_address: None,
             ship_to_address: None,
@@ -2696,6 +2748,10 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, Self>>
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 };
 
                 Ok(Self {
@@ -2735,6 +2791,10 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             };
 
             Ok(Self {

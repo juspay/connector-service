@@ -19,10 +19,7 @@ use domain_types::{
 
 use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
-use common_utils::{
-    custom_serde,
-    types::{MinorUnit, Money},
-};
+use common_utils::{custom_serde, types::MinorUnit};
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
@@ -596,7 +593,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         });
 
         Ok(Self {
-            amount: router_data.request.amount,
+            amount: router_data.request.amount.amount,
             currency: router_data.request.currency,
             settlement_currency: None,
             description: router_data.resource_common_data.description.clone(),
@@ -666,6 +663,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 incremental_authorization_allowed: None,
                 status_code: 200,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -676,14 +674,21 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 
-impl TryFrom<ResponseRouterData<RevolutOrderCreateResponse, Self>>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<RevolutOrderCreateResponse, RevolutRouterData<Self, T>>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<RevolutOrderCreateResponse, Self>,
+        item: ResponseRouterData<RevolutOrderCreateResponse, RevolutRouterData<Self, T>>,
     ) -> Result<Self, Self::Error> {
+        let connector = item.router_data.connector;
+        let item = ResponseRouterData {
+            response: item.response,
+            router_data: item.router_data.router_data,
+            http_code: item.http_code,
+        };
         let response = item.response;
 
         let status = match &response.payments {
@@ -708,10 +713,13 @@ impl TryFrom<ResponseRouterData<RevolutOrderCreateResponse, Self>>
             None => map_order_state(response.state),
         };
 
-        let amount = Some(Money {
-            amount: response.amount,
-            currency: response.currency,
-        });
+        let amount = Some(crate::utils::response_amount_to_money(
+            &connector,
+            response.amount,
+            response.currency,
+            item.http_code,
+            domain_types::connector_types::ConnectorEnum::Revolut,
+        )?);
 
         let merchant_reference = response
             .merchant_order_data
@@ -730,6 +738,7 @@ impl TryFrom<ResponseRouterData<RevolutOrderCreateResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: 200,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -818,7 +827,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
         Ok(Self {
-            amount: router_data.request.minor_refund_amount,
+            amount: router_data.request.refund_amount.amount,
             currency: router_data.request.currency,
             merchant_order_data: Some(RevolutMerchantOrderData {
                 reference: Some(
@@ -857,6 +866,7 @@ impl<F> TryFrom<ResponseRouterData<RevolutRefundResponse, Self>>
                 connector_refund_id: response.id.clone(),
                 refund_status: status,
                 status_code: item.http_code,
+                acquirer_reference_number: None,
             }),
             ..item.router_data
         })
@@ -885,6 +895,7 @@ impl<F> TryFrom<ResponseRouterData<RevolutRefundResponse, Self>>
                 connector_refund_id: response.id.clone(),
                 refund_status: status,
                 status_code: item.http_code,
+                acquirer_reference_number: None,
             }),
             ..item.router_data
         })
@@ -908,7 +919,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> Result<Self, Self::Error> {
         // Amount is optional - if not provided, Revolut captures full authorized amount
-        let amount = Some(item.router_data.request.minor_amount_to_capture);
+        let amount = Some(item.router_data.request.amount_to_capture.amount);
 
         Ok(Self { amount })
     }
@@ -959,6 +970,7 @@ impl<F> TryFrom<ResponseRouterData<RevolutOrderCreateResponse, Self>>
                 mandate_reference: None,
                 status_code: http_code,
                 splits: None,
+                payment_account_reference: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -1020,6 +1032,7 @@ impl TryFrom<RevolutWebhookBody> for WebhookDetailsResponse {
         let status = map_webhook_event_to_attempt_status(webhook_body.event)?;
 
         Ok(Self {
+            connector_returned_payment_method_details: None,
             resource_id: Some(ResponseId::ConnectorTransactionId(
                 webhook_body.order_id.clone(),
             )),
@@ -1028,11 +1041,11 @@ impl TryFrom<RevolutWebhookBody> for WebhookDetailsResponse {
             error_message: None,
             error_reason: None,
             status_code: 200,
-            connector_response_reference_id: webhook_body.merchant_order_ext_ref,
+            connector_response_reference_id: webhook_body.merchant_order_ext_ref.clone(),
+            connector_request_reference_id: webhook_body.merchant_order_ext_ref,
             mandate_reference: None,
             raw_connector_response: None,
             response_headers: None,
-            minor_amount_captured: None,
             amount_captured: None,
             network_txn_id: None,
             payment_method_update: None,
@@ -1081,7 +1094,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let router_data = item.router_data;
 
         Ok(Self {
-            amount: router_data.request.amount,
+            amount: router_data.request.amount.amount,
             currency: router_data.request.currency,
         })
     }

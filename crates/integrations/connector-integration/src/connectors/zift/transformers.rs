@@ -2,7 +2,7 @@ use crate::{connectors::zift::ZiftRouterData, types::ResponseRouterData};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
-    types::{MinorUnit, StringMinorUnit},
+    types::StringMinorUnit,
 };
 use error_stack::{report, Report, ResultExt};
 use std::fmt::Debug;
@@ -96,6 +96,7 @@ pub enum PaymentRequestType {
     #[serde(rename = "sale-auth")]
     Auth,
     Capture,
+    Void,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
@@ -459,6 +460,7 @@ impl TryFrom<&domain_types::router_request_types::AuthenticationData> for Authen
             | Some(common_enums::TransactionStatus::Failure)
             | Some(common_enums::TransactionStatus::ChallengeRequired)
             | Some(common_enums::TransactionStatus::ChallengeRequiredDecoupledAuthentication)
+            | Some(common_enums::TransactionStatus::SecurePaymentConfirmationRequired)
             | None => Self::Unavailable,
         };
         Ok(authentication_status)
@@ -501,7 +503,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let amount = item
             .connector
             .amount_converter
-            .convert(request_data.minor_amount, request_data.currency)
+            .convert(request_data.amount.amount, request_data.currency)
             .change_context(IntegrationError::AmountConversionFailed {
                 context: Default::default(),
             })?;
@@ -638,6 +640,10 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<ZiftAuthPaymentsRespo
                     network_advice_code: None,
                     network_decline_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
                 ..item.router_data
             }),
@@ -677,6 +683,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<ZiftAuthPaymentsRespo
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     }),
                     ..item.router_data
                 })
@@ -721,7 +728,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let amount = item
             .connector
             .amount_converter
-            .convert(request_data.minor_amount, request_data.currency)
+            .convert(request_data.amount.amount, request_data.currency)
             .change_context(IntegrationError::AmountConversionFailed {
                 context: Default::default(),
             })?;
@@ -805,6 +812,10 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<ZiftAuthPaymentsRespo
                     network_advice_code: None,
                     network_decline_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
                 ..item.router_data
             }),
@@ -828,6 +839,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<ZiftAuthPaymentsRespo
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
                         splits: None,
+                        payment_account_reference: None,
                     }),
                     ..item.router_data
                 })
@@ -868,6 +880,14 @@ impl TryFrom<ResponseRouterData<ZiftSyncResponse, Self>>
                 }
                 TransactionStatus::Cancelled => common_enums::AttemptStatus::CaptureFailed,
             },
+
+            PaymentRequestType::Void => match item.response.transaction_status {
+                TransactionStatus::Processed => common_enums::AttemptStatus::Voided,
+                TransactionStatus::Pending | TransactionStatus::InRebill => {
+                    common_enums::AttemptStatus::VoidInitiated
+                }
+                TransactionStatus::Cancelled => common_enums::AttemptStatus::VoidFailed,
+            },
         };
         let payments_response = if attempt_status == common_enums::AttemptStatus::Failure {
             Err(ErrorResponse {
@@ -888,6 +908,10 @@ impl TryFrom<ResponseRouterData<ZiftSyncResponse, Self>>
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             })
         } else {
             Ok(PaymentsResponseData::TransactionResponse {
@@ -901,6 +925,7 @@ impl TryFrom<ResponseRouterData<ZiftSyncResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             })
         };
 
@@ -963,7 +988,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount_to_capture,
+                item.router_data.request.amount_to_capture.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -1006,6 +1031,7 @@ impl<F> TryFrom<ResponseRouterData<ZiftCaptureResponse, Self>>
                     incremental_authorization_allowed: None,
                     status_code: item.http_code,
                     splits: None,
+                    payment_account_reference: None,
                 }),
                 ..item.router_data
             }),
@@ -1025,6 +1051,10 @@ impl<F> TryFrom<ResponseRouterData<ZiftCaptureResponse, Self>>
                     network_advice_code: None,
                     network_decline_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
                 ..item.router_data
             }),
@@ -1057,7 +1087,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        if item.router_data.request.amount.unwrap_or(0) > 0 {
+        if item
+            .router_data
+            .request
+            .amount
+            .as_ref()
+            .map(|money| money.amount)
+            .is_some_and(|amount| amount > common_utils::types::MinorUnit::zero())
+        {
             return Err(IntegrationError::FlowNotSupported {
                 flow: "Setup Mandate with non zero amount".to_string(),
                 connector: "Zift".to_string(),
@@ -1153,6 +1190,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     incremental_authorization_allowed: None,
                     status_code: item.http_code,
                     splits: None,
+                    payment_account_reference: None,
                 }),
                 ..item.router_data
             })
@@ -1172,6 +1210,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     network_advice_code: None,
                     network_decline_code: None,
                     network_error_message: None,
+                    typed_connector_response: None,
+                    raw_connector_response: None,
+                    raw_connector_request: None,
+                    typed_connector_request: None,
                 }),
                 ..item.router_data
             })
@@ -1231,6 +1273,7 @@ impl<F> TryFrom<ResponseRouterData<ZiftVoidResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
                 splits: None,
+                payment_account_reference: None,
             })
         } else {
             Err(ErrorResponse {
@@ -1243,6 +1286,10 @@ impl<F> TryFrom<ResponseRouterData<ZiftVoidResponse, Self>>
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             })
         };
 
@@ -1274,7 +1321,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .connector
             .amount_converter
             .convert(
-                MinorUnit::new(item.router_data.request.refund_amount),
+                item.router_data.request.refund_amount.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -1320,6 +1367,7 @@ impl<F> TryFrom<ResponseRouterData<ZiftRefundResponse, Self>>
                     })?,
                 refund_status,
                 status_code: item.http_code,
+                acquirer_reference_number: None,
             })
         } else {
             Err(ErrorResponse {
@@ -1335,6 +1383,10 @@ impl<F> TryFrom<ResponseRouterData<ZiftRefundResponse, Self>>
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             })
         };
         Ok(Self {

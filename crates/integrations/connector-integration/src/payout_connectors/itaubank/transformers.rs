@@ -1,5 +1,6 @@
 use crate::types::ResponseRouterData;
 use common_utils::types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector};
+use domain_types::payment_method_data::PaymentMethodDataTypes;
 use domain_types::{
     connector_flow::{PayoutGet, PayoutTransfer, ServerAuthenticationToken},
     connector_types::{
@@ -125,6 +126,35 @@ pub struct ItaubankAccessTokenResponse {
     pub expires_in: Option<i64>,
 }
 
+impl TryFrom<ResponseRouterData<ItaubankAccessTokenResponse, Self>>
+    for RouterDataV2<
+        ServerAuthenticationToken,
+        MerchantAuthenticationFlowData,
+        ServerAuthenticationTokenRequestData,
+        ServerAuthenticationTokenResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<ItaubankAccessTokenResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let token_res = &item.response;
+        let router_data = &item.router_data;
+
+        let access_token_data = ServerAuthenticationTokenResponseData {
+            access_token: token_res.access_token.clone().into(),
+            token_type: token_res.token_type.clone(),
+            expires_in: token_res.expires_in,
+        };
+
+        Ok(Self {
+            response: Ok(access_token_data),
+            ..router_data.clone()
+        })
+    }
+}
+
 // ===== PAYOUT TRANSFER REQUEST/RESPONSE =====
 
 #[derive(Debug, Serialize)]
@@ -209,12 +239,12 @@ pub enum ItauModuloSispag {
     Diversos,
 }
 
-impl
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Send + Sync + 'static + Serialize>
     TryFrom<
         &RouterDataV2<
             PayoutTransfer,
             PayoutFlowData,
-            PayoutTransferRequest,
+            PayoutTransferRequest<T>,
             PayoutTransferResponse,
         >,
     > for ItaubankTransferRequest
@@ -225,7 +255,7 @@ impl
         req: &RouterDataV2<
             PayoutTransfer,
             PayoutFlowData,
-            PayoutTransferRequest,
+            PayoutTransferRequest<T>,
             PayoutTransferResponse,
         >,
     ) -> Result<Self, Self::Error> {
@@ -274,6 +304,7 @@ impl
                 bank_account_number,
                 bank_name,
                 ispb,
+                ..
             }))) => {
                 let tipo_pessoa = tax_id.clone().expose_option().map(|id| {
                     if id.len() == 11 {
@@ -381,6 +412,37 @@ impl ItaubankPayoutStatus {
             }
             Self::Unknown => common_enums::PayoutStatus::Pending,
         }
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Send + Sync + 'static + Serialize>
+    TryFrom<ResponseRouterData<ItaubankTransferResponse, Self>>
+    for RouterDataV2<
+        PayoutTransfer,
+        PayoutFlowData,
+        PayoutTransferRequest<T>,
+        PayoutTransferResponse,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<ItaubankTransferResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let transfer_res = &item.response;
+        let router_data = &item.router_data;
+
+        let payments_response_data = PayoutTransferResponse {
+            merchant_payout_id: None,
+            payout_status: transfer_res.transfer_status.get_payout_status(),
+            connector_payout_id: Some(transfer_res.id.clone()),
+            status_code: item.http_code,
+        };
+
+        Ok(Self {
+            response: Ok(payments_response_data),
+            ..router_data.clone()
+        })
     }
 }
 
