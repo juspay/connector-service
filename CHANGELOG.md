@@ -19,6 +19,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.10.21.1
+
+### Features
+
+- **connector:** [JPMorgan] Update Access Token Flow ([#2533](https://github.com/juspay/connector-service/pull/2533)) ([`e19e837`](https://github.com/juspay/connector-service/commit/e19e837894051ec3240a15679d4cf87ddff2f278))
+
+### Documentation
+
+- Explain Prism webhooks and connector diagnostics ([#2546](https://github.com/juspay/connector-service/pull/2546)) ([`814b6ab`](https://github.com/juspay/connector-service/commit/814b6ab4a5fce7db94295d6ca16687cea1e4640a))
+
+**Full Changelog:** [`2026.10.21.0...2026.10.21.1`](https://github.com/juspay/connector-service/compare/2026.10.21.0...2026.10.21.1)
+
+- - -
+
 ## 2026.10.21.0
 
 ### Features
