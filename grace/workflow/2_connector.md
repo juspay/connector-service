@@ -176,9 +176,9 @@ them to this contract (`now` = `date -u +%FT%TZ`):
 The rest are not bookkeeping — git safety, selection rules and process ownership. Write them as given:
 
 ```bash
-snap_tree() { local i="$R/.snap.index"; rm -f "$i"; GIT_INDEX_FILE="$i" git read-tree HEAD
+snap_tree() { local i="$R/.snap.index"; mv -f "$i" "$i.prev" 2>/dev/null || :; GIT_INDEX_FILE="$i" git read-tree HEAD
   claimed_ucs | GIT_INDEX_FILE="$i" xargs git update-index --add --remove -- 2>/dev/null
-  GIT_INDEX_FILE="$i" git write-tree; rm -f "$i"; }
+  GIT_INDEX_FILE="$i" git write-tree; mv -f "$i" "$i.prev" 2>/dev/null || :; }
 snapshot() {  # label stage unit — HEAD, index and working tree untouched; never pushed
   local n t c ref; n=$(printf %03d $(( $(cat "$R/snapshots.tsv" 2>/dev/null | wc -l) + 1 )))
   t=$(snap_tree); c=$(git commit-tree "$t" -p HEAD -m "grace snapshot $RUN_ID $n-$1"); ref="refs/grace/$RUN_ID/$n-$1"

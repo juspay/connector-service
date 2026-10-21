@@ -4070,6 +4070,11 @@ message RecurringPaymentServiceChargeRequest {
 
   // Additional connector-specific information received from the merchant for the transaction
   optional AdditionalConnectorDetails additional_connector_details = 42;
+
+  // Connector session token, set by the caller from the session_token returned by
+  // MerchantAuthenticationService.CreateServerSessionAuthenticationToken (e.g. Nuvei's
+  // /getSessionToken.do sessionToken). Leave unset for connectors that do not use one.
+  optional string session_token = 43;
 }
 
 // Response message for repeat payment operation
@@ -4213,6 +4218,11 @@ message PaymentMethodAuthenticationServicePreAuthenticateRequest {
 
   // Sandbox/test mode flag
   optional bool test_mode = 17;
+
+  // Connector session token, set by the caller from the session_token returned by
+  // MerchantAuthenticationService.CreateServerSessionAuthenticationToken (e.g. Nuvei's
+  // /getSessionToken.do sessionToken). Leave unset for connectors that do not use one.
+  optional string session_token = 18;
 }
 
 // Response message for pre-authentication step
@@ -4289,6 +4299,18 @@ message PaymentMethodAuthenticationServiceAuthenticateRequest {
 
   // Domain-specific data (e.g. student fields for tuition payments)
   optional DomainData domain_data = 16;
+
+  // Stored-credential intent, used when this leg is the charging call
+  optional FutureUsage setup_future_usage = 18; // Indicates future usage intention
+  optional CustomerAcceptance customer_acceptance = 19; // Details of customer acceptance for mandates
+
+  // Payment Options applied when this leg is the charging call
+  optional bool enable_partial_authorization = 20; // Allow partial authorization
+  optional PaymentChannel payment_channel = 21; // Describes the channel through which the payment was initiated
+  optional BillingDescriptor billing_descriptor = 22; // Billing descriptor information
+
+  // Level 2 / Level 3 data
+  optional L2L3Data l2_l3_data = 23;
 }
 
 // Response message for authentication step
@@ -4321,6 +4343,10 @@ message PaymentMethodAuthenticationServiceAuthenticateResponse {
 
   // The connector's reported status (code/message/reason).
   optional RawConnectorStatus raw_connector_status = 13;
+
+  // Stored-credential results, set when this leg charged the payment
+  optional MandateReferenceDetails mandate_reference_details = 15; // Reference to the created mandate
+  optional string network_txn_link_id = 16; // Network transaction link identifier
 }
 
 // Request message for post-authentication step
@@ -4404,7 +4430,7 @@ message PaymentServiceIncrementalAuthorizationRequest {
   string connector_transaction_id = 2;
 
   // Amount Information
-  Money amount = 3; // new amount to be authorized (in minor currency units)
+  Money amount = 3; // New total authorized amount, including this increase.
 
   // Optional Fields
   optional string reason = 4;
@@ -4418,6 +4444,12 @@ message PaymentServiceIncrementalAuthorizationRequest {
   // endpoint construction on this (e.g. Adyen's merchant-prefixed live URL) need
   // the real value; defaulting to None/test mode breaks live-URL substitution.
   optional bool test_mode = 7;
+
+  // Increase over the current authorized total. Must use the same currency as amount.
+  optional Money additional_amount = 8;
+
+  // Network transaction ID returned by the original authorization.
+  optional string network_transaction_id = 9;
 }
 
 // Response message for incremental authorization
@@ -5298,7 +5330,10 @@ message HipayConfig {
 
 message JpmorganConfig {
   SecretString client_id = 1;
-  SecretString client_secret = 2;
+  optional SecretString client_secret = 2 [deprecated = true];
+  SecretString thumbprint = 3; // certificate thumbprint; hex SHA-1 format, colons allowed
+  SecretString private_key = 4; // base64 encoded PEM
+  SecretString resource_id = 5;
   optional string base_url = 50;
   optional SecretString company_name = 51;
   optional SecretString product_name = 52;
