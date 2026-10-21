@@ -599,6 +599,12 @@ pub enum ConnectorSpecificConfig {
         base_url: Option<String>,
     },
 
+    // Adyen Platform payouts use one API key and optional funding metadata.
+    Adyenplatform {
+        api_key: Secret<String>,
+        source_balance_account: Option<Secret<String>>,
+        base_url: Option<String>,
+    },
     // --- Three-field connectors ---
     Adyen {
         api_key: Secret<String>,
@@ -1185,6 +1191,7 @@ impl ConnectorSpecificConfig {
             };
         }
         extract_base_url!(
+            Adyenplatform { api_key },
             Stripe { api_key },
             Calida { api_key },
             Celero { api_key },
@@ -1726,6 +1733,7 @@ impl ConnectorSpecificConfig {
         let mut connectors = serde_json::Map::new();
         connectors.insert(
             connector_key!(
+                Adyenplatform { api_key },
                 Stripe { api_key },
                 Calida { api_key },
                 Celero { api_key },
@@ -2196,6 +2204,11 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 api_key: aci.api_key.ok_or_else(err)?,
                 entity_id: aci.entity_id.ok_or_else(err)?,
                 base_url: aci.base_url,
+            }),
+            AuthType::Adyenplatform(config) => Ok(Self::Adyenplatform {
+                api_key: config.api_key.ok_or_else(err)?,
+                source_balance_account: config.source_balance_account,
+                base_url: config.base_url,
             }),
             AuthType::Adyen(adyen) => Ok(Self::Adyen {
                 api_key: adyen.api_key.ok_or_else(err)?,
@@ -3319,6 +3332,14 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorVariant)>
                 },
 
                 // --- Connectors supporting both BodyKey and SignatureKey ---
+                ConnectorEnum::Adyenplatform => match auth {
+                    ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Adyenplatform {
+                        api_key: api_key.clone(),
+                        source_balance_account: None,
+                        base_url: None,
+                    }),
+                    _ => Err(err().into()),
+                },
                 ConnectorEnum::Adyen => match auth {
                     ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::Adyen {
                         api_key: api_key.clone(),
@@ -4436,6 +4457,14 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorVariant)>
                 }
             }
             connector_types::ConnectorVariant::Payout(connector_enum) => match connector_enum {
+                PayoutConnectorEnum::Adyenplatform => match auth {
+                    ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Adyenplatform {
+                        api_key: api_key.clone(),
+                        source_balance_account: None,
+                        base_url: None,
+                    }),
+                    _ => Err(err().into()),
+                },
                 PayoutConnectorEnum::Nuvei => match auth {
                     ConnectorAuthType::SignatureKey {
                         api_key,

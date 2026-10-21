@@ -134,6 +134,7 @@ hipay.secondary_base_url = "https://stage-secure2-vault.hipay-tpp.com/rest/v2/to
 hipay.third_base_url = "https://stage-api-gateway.hipay.com/"
 globalpay.base_url = "https://apis.sandbox.globalpay.com/ucp"
 forte.base_url = "https://sandbox.forte.net/api/v3"
+adyenplatform.base_url = "https://balanceplatform-api-test.adyen.com/"
 adyen.base_url = "https://checkout-test.adyen.com/"
 adyen.dispute_base_url = "https://ca-test.adyen.com/"
 razorpay.base_url = "https://api.razorpay.com/"

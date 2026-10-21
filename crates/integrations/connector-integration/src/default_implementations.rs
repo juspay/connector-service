@@ -189,6 +189,7 @@ macro_rules! default_impl_verify_webhook_source_v2 {
 //   that their gateway has no signing surface at all.
 default_impl_verify_webhook_source_v2!(
     not_supported: [
+        Adyenplatform,
         Adyen,
         Authorizedotnet,
         Bluesnap,
@@ -383,6 +384,7 @@ macro_rules! default_impl_recharge_v2 {
 }
 
 default_impl_recharge_v2!(
+    Adyenplatform,
     Betterpayment,
     Citigate,
     JpmorganOrbital,
@@ -624,6 +626,7 @@ macro_rules! default_impl_get_payment_method_v2 {
 
 // Same connector universe as default_impl_recharge_v2! above.
 default_impl_create_payment_method_v2!(
+    Adyenplatform,
     Betterpayment,
     Citigate,
     JpmorganOrbital,
@@ -743,6 +746,7 @@ default_impl_create_payment_method_v2!(
 );
 
 default_impl_get_payment_method_v2!(
+    Adyenplatform,
     Betterpayment,
     Citigate,
     JpmorganOrbital,
@@ -1043,6 +1047,7 @@ macro_rules! default_impl_refresh_payment_method_v2 {
 }
 
 default_impl_refresh_payment_method_v2!(
+    Adyenplatform,
     Betterpayment,
     Citigate,
     JpmorganOrbital,

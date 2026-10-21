@@ -327,6 +327,7 @@ use crate::{
 pub struct Connectors {
     // Added pub
     pub adyen: ConnectorParams,
+    pub adyenplatform: ConnectorParams,
     pub forte: ConnectorParams,
     pub razorpay: ConnectorParams,
     pub razorpayv2: ConnectorParams,
@@ -612,6 +613,9 @@ impl Connectors {
             ConnectorEnum::Stripe => {
                 patched.stripe.apply(params_patch);
             }
+            ConnectorEnum::Adyenplatform => {
+                patched.adyenplatform.apply(params_patch);
+            }
             ConnectorEnum::Adyen => {
                 patched.adyen.apply(params_patch);
             }
@@ -886,6 +890,7 @@ impl Connectors {
             third_base_url: Some(urls.third_base_url.clone()),
         };
         match connector {
+            PayoutConnectorEnum::Adyenplatform => patched.adyenplatform.apply(params_patch),
             PayoutConnectorEnum::Nuvei => patched.nuvei.apply(params_patch),
             PayoutConnectorEnum::Loonio => patched.loonio.apply(params_patch),
             PayoutConnectorEnum::Paypal => patched.paypal.apply(params_patch),

@@ -5392,6 +5392,13 @@ message WorldpayConfig {
   optional SecretString merchant_name = 51;
 }
 
+// Adyen Platform payout credentials and funding account.
+message AdyenplatformConfig {
+  SecretString api_key = 1;
+  optional SecretString source_balance_account = 2;
+  optional string base_url = 50;
+}
+
 // Three field auth types
 message AdyenConfig {
   SecretString api_key = 1;
@@ -6492,6 +6499,7 @@ message ConnectorSpecificConfig {
     GlobalpaymentsRealexConfig globalpayments_realex = 163;
     // BETTERPAYMENT = 153
     BetterpaymentConfig betterpayment = 164;
+    AdyenplatformConfig adyenplatform = 165;
   }
 }
 

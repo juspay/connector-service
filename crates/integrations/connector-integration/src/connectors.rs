@@ -343,3 +343,6 @@ pub use self::merchante::Merchante;
 
 pub mod betterpayment;
 pub use self::betterpayment::Betterpayment;
+
+pub mod adyenplatform;
+pub use self::adyenplatform::Adyenplatform;

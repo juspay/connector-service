@@ -60,6 +60,7 @@ use url::Url;
 )]
 #[strum(serialize_all = "snake_case")]
 pub enum ConnectorEnum {
+    Adyenplatform,
     Adyen,
     Forte,
     Razorpay,
@@ -255,6 +256,7 @@ pub enum AuthenticatorConnectorEnum {
 )]
 #[strum(serialize_all = "snake_case")]
 pub enum PayoutConnectorEnum {
+    Adyenplatform,
     Nuvei,
     Loonio,
     Paypal,
@@ -276,6 +278,7 @@ impl TryFrom<ConnectorEnum> for PayoutConnectorEnum {
 
     fn try_from(value: ConnectorEnum) -> Result<Self, Self::Error> {
         match value {
+            ConnectorEnum::Adyenplatform => Ok(Self::Adyenplatform),
             ConnectorEnum::Nuvei => Ok(Self::Nuvei),
             ConnectorEnum::Loonio => Ok(Self::Loonio),
             ConnectorEnum::Paypal => Ok(Self::Paypal),
@@ -321,6 +324,7 @@ impl ForeignTryFrom<AuthType> for PayoutConnectorEnum {
 
     fn foreign_try_from(config: AuthType) -> Result<Self, error_stack::Report<Self::Error>> {
         match config {
+            AuthType::Adyenplatform(_) => Ok(Self::Adyenplatform),
             AuthType::Nuvei(_) => Ok(Self::Nuvei),
             AuthType::Paypal(_) => Ok(Self::Paypal),
             AuthType::Loonio(_) => Ok(Self::Loonio),
@@ -462,6 +466,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
         connector: grpc_api_types::payments::Connector,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         match connector {
+            grpc_api_types::payments::Connector::Adyenplatform => Ok(Self::Adyenplatform),
             grpc_api_types::payments::Connector::Adyen => Ok(Self::Adyen),
             grpc_api_types::payments::Connector::Forte => Ok(Self::Forte),
             grpc_api_types::payments::Connector::Razorpay => Ok(Self::Razorpay),
@@ -5950,6 +5955,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         match auth_type {
             AuthType::Aci(_) => Ok(Self::Payment(ConnectorEnum::Aci)),
+            AuthType::Adyenplatform(_) => Ok(Self::Payment(ConnectorEnum::Adyenplatform)),
             AuthType::Adyen(_) => Ok(Self::Payment(ConnectorEnum::Adyen)),
             AuthType::Airwallex(_) => Ok(Self::Payment(ConnectorEnum::Airwallex)),
             AuthType::Bambora(_) => Ok(Self::Payment(ConnectorEnum::Bambora)),
