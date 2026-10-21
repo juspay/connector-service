@@ -3,7 +3,6 @@ use common_utils::{ext_traits::ConfigExt, Email, MinorUnit};
 use hyperswitch_masking::{PeekInterface, Secret, SerializableSecret};
 
 use crate::{
-    errors::{IntegrationError, IntegrationErrorContext},
     state_codes::convert_state_to_code,
     utils::{convert_canada_state_to_code, convert_us_state_to_code, missing_field_err, Error},
 };
@@ -537,22 +536,6 @@ pub struct OrderDetailsWithAmount {
 
 impl SerializableSecret for OrderDetailsWithAmount {}
 
-/// Missing-field error for `order_details[]` line-item fields, carrying a complete
-/// `additional_context` sentence alongside the `field_name`.
-fn missing_order_item_field(field_name: &'static str) -> Error {
-    IntegrationError::MissingRequiredField {
-        field_name,
-        context: IntegrationErrorContext {
-            additional_context: Some(format!(
-                "Failed to build the order line item: `{field_name}` is required on each \
-                 `order_details` entry"
-            )),
-            ..Default::default()
-        },
-    }
-    .into()
-}
-
 impl OrderDetailsWithAmount {
     /// Product name (`name` on most connector line items).
     pub fn get_product_name(&self) -> String {
@@ -568,14 +551,14 @@ impl OrderDetailsWithAmount {
     pub fn get_product_id(&self) -> Result<String, Error> {
         self.product_id
             .clone()
-            .ok_or_else(|| missing_order_item_field("order_details[].product_id"))
+            .ok_or_else(missing_field_err("order_details[].product_id"))
     }
 
     /// Stock keeping unit (`sku` on most connector line items).
     pub fn get_sku(&self) -> Result<String, Error> {
         self.sku
             .clone()
-            .ok_or_else(|| missing_order_item_field("order_details[].sku"))
+            .ok_or_else(missing_field_err("order_details[].sku"))
     }
 
     /// Line total in minor units: the explicit `total_amount` when present, else the unit
@@ -588,7 +571,7 @@ impl OrderDetailsWithAmount {
     pub fn get_product_type(&self) -> Result<ProductType, Error> {
         self.product_type
             .clone()
-            .ok_or_else(|| missing_order_item_field("order_details[].product_type"))
+            .ok_or_else(missing_field_err("order_details[].product_type"))
     }
 
     /// Product page URL (`item_url` on most connector line items).
