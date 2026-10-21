@@ -1,6 +1,6 @@
 import type { ConnectorScenarioConfig } from "../../../framework/scenario.js";
 
-export const overrides: ConnectorScenarioConfig = {
+export const config: ConnectorScenarioConfig = {
   cases: {
     baseline: {},
     "inline-customer": {},

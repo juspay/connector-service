@@ -14,7 +14,7 @@ import { type OtpScenario } from "../scenario.js";
 import { otpSupersetCases } from "../scenario.js";
 import {
   basicCardPayment,
-  checkoutPayment,
+  connectDirectPayment,
 } from "../../otp/superset/card-no3ds/requests.js";
 test("merchant patches retain nested connector defaults, replace arrays, and do not mutate shared input", () => {
   const defaults = {
@@ -123,14 +123,14 @@ test("one superset case expands across connectors and preserves terminal versus 
   assert.deepEqual(definition.scenarios, ["manual-capture"]);
 });
 
-test("complete connector request overrides retain absent fields and do not inherit common payment defaults", () => {
+test("shared direct-charge requests retain their field structure without connector request replacement", () => {
   const cases = otpSupersetCases({
     id: "direct-charge",
     description: "Direct charge",
     verifies: "Payment succeeds",
     sequence: ["Confirm"],
 
-    request: checkoutPayment(),
+    request: connectDirectPayment(),
     scenarios: ["automatic"],
   });
   assert.equal(cases.length, 1);

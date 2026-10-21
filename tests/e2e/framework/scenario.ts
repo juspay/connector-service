@@ -46,12 +46,7 @@ export type OtpScenario = RequestVariant & {
 
 export type ConnectorCaseOverride = Pick<
   RequestVariant,
-  | "payment"
-  | "request"
-  | "confirmRequest"
-  | "connectorMetadata"
-  | "profile"
-  | "fixture"
+  "payment" | "confirmRequest" | "connectorMetadata" | "profile" | "fixture"
 > & {
   id?: string;
   completion?: "submission";
@@ -66,12 +61,12 @@ export type ConnectorScenarioConfig = {
 
 import { merge } from "./config.js";
 
-import { overrides as adyen } from "../otp/adyen/card-no3ds/config.js";
-import { overrides as paypal } from "../otp/paypal/card-no3ds/config.js";
-import { overrides as authorizedotnet } from "../otp/authorizedotnet/card-no3ds/config.js";
-import { overrides as cybersource } from "../otp/cybersource/card-no3ds/config.js";
-import { overrides as checkout } from "../otp/checkout/card-no3ds/config.js";
-import { overrides as stripe } from "../otp/stripe/card-no3ds/config.js";
+import { config as adyen } from "../otp/adyen/card-no3ds/config.js";
+import { config as paypal } from "../otp/paypal/card-no3ds/config.js";
+import { config as authorizedotnet } from "../otp/authorizedotnet/card-no3ds/config.js";
+import { config as cybersource } from "../otp/cybersource/card-no3ds/config.js";
+import { config as checkout } from "../otp/checkout/card-no3ds/config.js";
+import { config as stripe } from "../otp/stripe/card-no3ds/config.js";
 
 const configurations: Record<
   (typeof connectors)[number],

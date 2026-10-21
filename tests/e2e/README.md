@@ -106,7 +106,6 @@ tests/e2e/
       requests.ts
     <connector>/card-no3ds/
       config.ts
-      requests.ts              # Optional complete connector requests
   framework/
     scenario.ts                # Scenario types and connector registration
     runner.ts                  # Shared payment lifecycle execution
@@ -138,11 +137,11 @@ Complete request definitions do not inherit shared optional payment fields. Runt
 
 Copy `overrides.example.json` to an ignored `overrides.local.json` and set `E2E_OVERRIDES_FILE`. Connector settings support credential-entry selection, connector metadata, profile flags, and payment fields. Variant settings override a named request shape without changing credentials.
 
-The superset chooses the request data; a connector can replace it completely or supply field overrides. External connector settings and named variant overrides are then resolved by the shared configuration helper. Nested objects merge, arrays replace, and `null` clears a field. OTP guards reject future-usage, mandate, recurring-payment, wallet, and 3DS requests. Customer acceptance alone is allowed; the resulting payment must still have no future usage or mandate. Use sandbox test data.
+The superset defines each complete request; connectors supply field overrides. External connector settings and named variant overrides are then resolved by the shared configuration helper. Nested objects merge, arrays replace, and `null` clears a field. OTP guards reject future-usage, mandate, recurring-payment, wallet, and 3DS requests. Customer acceptance alone is allowed; the resulting payment must still have no future usage or mandate. Use sandbox test data.
 
 ## Shared execution and reporting
 
-Scenario specs declare requests and expected behavior, then call `runOtpScenario`. Connector directories contain configuration and optional request builders. One shared runner performs payment lifecycles through HS.
+Scenario specs declare requests and expected behavior, then call `runOtpScenario`. Connector directories contain configuration and field overrides; request builders live in the shared superset. One shared runner performs payment lifecycles through HS.
 
 `framework/checks.ts` defines comparisons once using `equal(expected, actual)` or `oneOf([allowed, states], actual)`. The framework uses those same definitions for assertions and JSON attachments, including failed comparisons. Missing observations appear as `<missing>` and do not pass as null. Use boolean matches for identifiers or sensitive free-form values; whole response objects cannot be check values. Existing masked UCS audit events are attached unchanged and separately from comparisons.
 

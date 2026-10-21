@@ -1,6 +1,6 @@
 import type { ConnectorScenarioConfig } from "../../../framework/scenario.js";
 
-export const overrides: ConnectorScenarioConfig = {
+export const config: ConnectorScenarioConfig = {
   payment: {
     payment_method_data: { card: { card_number: "4012000033330026" } },
   },

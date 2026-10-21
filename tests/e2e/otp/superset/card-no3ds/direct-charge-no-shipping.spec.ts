@@ -2,7 +2,7 @@ import { test } from "@playwright/test";
 import type { OtpScenario } from "../../../framework/scenario.js";
 import { runOtpScenario } from "../../../framework/runner.js";
 import { otpSupersetCases } from "../../../framework/scenario.js";
-import { checkoutPayment } from "./requests.js";
+import { connectDirectPayment } from "./requests.js";
 
 const scenario: OtpScenario = {
   id: "direct-charge-no-shipping",
@@ -12,12 +12,12 @@ const scenario: OtpScenario = {
     "The HS payment succeeds with the expected amount and currency, UCS routing, and a recorded processor reference.",
 
   sequence: [
-    "Resolve eligible sandbox connected account",
+    "Read configured sandbox connected account",
     "Create direct charge without shipping",
     "Retrieve terminal payment",
     "Verify UCS routing and recorded processor reference",
   ],
-  request: checkoutPayment(),
+  request: { ...connectDirectPayment(), shipping: null },
   scenarios: ["automatic"],
 };
 

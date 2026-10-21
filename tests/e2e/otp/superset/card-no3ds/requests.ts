@@ -100,3 +100,53 @@ export function clientConfirmation(): Json {
     return_url: "https://example.com",
   };
 }
+
+export function connectDirectPayment(): Json {
+  return structuredClone({
+    amount: 6000,
+    currency: "USD",
+    confirm: true,
+    capture_method: "automatic",
+    payment_method: "card",
+    payment_method_data: { card },
+    billing: { address, email: "ucs-e2e@example.com" },
+    billing_descriptor: {},
+    browser_info: browser,
+    customer: {
+      id: "customer_e2e",
+      name: "Test Buyer",
+      email: "ucs-e2e@example.com",
+    },
+    description: "Test checkout",
+    merchant_order_reference_id: "test-order",
+    metadata: Object.fromEntries(
+      Array.from({ length: 15 }, (_, i) => [
+        `fixture_field_${i + 1}`,
+        `test-value-${i + 1}`,
+      ]),
+    ),
+    partner_merchant_identifier_details: {
+      merchant_details: { name: "Example Store", version: "1.0" },
+      partner_details: {
+        integrator: "Example Integrator",
+        name: "Example Platform",
+      },
+    },
+    payment_channel: "ecommerce",
+    return_url: "https://example.com",
+    shipping: { address: { ...address, line2: "Suite 1" } },
+    split_payments: {
+      stripe_split_payment: { charge_type: "direct", application_fees: 300 },
+    },
+  });
+}
+export function connectDetailedPayment(): Json {
+  const request = connectDirectPayment();
+  request.billing.phone = { number: "2025550100", country_code: "+1" };
+  request.customer.phone = "2025550100";
+  request.customer.phone_country_code = "+1";
+  request.billing_descriptor.statement_descriptor_suffix = "E2E";
+  request.frm_metadata = "test-fraud-context";
+  request.metadata.fixture_field_16 = "test-value-16";
+  return request;
+}
