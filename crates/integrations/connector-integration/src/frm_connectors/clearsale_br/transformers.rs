@@ -2846,7 +2846,6 @@ mod tests {
                     reservation_expires_at: Some("2025-05-02T10:00:00Z".to_owned()),
                     check_in: Some("2025-06-01".to_owned()),
                     check_out: Some("2025-06-05".to_owned()),
-                    ..HotelSegment::default()
                 }],
             }],
             ..DomainData::default()
