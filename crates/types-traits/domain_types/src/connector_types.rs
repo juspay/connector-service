@@ -5036,6 +5036,7 @@ pub struct TaxInfo {
     pub tax_status: Option<common_enums::TaxStatus>,
     pub customer_tax_registration_id: Option<Secret<String>>,
     pub merchant_tax_registration_id: Option<Secret<String>>,
+    pub merchant_vat_registration_id: Option<Secret<String>>,
     pub shipping_amount_tax: Option<Money>,
     pub order_tax_amount: Option<Money>,
     pub value_added_tax_amount: Option<Money>,
@@ -5261,6 +5262,12 @@ impl L2L3Data {
         self.tax_info
             .as_ref()
             .and_then(|tax| tax.merchant_tax_registration_id.clone())
+    }
+
+    pub fn get_merchant_vat_registration_id(&self) -> Option<Secret<String>> {
+        self.tax_info
+            .as_ref()
+            .and_then(|tax| tax.merchant_vat_registration_id.clone())
     }
 
     pub fn get_shipping_amount_tax(&self) -> Option<MinorUnit> {

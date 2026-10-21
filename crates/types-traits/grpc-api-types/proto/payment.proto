@@ -1515,6 +1515,9 @@ message TaxInfo {
 
   // Reference number of the value added tax (VAT) invoice for the order
   optional string vat_invoice_reference_number = 8;
+
+  // Merchant's VAT registration ID
+  optional SecretString merchant_vat_registration_id = 9;
 }
 
 // Level 2 / Level 3 data for enhanced payment processing.

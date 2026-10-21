@@ -43,13 +43,10 @@ const JPMORGAN_THREE_DS_NOT_IMPLEMENTED: &str = "3DS payments";
 
 const JPMORGAN_PURCHASE_ORDER_NUMBER_MAX_LENGTH: usize = 17;
 
-
 const JPMORGAN_MAX_LINE_ITEMS: usize = 998;
 const JPMORGAN_MAX_VAT_PERCENT: i64 = 9999;
 
-fn build_line_item(
-    detail: &OrderDetailsWithAmount,
-) -> requests::JpmorganLineItem {
+fn build_line_item(detail: &OrderDetailsWithAmount) -> requests::JpmorganLineItem {
     let line_item_description_text = detail
         .description
         .clone()
@@ -108,10 +105,7 @@ fn build_level3(
         return None;
     }
 
-    let line_items = order_details
-        .iter()
-        .map(build_line_item)
-        .collect();
+    let line_items = order_details.iter().map(build_line_item).collect();
 
     let total_shipping_amount = l2_l3_data.get_shipping_cost().or(fallback_shipping_cost);
     let duty_amount = l2_l3_data.get_duty_amount();
@@ -209,7 +203,8 @@ fn build_retail_addenda(
         is_taxable,
         taxable_indicator: is_taxable,
         customer_vat_registration_number: l2_l3_data.get_customer_tax_registration_id(),
-        merchant_vat_registration_number: l2_l3_data.get_merchant_tax_registration_id(),
+        merchant_vat_registration_number: l2_l3_data.get_merchant_vat_registration_id(),
+        pst_tax_registration_number: l2_l3_data.get_merchant_tax_registration_id(),
         summary_item_commodity_code,
         level3,
     };
@@ -224,6 +219,7 @@ fn build_retail_addenda(
         taxable_indicator,
         customer_vat_registration_number,
         merchant_vat_registration_number,
+        pst_tax_registration_number,
         summary_item_commodity_code,
         level3,
     } = &addenda;
@@ -234,6 +230,7 @@ fn build_retail_addenda(
         && taxable_indicator.is_none()
         && customer_vat_registration_number.is_none()
         && merchant_vat_registration_number.is_none()
+        && pst_tax_registration_number.is_none()
         && summary_item_commodity_code.is_none()
         && level3.is_none();
 
@@ -276,8 +273,8 @@ fn authorize_level2_data<T: PaymentMethodDataTypes>(
             .request
             .shipping_cost
             .as_ref()
-            .map(|shipping_cost| shipping_cost.amount)
-        );
+            .map(|shipping_cost| shipping_cost.amount),
+    );
     // shipTo only earns its place next to Level 2 data; without retailAddenda
     // it is just an unused address on the wire.
     let ship_to = retail_addenda
@@ -1953,6 +1950,62 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             account_on_file: requests::JpmorganAccountOnFile::Stored,
             is_amount_final: true,
         })
+    }
+}
+
+#[cfg(test)]
+mod merchant_registration_tests {
+    use super::*;
+    use domain_types::{connector_types::TaxInfo, utils::ForeignTryFrom};
+    use serde_json::json;
+
+    fn registration_addenda(tax_id: Option<&str>, vat_id: Option<&str>) -> serde_json::Value {
+        let proto_tax_info = grpc_api_types::payments::TaxInfo {
+            merchant_tax_registration_id: tax_id.map(|id| Secret::new(id.to_string())),
+            merchant_vat_registration_id: vat_id.map(|id| Secret::new(id.to_string())),
+            ..Default::default()
+        };
+        let data = L2L3Data {
+            tax_info: Some(
+                TaxInfo::foreign_try_from((&proto_tax_info, common_enums::Currency::USD))
+                    .expect("convert optional tax identifiers from gRPC"),
+            ),
+            ..Default::default()
+        };
+        serde_json::to_value(build_retail_addenda(Some(&data), None, None))
+            .expect("serialize registration addenda")
+    }
+
+    #[test]
+    fn separate_tax_and_vat_ids_reach_their_respective_wire_fields() {
+        assert_eq!(
+            registration_addenda(Some("TAX-123"), Some("VAT-456")),
+            json!({
+                "pstTaxRegistrationNumber": "TAX-123",
+                "merchantVatRegistrationNumber": "VAT-456"
+            })
+        );
+    }
+
+    #[test]
+    fn tax_id_without_vat_id_does_not_populate_the_vat_field() {
+        assert_eq!(
+            registration_addenda(Some("TAX-123"), None),
+            json!({"pstTaxRegistrationNumber": "TAX-123"})
+        );
+    }
+
+    #[test]
+    fn vat_id_without_tax_id_is_preserved() {
+        assert_eq!(
+            registration_addenda(None, Some("VAT-456")),
+            json!({"merchantVatRegistrationNumber": "VAT-456"})
+        );
+    }
+
+    #[test]
+    fn absent_registration_ids_do_not_require_addenda() {
+        assert_eq!(registration_addenda(None, None), serde_json::Value::Null);
     }
 }
 

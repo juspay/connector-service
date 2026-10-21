@@ -236,6 +236,7 @@ default = '{}'
 "l2_l3_data.tax_info.shipping_amount_tax" = 20
 "l2_l3_data.tax_info.customer_tax_registration_id" = "GB123456789"
 "l2_l3_data.tax_info.merchant_tax_registration_id" = "GB987654321"
+"l2_l3_data.tax_info.merchant_vat_registration_id" = "GB112233445"
 
 # The default recurring_charge request charges a stored profile. The second MIT
 # shape - a card charged with the network transaction id of the original CIT -

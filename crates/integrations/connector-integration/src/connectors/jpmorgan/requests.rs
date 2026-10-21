@@ -75,6 +75,8 @@ pub struct JpmorganRetailAddenda {
     pub customer_vat_registration_number: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub merchant_vat_registration_number: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pst_tax_registration_number: Option<Secret<String>>,
     /// Commodity code for the order as a whole. Visa only.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub summary_item_commodity_code: Option<String>,
