@@ -991,6 +991,9 @@ jobs:
         with:
           toolchain: stable
 
+      - name: Install SDK build target
+        run: rustup target add x86_64-unknown-linux-gnu
+
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:
