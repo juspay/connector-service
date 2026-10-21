@@ -43,8 +43,8 @@ permissions:
 
 jobs:
 
-  # Self-hosted pools are limited to local Rust and lightweight checks. SDK,
-  # Java/Node, and certificate-sensitive tooling stays on hosted runners.
+  # Self-hosted pools are limited to lightweight checks. Rust setup,
+  # SDK, Java/Node, and certificate-sensitive tooling stays hosted.
 
   # ── Change Detection ──────────────────────────────────────────────────────
   changes:
@@ -370,9 +370,7 @@ jobs:
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
           'ubuntu-latest' ||
-          github.event_name == 'merge_group' && 'ubuntu-latest' ||
-          github.event_name == 'push' && 'hyperswitch-runners-merge' ||
-          'hyperswitch-runners' }}
+          'ubuntu-24.04' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -626,9 +624,7 @@ jobs:
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
           'ubuntu-latest' ||
-          github.event_name == 'merge_group' && 'ubuntu-latest' ||
-          github.event_name == 'push' && 'hyperswitch-runners-merge' ||
-          'hyperswitch-runners' }}
+          'ubuntu-24.04' }}
 
     env:
       RUSTFLAGS: "-D warnings"
@@ -688,9 +684,7 @@ jobs:
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
           'ubuntu-latest' ||
-          github.event_name == 'merge_group' && 'ubuntu-latest' ||
-          github.event_name == 'push' && 'hyperswitch-runners-merge' ||
-          'hyperswitch-runners' }}
+          'ubuntu-24.04' }}
 
     env:
       RUSTFLAGS: "-D warnings"
