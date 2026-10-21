@@ -1,26 +1,48 @@
 # End-to-end tests
 
-This directory reserves the structure for end-to-end payment tests.
+This directory reserves the structure for end-to-end payment tests. The layout shows the planned files; this PR adds directories and documentation only.
 
 ```text
-tests/
-  e2e/
-    otp/
-      superset/
-        card-no3ds/
-      <connector>/
-        card-no3ds/
-    support/
-    scripts/
-    docker/
+tests/e2e/
+  otp/
+    superset/card-no3ds/
+      baseline.spec.ts
+      client-confirm.spec.ts
+      manual-capture.spec.ts
+      refund-full.spec.ts
+      ...
+      requests.ts
+    <connector>/card-no3ds/
+      config.ts
+      requests.ts              # Optional complete connector requests
+  framework/
+    scenario.ts                # Scenario types and connector registration
+    runner.ts                  # Shared payment lifecycle execution
+    config.ts                  # Credentials and external configuration
+    hyperswitch.ts             # HS API client and local database checks
+    audit.ts                   # Existing masked UCS event attachments
+    checks.ts                  # Shared expected/actual assertions and output
+    report.ts                  # Scenario descriptions and summaries
+    tests/                     # Offline tests for framework helpers
+  scripts/
+    stack.mjs                  # Docker stack startup and shutdown
+    credentials.sh             # Optional external credential retrieval
+  docker/
+    ucs.Dockerfile             # UCS image with a gRPC readiness probe
+  playwright.config.ts
+  package.json
+  package-lock.json
+  tsconfig.json
+  overrides.example.json
 ```
 
-- `otp/superset/<variant>/`: shared one-time payment scenarios. Each scenario will describe its request sequence and expected behavior once, for reuse across connectors.
-- `otp/<connector>/<variant>/`: connector request/configuration overrides and supported scenario settings. Connector directories do not duplicate scenario implementations.
-- `support/`: shared fixtures, API clients, and assertions.
-- `scripts/`: setup and execution helpers.
-- `docker/`: container configuration for the test environment.
+- `otp/superset/<variant>/` defines shared scenarios once, including the request sequence and expected behavior. Each explanation appears alongside its test declaration.
+- `otp/<connector>/<variant>/config.ts` selects shared scenarios and supplies request or configuration differences. Optional `requests.ts` supplies complete request data when field overrides are insufficient. Connector directories do not duplicate test execution.
+- `framework/` supplies typed scenarios, connector registration, one lifecycle runner, HS access, audit collection, and shared assertion/report helpers. `hyperswitch.ts` makes HS API calls and reads local HS database records for UCS routing and processor-reference checks.
+- `framework/tests/` checks shared helpers without starting the payment stack.
+- `scripts/` operates the Docker stack and retrieves external credentials when configured.
+- `docker/` contains the UCS image wrapper that adds the gRPC health probe used before HS starts.
 
-For example, a manual-capture scenario belongs in `otp/superset/card-no3ds/`. A connector can supply its sandbox card or metadata and specify whether capture verifies submission acceptance or terminal completion. Adding another connector reuses the superset through overrides; adding another OTP scenario extends the superset once.
+A manual-capture scenario belongs in `otp/superset/card-no3ds/`. Connectors enable it in their configs and supply only differences. Adding a connector reuses the superset; adding a scenario extends the superset once. Test discovery lists enabled connector/scenario combinations.
 
-Additional payment flows can be added beside `otp/`. The `.gitkeep` files preserve empty directories. Test implementation and runner configuration will follow separately.
+Further payment flows can be added beside `otp/`. The `.gitkeep` files preserve empty directories. Test implementation, dependencies, credentials, and CI configuration are outside this scaffold PR.
