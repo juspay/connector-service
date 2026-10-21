@@ -9,17 +9,16 @@ import asyncio
 import sys
 from payments import PaymentClient
 from payments import MerchantAuthenticationClient
-from payments import RecurringPaymentClient
+from payments import RefundClient
 from payments.generated import sdk_config_pb2, payment_pb2, events_pb2, payment_methods_pb2
 
-SUPPORTED_FLOWS = ["authorize", "capture", "create_client_authentication_token", "create_server_authentication_token", "get", "proxy_authorize", "proxy_setup_recurring", "recurring_charge", "refund", "setup_recurring", "token_authorize"]
+SUPPORTED_FLOWS = ["authorize", "capture", "create_client_authentication_token", "create_server_authentication_token", "get", "proxy_authorize", "proxy_setup_recurring", "refund", "refund_get", "setup_recurring", "token_authorize", "void"]
 
 _default_config = sdk_config_pb2.ConnectorConfig(
     options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
     connector_config=payment_pb2.ConnectorSpecificConfig(
         jpmorgan=payment_pb2.JpmorganConfig(
             client_id=payment_methods_pb2.SecretString(value="YOUR_CLIENT_ID"),
-            client_secret=payment_methods_pb2.SecretString(value="YOUR_CLIENT_SECRET"),
             thumbprint=payment_methods_pb2.SecretString(value="YOUR_THUMBPRINT"),
             private_key=payment_methods_pb2.SecretString(value="YOUR_PRIVATE_KEY"),
             resource_id=payment_methods_pb2.SecretString(value="YOUR_RESOURCE_ID"),
@@ -177,35 +176,6 @@ def _build_proxy_setup_recurring_request():
         ),
         auth_type=payment_pb2.AuthenticationType.Value("NO_THREE_DS"),
         setup_future_usage=payment_pb2.FutureUsage.Value("OFF_SESSION"),
-    )
-
-def _build_recurring_charge_request():
-    return payment_pb2.RecurringPaymentServiceChargeRequest(
-        connector_recurring_payment_id=payment_pb2.MandateReference(  # Reference to existing mandate.
-            connector_mandate_id=payment_pb2.ConnectorMandateReferenceId(  # mandate_id sent by the connector.
-                connector_mandate_id="probe-mandate-123",
-            ),
-        ),
-        amount=payment_pb2.Money(  # Amount Information.
-            minor_amount=1000,  # Amount in minor units (e.g., 1000 = $10.00).
-            currency=payment_pb2.Currency.Value("USD"),  # ISO 4217 currency code (e.g., "USD", "EUR").
-        ),
-        payment_method=payment_methods_pb2.PaymentMethod(  # Optional payment Method Information (for network transaction flows).
-            token=payment_methods_pb2.TokenPaymentMethodType(
-                token=payment_methods_pb2.SecretString(value="probe_pm_token"),  # The token string representing a payment method.
-            ),
-        ),
-        return_url="https://example.com/recurring-return",
-        connector_customer_id="cust_probe_123",
-        payment_method_type=payment_pb2.PaymentMethodType.Value("PAY_PAL"),
-        off_session=True,  # Behavioral Flags and Preferences.
-        state=payment_pb2.ConnectorState(  # State Information.
-            access_token=payment_pb2.AccessToken(  # Access token obtained from connector.
-                token=payment_methods_pb2.SecretString(value="probe_access_token"),  # The token string.
-                expires_in_seconds=3600,  # Expiration timestamp (seconds since epoch).
-                token_type="Bearer",  # Token type (e.g., "Bearer", "Basic").
-            ),
-        ),
     )
 
 def _build_refund_request(connector_transaction_id: str):
@@ -439,13 +409,13 @@ async def process_proxy_setup_recurring(merchant_transaction_id: str, config: sd
     return {"status": proxy_response.status}
 
 
-async def process_recurring_charge(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: RecurringPaymentService.Charge"""
-    recurringpayment_client = RecurringPaymentClient(config)
+async def process_refund_get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: RefundService.Get"""
+    refund_client = RefundClient(config)
 
-    recurring_response = await recurringpayment_client.charge(_build_recurring_charge_request())
+    refund_response = await refund_client.refund_get(_build_refund_get_request())
 
-    return {"status": recurring_response.status}
+    return {"status": refund_response.status}
 
 
 async def process_setup_recurring(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
