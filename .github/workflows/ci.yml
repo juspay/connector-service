@@ -43,6 +43,9 @@ permissions:
 
 jobs:
 
+  # Internal jobs use the Hyperswitch runner pools. Fork pull requests stay on
+  # GitHub-hosted runners so untrusted code never runs on internal machines.
+
   # ── Change Detection ──────────────────────────────────────────────────────
   changes:
     name: Detect Changes
@@ -50,7 +53,10 @@ jobs:
     runs-on: >-
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
-          'ubuntu-latest' || 'ubuntu-24.04' }}
+          'ubuntu-latest' ||
+          github.event_name == 'merge_group' && 'hyperswitch-runners-merge' ||
+          github.event_name == 'push' && 'hyperswitch-runners-merge' ||
+          'hyperswitch-runners' }}
     permissions:
       pull-requests: read
     outputs:
@@ -349,7 +355,10 @@ jobs:
     runs-on: >-
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
-          'ubuntu-latest' || 'ubuntu-24.04' }}
+          'ubuntu-latest' ||
+          github.event_name == 'merge_group' && 'hyperswitch-runners-merge' ||
+          github.event_name == 'push' && 'hyperswitch-runners-merge' ||
+          'hyperswitch-runners' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -366,7 +375,10 @@ jobs:
     runs-on: >-
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
-          'ubuntu-latest' || 'ubuntu-24.04' }}
+          'ubuntu-latest' ||
+          github.event_name == 'merge_group' && 'hyperswitch-runners-merge' ||
+          github.event_name == 'push' && 'hyperswitch-runners-merge' ||
+          'hyperswitch-runners' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -409,7 +421,10 @@ jobs:
     runs-on: >-
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
-          'ubuntu-latest' || 'ubuntu-24.04' }}
+          'ubuntu-latest' ||
+          github.event_name == 'merge_group' && 'hyperswitch-runners-merge' ||
+          github.event_name == 'push' && 'hyperswitch-runners-merge' ||
+          'hyperswitch-runners' }}
     permissions:
       contents: write
     outputs:
@@ -587,7 +602,10 @@ jobs:
     runs-on: >-
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
-          'ubuntu-latest' || 'ubuntu-24.04' }}
+          'ubuntu-latest' ||
+          github.event_name == 'merge_group' && 'hyperswitch-runners-merge' ||
+          github.event_name == 'push' && 'hyperswitch-runners-merge' ||
+          'hyperswitch-runners' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -619,7 +637,10 @@ jobs:
     runs-on: >-
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
-          'ubuntu-latest' || 'ubuntu-24.04' }}
+          'ubuntu-latest' ||
+          github.event_name == 'merge_group' && 'hyperswitch-runners-merge' ||
+          github.event_name == 'push' && 'hyperswitch-runners-merge' ||
+          'hyperswitch-runners' }}
 
     env:
       RUSTFLAGS: "-D warnings"
@@ -678,7 +699,10 @@ jobs:
     runs-on: >-
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
-          'ubuntu-latest' || 'ubuntu-24.04' }}
+          'ubuntu-latest' ||
+          github.event_name == 'merge_group' && 'hyperswitch-runners-merge' ||
+          github.event_name == 'push' && 'hyperswitch-runners-merge' ||
+          'hyperswitch-runners' }}
 
     env:
       RUSTFLAGS: "-D warnings"
@@ -946,7 +970,10 @@ jobs:
     runs-on: >-
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
-          'ubuntu-latest' || 'ubuntu-24.04' }}
+          'ubuntu-latest' ||
+          github.event_name == 'merge_group' && 'hyperswitch-runners-merge' ||
+          github.event_name == 'push' && 'hyperswitch-runners-merge' ||
+          'hyperswitch-runners' }}
 
     env:
       RUSTFLAGS: "-D warnings"
@@ -1046,7 +1073,10 @@ jobs:
     runs-on: >-
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
-          'ubuntu-latest' || 'ubuntu-24.04' }}
+          'ubuntu-latest' ||
+          github.event_name == 'merge_group' && 'hyperswitch-runners-merge' ||
+          github.event_name == 'push' && 'hyperswitch-runners-merge' ||
+          'hyperswitch-runners' }}
 
     strategy:
       fail-fast: false
@@ -1181,7 +1211,10 @@ jobs:
     runs-on: >-
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
-          'ubuntu-latest' || 'ubuntu-24.04' }}
+          'ubuntu-latest' ||
+          github.event_name == 'merge_group' && 'hyperswitch-runners-merge' ||
+          github.event_name == 'push' && 'hyperswitch-runners-merge' ||
+          'hyperswitch-runners' }}
     steps:
       - name: Evaluate CI results
         run: |

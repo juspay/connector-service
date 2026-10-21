@@ -13,7 +13,10 @@ permissions:
 jobs:
   e2e:
     name: Playwright E2E (UI + API)
-    runs-on: ubuntu-latest
+    runs-on: >-
+      ${{ github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name != github.repository &&
+          'ubuntu-latest' || 'hyperswitch-runners' }}
     defaults:
       run:
         # The plugin is a self-contained npm workspace under plugins/medusa;

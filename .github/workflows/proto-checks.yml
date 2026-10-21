@@ -17,7 +17,10 @@ jobs:
   proto-checks:
     name: Proto checks (lint + breaking)
     if: "!github.event.pull_request.draft"
-    runs-on: ubuntu-latest
+    runs-on: >-
+      ${{ github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name != github.repository &&
+          'ubuntu-latest' || 'hyperswitch-runners' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
