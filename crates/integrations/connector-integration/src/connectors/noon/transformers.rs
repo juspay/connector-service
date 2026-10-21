@@ -12,6 +12,7 @@ use domain_types::{
     },
     errors::{ConnectorError, IntegrationError},
     mandates::MandateDataType,
+    payment_address::AddressDetails,
     payment_method_data::{
         GooglePayWalletData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
     },
@@ -245,6 +246,25 @@ pub struct NoonPaymentsRequest<
     billing: Option<NoonBilling>,
 }
 
+/// The billing address Noon should receive, or `None` when it carries no address
+/// fields at all.
+///
+/// Direct (hyperswitch) reaches `None` naturally: an Apple Pay token's billing
+/// contact holds only email/phone, so the unified address is
+/// `Address { address: None, .. }` and `.and_then(|b| b.address.as_ref())`
+/// short-circuits. Prism's grpc -> domain conversion always yields
+/// `Some(AddressDetails)`, so that chain can never short-circuit and Noon was
+/// sent an all-null `billing` object where Direct sends `null`.
+///
+/// Only an entirely-empty address is treated as absent; present-but-empty
+/// strings are preserved.
+fn get_optional_billing_address(flow_data: &PaymentFlowData) -> Option<&AddressDetails> {
+    flow_data
+        .get_optional_billing()
+        .and_then(|billing_address| billing_address.address.as_ref())
+        .filter(|address| **address != AddressDetails::default())
+}
+
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         NoonRouterData<
@@ -275,7 +295,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                data.router_data.request.minor_amount,
+                data.router_data.request.amount.amount,
                 data.router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -295,7 +315,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     Ok(NoonPaymentData::GooglePay(NoonGooglePay {
                         api_version_minor: GOOGLEPAY_API_VERSION_MINOR,
                         api_version: GOOGLEPAY_API_VERSION,
-                        payment_method_data: google_pay_data,
+                        payment_method_data: *google_pay_data,
                     }))
                 }
                 WalletData::ApplePay(apple_pay_data) => {
@@ -415,11 +435,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let channel = NoonChannels::Web;
 
-        let billing = item
-            .resource_common_data
-            .get_optional_billing()
-            .and_then(|billing_address| billing_address.address.as_ref())
-            .map(|address| NoonBilling {
+        let billing =
+            get_optional_billing_address(&item.resource_common_data).map(|address| NoonBilling {
                 address: NoonBillingAddress {
                     street: address.line1.clone(),
                     street2: address.line2.clone(),
@@ -730,7 +747,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let item = &data.router_data;
         let amount = data.connector.amount_converter.convert(
-            data.router_data.request.minor_amount_to_capture,
+            data.router_data.request.amount_to_capture.amount,
             data.router_data.request.currency,
         );
         let order = NoonActionOrder {
@@ -845,7 +862,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let item = &data.router_data;
         let refund_amount = data.connector.amount_converter.convert(
-            data.router_data.request.minor_refund_amount,
+            data.router_data.request.refund_amount.amount,
             data.router_data.request.currency,
         );
         let order = NoonActionOrder {
@@ -1217,7 +1234,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             Ok(NoonPaymentData::GooglePay(NoonGooglePay {
                                 api_version_minor: GOOGLEPAY_API_VERSION_MINOR,
                                 api_version: GOOGLEPAY_API_VERSION,
-                                payment_method_data: google_pay_data,
+                                payment_method_data: *google_pay_data,
                             }))
                         }
                         WalletData::ApplePay(apple_pay_data) => {
@@ -1351,11 +1368,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let channel = NoonChannels::Web;
 
-        let billing = item
-            .resource_common_data
-            .get_optional_billing()
-            .and_then(|billing_address| billing_address.address.as_ref())
-            .map(|address| NoonBilling {
+        let billing =
+            get_optional_billing_address(&item.resource_common_data).map(|address| NoonBilling {
                 address: NoonBillingAddress {
                     street: address.line1.clone(),
                     street2: address.line2.clone(),
@@ -1565,7 +1579,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                router_data.request.minor_amount,
+                router_data.request.amount.amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -1600,19 +1614,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let channel = NoonChannels::Web;
 
-        let billing = router_data
-            .resource_common_data
-            .get_optional_billing()
-            .and_then(|billing_address| billing_address.address.as_ref())
-            .map(|address| NoonBilling {
-                address: NoonBillingAddress {
-                    street: address.line1.clone(),
-                    street2: address.line2.clone(),
-                    city: address.city.clone(),
-                    state_province: address.state.clone(),
-                    country: address.country,
-                    postal_code: address.zip.clone(),
-                },
+        let billing =
+            get_optional_billing_address(&router_data.resource_common_data).map(|address| {
+                NoonBilling {
+                    address: NoonBillingAddress {
+                        street: address.line1.clone(),
+                        street2: address.line2.clone(),
+                        city: address.city.clone(),
+                        state_province: address.state.clone(),
+                        country: address.country,
+                        postal_code: address.zip.clone(),
+                    },
+                }
             });
 
         // Clean description

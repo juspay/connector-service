@@ -36,10 +36,10 @@ use crate::harness::{
         configured_all_connectors, get_the_assertion as get_the_assertion_impl,
         get_the_grpc_req as get_the_grpc_req_impl, is_suite_supported_for_connector,
         load_connector_browser_automation_spec, load_connector_spec, load_default_scenario_name,
-        load_scenario, load_suite_scenarios, load_suite_spec,
-        load_supported_payment_methods_for_connector, load_supported_suites_for_connector,
-        merge_connector_specific_scenarios, scenario_matches_supported_payment_methods,
-        scenario_unsupported_reason,
+        load_scenario_for_connector, load_suite_scenarios, load_suite_spec,
+        load_suite_spec_for_connector, load_supported_payment_methods_for_connector,
+        load_supported_suites_for_connector, merge_connector_specific_scenarios,
+        scenario_matches_supported_payment_methods, scenario_unsupported_reason,
     },
     scenario_types::{
         BrowserAutomationHook, BrowserAutomationPhase, CliPreRequestHookConfig, ContextMap,
@@ -67,7 +67,7 @@ fn load_effective_scenario_for_connector(
     scenario: &str,
     connector: &str,
 ) -> Result<(Value, BTreeMap<String, FieldAssert>), ScenarioError> {
-    let base_scenario = load_scenario(suite, scenario)?;
+    let base_scenario = load_scenario_for_connector(suite, scenario, connector)?;
     let mut grpc_req = base_scenario.grpc_req;
     let mut assertions = base_scenario.assert_rules;
 
@@ -3332,6 +3332,7 @@ fn normalize_proto_oneof_shapes(value: &mut Value) {
             normalize_payment_method_oneof(map);
             normalize_mandate_reference_oneofs(map);
             normalize_google_pay_tokenization_data_oneof(map);
+            normalize_apple_pay_payment_data_oneof(map);
         }
         Value::Array(items) => {
             for item in items {
@@ -3433,6 +3434,47 @@ fn normalize_google_pay_tokenization_data_oneof(map: &mut serde_json::Map<String
     oneof_map.insert(variant_snake, payload);
 
     tokenization_data_obj.insert("tokenization_data".to_string(), Value::Object(oneof_map));
+}
+
+/// Normalizes the `apple_pay_sdk.payment_data` oneof so that the flat
+/// scenario JSON shape (`{"encrypted_data": "..."}` or `{"decrypted_data": {...}}`)
+/// is rewritten into the nested shape the proto struct expects:
+/// `{"payment_data": {"encrypted_data": "..."}}`.
+///
+/// Mirrors `normalize_google_pay_tokenization_data_oneof` for the
+/// `AppleWallet.PaymentData` message, which has a field `payment_data` holding
+/// the oneof. Scenario JSON omits that extra wrapper level and uses the variant
+/// name in snake_case directly.
+fn normalize_apple_pay_payment_data_oneof(map: &mut serde_json::Map<String, Value>) {
+    let Some(Value::Object(payment_data_obj)) = map.get_mut("payment_data") else {
+        return;
+    };
+
+    // Already normalized (has the inner "payment_data" oneof wrapper).
+    if payment_data_obj.contains_key("payment_data") {
+        return;
+    }
+
+    // Must have exactly one key — the variant name in snake_case.
+    if payment_data_obj.len() != 1 {
+        return;
+    }
+
+    let original = std::mem::take(payment_data_obj);
+    let Some((variant_snake, payload)) = original.into_iter().next() else {
+        return;
+    };
+
+    // Only rewrite known AppleWallet PaymentData variants.
+    if variant_snake != "encrypted_data" && variant_snake != "decrypted_data" {
+        payment_data_obj.insert(variant_snake, payload);
+        return;
+    }
+
+    let mut oneof_map = serde_json::Map::new();
+    oneof_map.insert(variant_snake, payload);
+
+    payment_data_obj.insert("payment_data".to_string(), Value::Object(oneof_map));
 }
 
 fn to_pascal_case(value: &str) -> String {
@@ -3648,15 +3690,10 @@ pub fn run_scenario_test_with_options(
     options: SuiteRunOptions<'_>,
 ) -> Result<SuiteRunSummary, ScenarioError> {
     let connector = connector.unwrap_or(DEFAULT_CONNECTOR);
-    let target_suite_spec = load_suite_spec(suite)?;
-    let scenarios = load_suite_scenarios(suite)?;
-
-    if !scenarios.contains_key(scenario) {
-        return Err(ScenarioError::ScenarioNotFound {
-            suite: suite.to_string(),
-            scenario: scenario.to_string(),
-        });
-    }
+    let target_suite_spec = load_suite_spec_for_connector(suite, connector)?;
+    // Fails with ScenarioNotFound when neither the global suite nor the
+    // connector's private file defines it.
+    load_scenario_for_connector(suite, scenario, connector)?;
 
     let mut results = Vec::new();
     let mut passed = 0usize;
@@ -3889,7 +3926,7 @@ pub fn run_suite_test_with_options(
     options: SuiteRunOptions<'_>,
 ) -> Result<SuiteRunSummary, ScenarioError> {
     let connector = connector.unwrap_or(DEFAULT_CONNECTOR);
-    let target_suite_spec = load_suite_spec(suite)?;
+    let target_suite_spec = load_suite_spec_for_connector(suite, connector)?;
 
     // A scenario naming a payment method the connector never claimed cannot
     // pass; the only way through is an `assert` override that hides real
@@ -4865,7 +4902,7 @@ fn execute_single_scenario_with_context(
 ) -> Result<ExecutedScenario, ScenarioError> {
     run_test(Some(suite), Some(scenario), Some(connector))?;
 
-    let base_scenario = load_scenario(suite, scenario)?;
+    let base_scenario = load_scenario_for_connector(suite, scenario, connector)?;
     let mut effective_req = base_scenario.grpc_req;
     let mut assertions = base_scenario.assert_rules;
 

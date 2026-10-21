@@ -533,7 +533,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             get_finix_fraud_session_id(router_data.request.connector_feature_data.as_ref());
 
         Ok(Self {
-            amount: router_data.request.amount,
+            amount: router_data.request.amount.amount,
             currency: router_data.request.currency,
             source,
             merchant: merchant_id,
@@ -809,7 +809,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            capture_amount: MinorUnit::new(item.router_data.request.amount_to_capture),
+            capture_amount: item.router_data.request.amount_to_capture.amount,
             idempotency_id: None,
         })
     }
@@ -1052,7 +1052,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            refund_amount: item.router_data.request.minor_refund_amount,
+            refund_amount: item.router_data.request.refund_amount.amount,
             idempotency_id: None,
         })
     }
@@ -1771,7 +1771,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             get_finix_fraud_session_id(router_data.request.connector_feature_data.as_ref());
 
         Ok(Self {
-            amount: router_data.request.minor_amount,
+            amount: router_data.request.amount.amount,
             currency: router_data.request.currency,
             source,
             merchant: merchant_id,
@@ -2180,6 +2180,7 @@ pub(super) fn get_finix_webhook_reference(
                 PaymentWebhookReference {
                     connector_transaction_id: Some(authorization.id),
                     merchant_transaction_id: None,
+                    connector_preprocessing_id: None,
                 },
             )))
         }
@@ -2203,6 +2204,7 @@ pub(super) fn get_finix_webhook_reference(
                     PaymentWebhookReference {
                         connector_transaction_id: Some(transfer.id),
                         merchant_transaction_id: None,
+                        connector_preprocessing_id: None,
                     },
                 ))),
             }
@@ -2284,6 +2286,7 @@ fn get_finix_webhook_dispute_status(state: &FinixDisputeState) -> common_enums::
 /// transfers. Status mapping ports HS `get_attempt_status` with
 /// `FinixFlow::Auth` / `FinixFlow::Transfer` respectively.
 pub(super) fn build_finix_payment_webhook_response(
+    connector: &dyn common_utils::types::AmountConvertor<Output = MinorUnit>,
     body: &FinixWebhookBody,
     raw_body: &[u8],
 ) -> Result<WebhookDetailsResponse, error_stack::Report<WebhookError>> {
@@ -2319,8 +2322,13 @@ pub(super) fn build_finix_payment_webhook_response(
         response_headers: None,
         amount_captured: resource
             .captured_amount
-            .map(|amount| amount.get_amount_as_i64()),
-        minor_amount_captured: resource.captured_amount,
+            .map(|amount| {
+                crate::utils::webhook_amount_to_money(
+                    connector.convert_back(amount, resource.currency),
+                    resource.currency,
+                )
+            })
+            .transpose()?,
         network_txn_id: None,
         payment_method_update: None,
         sender_payment_instrument_id: None,
@@ -2389,6 +2397,7 @@ pub(super) fn build_finix_dispute_webhook_response(
         connector_response_reference_id: None,
         dispute_message: dispute.reason,
         connector_reason_code: None,
+        additional_details: None,
         raw_connector_response: Some(String::from_utf8_lossy(raw_body).to_string()),
         status_code: 200,
         response_headers: None,

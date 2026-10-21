@@ -23,6 +23,18 @@ use url::Url;
 
 use crate::{connectors::maya::MayaRouterData, types::ResponseRouterData};
 
+fn maya_response_amount_to_minor_unit(
+    amount: StringMajorUnit,
+    currency: common_enums::Currency,
+    http_code: u16,
+) -> Result<common_utils::types::MinorUnit, error_stack::Report<ConnectorError>> {
+    StringMajorUnitForConnector
+        .convert_back(amount, currency)
+        .change_context(crate::utils::response_handling_fail_for_connector(
+            http_code, "maya",
+        ))
+}
+
 #[derive(Debug, Clone)]
 pub struct MayaAuthType {
     pub public_key: Secret<String>,
@@ -433,7 +445,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                router_data.request.minor_amount,
+                router_data.request.amount.amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -561,12 +573,7 @@ impl TryFrom<ResponseRouterData<MayaWebhookBody, Self>>
         // but only when both are present (Maya omits them for e.g. expired payments).
         let integrity_object = match (payment.amount.clone(), payment.currency) {
             (Some(amount), Some(currency)) => {
-                let amount = StringMajorUnitForConnector
-                    .convert_back(amount, currency)
-                    .change_context(crate::utils::response_handling_fail_for_connector(
-                        item.http_code,
-                        "maya",
-                    ))?;
+                let amount = maya_response_amount_to_minor_unit(amount, currency, item.http_code)?;
                 Some(PaymentSynIntegrityObject { amount, currency })
             }
             _ => None,
@@ -747,7 +754,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
             .connector
             .amount_converter
             .convert(
-                router_data.request.minor_refund_amount,
+                router_data.request.refund_amount.amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -796,12 +803,8 @@ impl TryFrom<ResponseRouterData<MayaRefundResponse, Self>>
         // the refund integrity check, but only when Maya returns both.
         let integrity_object = match (item.response.amount.clone(), item.response.currency) {
             (Some(amount), Some(currency)) => {
-                let refund_amount = StringMajorUnitForConnector
-                    .convert_back(amount, currency)
-                    .change_context(crate::utils::response_handling_fail_for_connector(
-                        item.http_code,
-                        "maya",
-                    ))?;
+                let refund_amount =
+                    maya_response_amount_to_minor_unit(amount, currency, item.http_code)?;
                 Some(RefundIntegrityObject {
                     refund_amount,
                     currency,

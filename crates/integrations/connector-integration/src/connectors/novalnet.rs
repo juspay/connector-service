@@ -104,6 +104,29 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Novalnet<T>
 {
+    fn validate_psync_reference_id(
+        &self,
+        data: &PaymentsSyncData,
+        _payment_flow_data: &PaymentFlowData,
+    ) -> CustomResult<(), IntegrationError> {
+        // A post-3DS Novalnet attempt is synced off `encoded_data`: the redirect query carries
+        // the `tid`, which is frequently the only transaction id that exists yet. The default
+        // gate accepts a connector transaction id only, so it skips the sync entirely and the
+        // attempt stays pinned to its pre-redirect status. Mirrors hyperswitch's novalnet
+        // `validate_psync_reference_id`.
+        if data.encoded_data.is_some()
+            || data
+                .connector_transaction_id
+                .get_connector_transaction_id()
+                .is_ok()
+        {
+            return Ok(());
+        }
+        Err(IntegrationError::MissingConnectorTransactionID {
+            context: Default::default(),
+        }
+        .into())
+    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::SetupMandateV2<T> for Novalnet<T>
@@ -824,6 +847,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             stage: common_enums::DisputeStage::Dispute,
             dispute_id: notif.event.tid.to_string(),
             connector_reason_code: reason_code,
+            additional_details: None,
             status: common_enums::DisputeStatus::foreign_try_from(dispute_status)
                 .map_err(|e| e.change_context(WebhookError::WebhookProcessingFailed))?,
             connector_response_reference_id: None,

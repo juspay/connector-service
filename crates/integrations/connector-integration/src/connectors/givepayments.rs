@@ -181,6 +181,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 WebhookResourceReference::Payment(PaymentWebhookReference {
                     connector_transaction_id: Some(response_data.id),
                     merchant_transaction_id: response_data.external_reference,
+                    connector_preprocessing_id: None,
                 })
             }
             GivepaymentsWebhookData::Refund(response_data) => {
@@ -250,7 +251,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             status_code: 200,
             response_headers: None,
             amount_captured: None,
-            minor_amount_captured: None,
             network_txn_id: None,
             payment_method_update: None,
             sender_payment_instrument_id: None,
