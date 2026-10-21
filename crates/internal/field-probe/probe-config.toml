@@ -222,6 +222,7 @@ default = '{}'
 [connector_overrides.authorize.jpmorgan]
 "amount" = 2240
 "address.shipping_address.zip_code" = "33607"
+"address.shipping_address.origin_zip" = "34490"
 "address.shipping_address.country_alpha2_code" = 1
 "l2_l3_data.order_info.merchant_order_reference_id" = "probe_po_001"
 "l2_l3_data.order_info.order_date" = 1568073600

@@ -240,16 +240,25 @@ fn build_retail_addenda(
 /// `shipTo.shippingAddress.postalCode` — required by American Express for
 /// Level 2 and optional on the other networks, so it is sent whenever the
 /// merchant supplied a shipping address.
-fn build_ship_to(l2_l3_data: Option<&L2L3Data>) -> Option<requests::JpmorganShipTo> {
+fn build_ship_to(
+    l2_l3_data: Option<&L2L3Data>,
+    address: &domain_types::payment_address::PaymentAddress,
+) -> Option<requests::JpmorganShipTo> {
     l2_l3_data
         .and_then(|l2_l3_data| l2_l3_data.get_shipping_zip())
+        .or_else(|| {
+            address
+                .get_shipping()
+                .and_then(|shipping| shipping.address.as_ref())
+                .and_then(|details| details.zip.clone())
+        })
         .map(|postal_code| requests::JpmorganShipTo {
             shipping_address: requests::JpmorganShippingAddress { postal_code },
         })
 }
 
-/// Level 2 data for an Authorize request: the gated `retailAddenda` plus the
-/// `shipTo` block Amex needs alongside it.
+/// Level 2 data and the independently supplied shipping destination for an
+/// Authorize request.
 fn authorize_level2_data<T: PaymentMethodDataTypes>(
     router_data: &RouterDataV2<
         Authorize,
@@ -275,11 +284,7 @@ fn authorize_level2_data<T: PaymentMethodDataTypes>(
             .as_ref()
             .map(|shipping_cost| shipping_cost.amount),
     );
-    // shipTo only earns its place next to Level 2 data; without retailAddenda
-    // it is just an unused address on the wire.
-    let ship_to = retail_addenda
-        .as_ref()
-        .and_then(|_| build_ship_to(l2_l3_data));
+    let ship_to = build_ship_to(l2_l3_data, &router_data.resource_common_data.address);
     (retail_addenda, ship_to)
 }
 
@@ -1950,6 +1955,102 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             account_on_file: requests::JpmorganAccountOnFile::Stored,
             is_amount_final: true,
         })
+    }
+}
+
+#[cfg(test)]
+mod shipping_tests {
+    use super::*;
+    use domain_types::{
+        connector_types::OrderInfo,
+        payment_address::{Address, AddressDetails, PaymentAddress},
+        utils::ForeignTryFrom,
+    };
+    use serde_json::json;
+
+    fn payment_address(details: AddressDetails) -> PaymentAddress {
+        PaymentAddress::new(
+            Some(Address {
+                address: Some(details),
+                ..Default::default()
+            }),
+            None,
+            None,
+            None,
+        )
+    }
+
+    #[test]
+    fn shipping_destination_is_sent_without_l2_l3_data() {
+        let address = payment_address(AddressDetails {
+            zip: Some(Secret::new("33607".to_string())),
+            ..Default::default()
+        });
+        assert!(build_retail_addenda(None, None, None).is_none());
+        assert_eq!(
+            serde_json::to_value(build_ship_to(None, &address)).expect("serialize shipTo"),
+            json!({"shippingAddress": {"postalCode": "33607"}})
+        );
+    }
+
+    #[test]
+    fn l2_l3_shipping_destination_is_sent_without_retail_addenda() {
+        let data = L2L3Data {
+            shipping_details: Some(AddressDetails {
+                zip: Some(Secret::new("33607".to_string())),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        assert!(build_retail_addenda(Some(&data), None, None).is_none());
+        assert_eq!(
+            serde_json::to_value(build_ship_to(Some(&data), &PaymentAddress::default()))
+                .expect("serialize shipTo without addenda"),
+            json!({"shippingAddress": {"postalCode": "33607"}})
+        );
+    }
+
+    #[test]
+    fn missing_destination_postal_code_is_optional() {
+        assert!(build_ship_to(None, &PaymentAddress::default()).is_none());
+        let address = payment_address(AddressDetails {
+            origin_zip: Some(Secret::new("34490".to_string())),
+            ..Default::default()
+        });
+        assert!(build_ship_to(None, &address).is_none());
+    }
+
+    #[test]
+    fn grpc_shipping_origin_reaches_level3_separately_from_destination() {
+        let details = AddressDetails::foreign_try_from(grpc_api_types::payments::Address {
+            zip_code: Some(Secret::new("33607".to_string())),
+            origin_zip: Some(Secret::new("34490".to_string())),
+            ..Default::default()
+        })
+        .expect("convert shipping address from gRPC");
+        let data = L2L3Data {
+            shipping_details: Some(details),
+            order_info: Some(OrderInfo {
+                order_date: None,
+                order_details: Some(vec![OrderDetailsWithAmount::default()]),
+                merchant_order_reference_id: None,
+                discount_amount: None,
+                shipping_cost: None,
+                duty_amount: None,
+                order_commodity_code: None,
+            }),
+            ..Default::default()
+        };
+        let addenda = serde_json::to_value(build_retail_addenda(Some(&data), None, None))
+            .expect("serialize shipping addenda");
+        assert_eq!(
+            addenda.pointer("/level3/shipFromAddressPostalCode"),
+            Some(&json!("34490"))
+        );
+        assert_eq!(
+            addenda.pointer("/level3/shipToAddressPostalCode"),
+            Some(&json!("33607"))
+        );
     }
 }
 
