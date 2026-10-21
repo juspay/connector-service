@@ -3,51 +3,8 @@
   "flows": {
     "authenticate": {
       "default": {
-        "status": "supported",
-        "proto_request": {
-          "amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          },
-          "payment_method": {
-            "card": {
-              "card_number": "4111111111111111",
-              "card_exp_month": "03",
-              "card_exp_year": "2030",
-              "card_cvc": "737",
-              "card_holder_name": "John Doe"
-            }
-          },
-          "address": {
-            "billing_address": {}
-          },
-          "return_url": "https://example.com/3ds-return",
-          "continue_redirection_url": "https://example.com/3ds-continue",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          },
-          "capture_method": "MANUAL"
-        },
-        "sample": {
-          "url": "https://checkout-test.adyen.com/v71/payments",
-          "method": "Post",
-          "headers": {
-            "content-type": "application/json",
-            "via": "HyperSwitch",
-            "x-api-key": "probe_key"
-          },
-          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"reference\":\"\",\"paymentMethod\":{\"type\":\"scheme\",\"number\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"cvc\":\"737\",\"holderName\":\"John Doe\"},\"returnUrl\":\"https://example.com/3ds-continue\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"channel\":\"Web\",\"origin\":\"https://example.com\",\"authenticationData\":{\"authenticationOnly\":true,\"threeDSRequestData\":{\"nativeThreeDS\":\"disabled\"}},\"additionalData\":{\"authorisationType\":\"PreAuth\",\"manualCapture\":\"true\"},\"shopperIP\":\"1.2.3.4\"}"
-        }
+        "status": "not_implemented",
+        "error": "This feature is not implemented: authenticate flow for adyen"
       }
     },
     "authorize": {
@@ -3008,39 +2965,8 @@
     },
     "post_authenticate": {
       "default": {
-        "status": "supported",
-        "proto_request": {
-          "amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          },
-          "payment_method": {
-            "card": {
-              "card_number": "4111111111111111",
-              "card_exp_month": "03",
-              "card_exp_year": "2030",
-              "card_cvc": "737",
-              "card_holder_name": "John Doe"
-            }
-          },
-          "address": {
-            "billing_address": {}
-          },
-          "redirection_response": {
-            "params": "redirectResult=probe_redirect_result",
-            "payload": {}
-          }
-        },
-        "sample": {
-          "url": "https://checkout-test.adyen.com/v71/payments/details",
-          "method": "Post",
-          "headers": {
-            "content-type": "application/json",
-            "via": "HyperSwitch",
-            "x-api-key": "probe_key"
-          },
-          "body": "{\"details\":{\"redirectResult\":\"probe_redirect_result\"},\"authenticationData\":{\"authenticationOnly\":true}}"
-        }
+        "status": "not_implemented",
+        "error": "This feature is not implemented: post_authenticate flow for adyen"
       }
     },
     "pre_authenticate": {

@@ -11,9 +11,7 @@
     "PaymentService/Refund",
     "PaymentService/SetupRecurring",
     "PaymentService/Void",
-    "EventService/HandleEvent",
-    "PaymentMethodAuthenticationService/Authenticate",
-    "PaymentMethodAuthenticationService/PostAuthenticate"
+    "EventService/HandleEvent"
   ],
   "supported_payment_methods": [
     "card",

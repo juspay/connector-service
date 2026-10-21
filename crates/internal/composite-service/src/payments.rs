@@ -913,17 +913,6 @@ where
                         .await?,
                     );
                     state.completed_step = Some(AuthenticationStep::PostAuthenticate);
-
-                    // A failed or errored authentication, or a connector reporting money
-                    // already moved on this leg, must not be followed by Authorize.
-                    if state
-                        .post_authn_response_opt
-                        .as_ref()
-                        .map(|r| is_terminal_payment_status(r.status) || r.error.is_some())
-                        .unwrap_or(false)
-                    {
-                        break;
-                    }
                 }
 
                 AuthenticationStep::Authorize => {

@@ -11,7 +11,6 @@ import types.Payment.*
 import types.Events.*
 import types.PaymentMethods.*
 import payments.PaymentClient
-import payments.PaymentMethodAuthenticationClient
 import payments.MerchantAuthenticationClient
 import payments.DisputeClient
 import payments.EventClient
@@ -31,7 +30,7 @@ import payments.ConnectorSpecificConfig
 import types.Payment.AdyenConfig
 import payments.SecretString
 
-val SUPPORTED_FLOWS = listOf<String>("authenticate", "authorize", "capture", "create_client_authentication_token", "create_order", "dispute_accept", "dispute_defend", "dispute_submit_evidence", "get", "incremental_authorization", "parse_event", "post_authenticate", "proxy_authorize", "proxy_setup_recurring", "recurring_charge", "refund", "reverse", "setup_recurring", "token_authorize", "void")
+val SUPPORTED_FLOWS = listOf<String>("authorize", "capture", "create_client_authentication_token", "create_order", "dispute_accept", "dispute_defend", "dispute_submit_evidence", "get", "incremental_authorization", "parse_event", "proxy_authorize", "proxy_setup_recurring", "recurring_charge", "refund", "reverse", "setup_recurring", "token_authorize", "void")
 
 val _defaultConfig: ConnectorConfig = ConnectorConfig.newBuilder()
     .setOptions(SdkOptions.newBuilder().setEnvironment(Environment.SANDBOX).build())
@@ -247,48 +246,6 @@ fun processGetPayment(txnId: String, config: ConnectorConfig = _defaultConfig): 
     return mapOf("status" to getResponse.status.name, "transactionId" to getResponse.connectorTransactionId, "error" to getResponse.error)
 }
 
-// Flow: PaymentMethodAuthenticationService.Authenticate
-fun authenticate(txnId: String, config: ConnectorConfig = _defaultConfig) {
-    val client = PaymentMethodAuthenticationClient(config)
-    val request = PaymentMethodAuthenticationServiceAuthenticateRequest.newBuilder().apply {
-        amountBuilder.apply {  // Amount Information.
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
-        }
-        paymentMethodBuilder.apply {  // Payment Method.
-            cardBuilder.apply {  // Generic card payment.
-                cardNumberBuilder.value = "4111111111111111"  // Card Identification.
-                cardExpMonthBuilder.value = "03"
-                cardExpYearBuilder.value = "2030"
-                cardCvcBuilder.value = "737"
-                cardHolderNameBuilder.value = "John Doe"  // Cardholder Information.
-            }
-        }
-        addressBuilder.apply {  // Address Information.
-            billingAddressBuilder.apply {
-            }
-        }
-        returnUrl = "https://example.com/3ds-return"  // URLs for Redirection.
-        continueRedirectionUrl = "https://example.com/3ds-continue"
-        browserInfoBuilder.apply {  // Contextual Information.
-            colorDepth = 24  // Display Information.
-            screenHeight = 900
-            screenWidth = 1440
-            javaEnabled = false  // Browser Settings.
-            javaScriptEnabled = true
-            language = "en-US"
-            timeZoneOffsetMinutes = -480
-            acceptHeader = "application/json"  // Browser Headers.
-            userAgent = "Mozilla/5.0 (probe-bot)"
-            acceptLanguage = "en-US,en;q=0.9"
-            ipAddress = "1.2.3.4"  // Device Information.
-        }
-        captureMethod = CaptureMethod.MANUAL  // Capture Settings.
-    }.build()
-    val response = client.authenticate(request)
-    println("Status: ${response.status.name}")
-}
-
 // Flow: PaymentService.Authorize (Card)
 fun authorize(txnId: String, config: ConnectorConfig = _defaultConfig) {
     val client = PaymentClient(config)
@@ -432,36 +389,6 @@ fun parseEvent(txnId: String, config: ConnectorConfig = _defaultConfig) {
     }.build()
     val response = client.parse_event(request)
     println("Webhook parsed: type=${response.eventType.name}")
-}
-
-// Flow: PaymentMethodAuthenticationService.PostAuthenticate
-fun postAuthenticate(txnId: String, config: ConnectorConfig = _defaultConfig) {
-    val client = PaymentMethodAuthenticationClient(config)
-    val request = PaymentMethodAuthenticationServicePostAuthenticateRequest.newBuilder().apply {
-        amountBuilder.apply {  // Amount Information.
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
-        }
-        paymentMethodBuilder.apply {  // Payment Method.
-            cardBuilder.apply {  // Generic card payment.
-                cardNumberBuilder.value = "4111111111111111"  // Card Identification.
-                cardExpMonthBuilder.value = "03"
-                cardExpYearBuilder.value = "2030"
-                cardCvcBuilder.value = "737"
-                cardHolderNameBuilder.value = "John Doe"  // Cardholder Information.
-            }
-        }
-        addressBuilder.apply {  // Address Information.
-            billingAddressBuilder.apply {
-            }
-        }
-        redirectionResponseBuilder.apply {  // Redirection Information after DDC step.
-            params = "redirectResult=probe_redirect_result"
-            putAllPayload(mapOf())
-        }
-    }.build()
-    val response = client.post_authenticate(request)
-    println("Status: ${response.status.name}")
 }
 
 // Flow: PaymentService.ProxyAuthorize
@@ -700,7 +627,6 @@ fun main(args: Array<String>) {
         "processRefund" -> processRefund(txnId)
         "processVoidPayment" -> processVoidPayment(txnId)
         "processGetPayment" -> processGetPayment(txnId)
-        "authenticate" -> authenticate(txnId)
         "authorize" -> authorize(txnId)
         "capture" -> capture(txnId)
         "createClientAuthenticationToken" -> createClientAuthenticationToken(txnId)
@@ -712,7 +638,6 @@ fun main(args: Array<String>) {
         "handleEvent" -> handleEvent(txnId)
         "incrementalAuthorization" -> incrementalAuthorization(txnId)
         "parseEvent" -> parseEvent(txnId)
-        "postAuthenticate" -> postAuthenticate(txnId)
         "proxyAuthorize" -> proxyAuthorize(txnId)
         "proxySetupRecurring" -> proxySetupRecurring(txnId)
         "recurringCharge" -> recurringCharge(txnId)
@@ -721,6 +646,6 @@ fun main(args: Array<String>) {
         "setupRecurring" -> setupRecurring(txnId)
         "tokenAuthorize" -> tokenAuthorize(txnId)
         "void" -> void(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authenticate, authorize, capture, createClientAuthenticationToken, createOrder, disputeAccept, disputeDefend, disputeSubmitEvidence, get, handleEvent, incrementalAuthorization, parseEvent, postAuthenticate, proxyAuthorize, proxySetupRecurring, recurringCharge, refund, reverse, setupRecurring, tokenAuthorize, void")
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createClientAuthenticationToken, createOrder, disputeAccept, disputeDefend, disputeSubmitEvidence, get, handleEvent, incrementalAuthorization, parseEvent, proxyAuthorize, proxySetupRecurring, recurringCharge, refund, reverse, setupRecurring, tokenAuthorize, void")
     }
 }
