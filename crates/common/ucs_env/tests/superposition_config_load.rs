@@ -78,7 +78,7 @@ endpoint = "http://superposition:8080"
 token = "sp_test_token"
 org_id = "hyperswitch"
 workspace_id = "prism"
-polling_interval_milliseconds = 7000
+polling_interval = 7
 "#;
     let cfg = load(
         "complete",
@@ -88,10 +88,7 @@ polling_interval_milliseconds = 7000
     assert_eq!(cfg.superposition.endpoint, "http://superposition:8080");
     assert_eq!(cfg.superposition.token.peek(), "sp_test_token");
     assert_eq!(cfg.superposition.workspace_id, "prism");
-    assert_eq!(
-        cfg.superposition.effective_polling_interval_milliseconds(),
-        7000
-    );
+    assert_eq!(cfg.superposition.polling_interval, 7);
 }
 
 /// The shipped development config is file-first.
@@ -99,36 +96,5 @@ polling_interval_milliseconds = 7000
 fn shipped_development_config_is_file_first() {
     let cfg = load("shipped", &dev_config_toml());
     assert_eq!(cfg.superposition.source, SuperpositionSource::File);
-    assert_eq!(
-        cfg.superposition.effective_polling_interval_milliseconds(),
-        15_000
-    );
-}
-
-/// A config that still uses the deprecated seconds-based keys keeps working: the values
-/// are read as seconds and converted to milliseconds.
-#[test]
-fn deprecated_second_keys_still_load_and_are_converted() {
-    let block = r#"
-[superposition]
-source = "remote"
-endpoint = "http://superposition:8080"
-token = "sp_test_token"
-org_id = "hyperswitch"
-workspace_id = "prism"
-polling_interval = 7
-request_timeout = 3
-"#;
-    let cfg = load(
-        "deprecated-seconds",
-        &with_superposition_table(&dev_config_toml(), block),
-    );
-    assert_eq!(
-        cfg.superposition.effective_polling_interval_milliseconds(),
-        7000
-    );
-    assert_eq!(
-        cfg.superposition.effective_request_timeout_milliseconds(),
-        Some(3000)
-    );
+    assert_eq!(cfg.superposition.polling_interval, 15);
 }
