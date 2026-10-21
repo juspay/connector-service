@@ -124,7 +124,7 @@ Each superset spec contains its explanation, expected behavior, request data, AP
 
 Connector `config.ts` files supply differences such as test cards, currencies, profile options, and metadata. An empty connector config runs shared scenarios unchanged. `exclude` records scenarios that cannot run and their reasons. Scenarios can declare a required capability, such as `stripe-connect`; connectors declare that capability, and inapplicable cases are reported as skipped. `completion: "submission"` explicitly checks acceptance rather than terminal completion. Currency variants expand a shared scenario without copying execution code.
 
-Add scenarios in `otp/superset/card-no3ds/` ; they run for every applicable connector automatically. Register new connectors in `framework/scenario.ts` and the UCS stack configuration. `npm run list` shows enabled connector/scenario combinations. `npm test -- --grep @stripe` selects Stripe; `npm test -- otp/superset/card-no3ds/manual-capture.spec.ts` runs capture across applicable connectors.
+Add scenarios in `otp/superset/card-no3ds/`; they run for every applicable connector automatically. Register new connectors in `framework/scenario.ts` and the UCS stack configuration. `npm run list` shows enabled connector/scenario combinations. `npm test -- --grep @stripe` selects Stripe; `npm test -- otp/superset/card-no3ds/manual-capture.spec.ts` runs capture across applicable connectors.
 
 Complete request definitions do not inherit shared optional payment fields. Runtime identifiers and client secrets are obtained during execution.
 

@@ -7,6 +7,17 @@ export const config: ConnectorScenarioConfig = {
     },
   },
   overrides: {
+    // Adyen maps line1 to houseNumberOrName and line2 to street.
+    "billing-profile": {
+      payment: {
+        shipping: { address: { line1: "1", line2: "Example Street" } },
+      },
+    },
+    "checkout-details": {
+      payment: {
+        shipping: { address: { line1: "1", line2: "Example Street" } },
+      },
+    },
     "client-void": { completion: "submission" },
     "client-capture": { completion: "submission" },
     "refund-partial": { completion: "submission" },
