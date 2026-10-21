@@ -1,0 +1,12 @@
+{
+  "connectors": {
+    "stripe": {
+      "credential": "connector_1"
+    }
+  },
+  "variants": {
+    "stripe/baseline": {
+      "payment": { "metadata": { "fixture_case": "automatic" } }
+    }
+  }
+}

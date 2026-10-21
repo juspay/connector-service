@@ -1,0 +1,324 @@
+import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import {
+  mkdirSync,
+  readdirSync,
+  existsSync,
+  readFileSync,
+  writeFileSync,
+  renameSync,
+  rmSync,
+} from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const runtime = resolve(root, ".runtime");
+let checkout = process.env.HS_SOURCE_DIR
+  ? resolve(process.env.HS_SOURCE_DIR)
+  : resolve(runtime, "hyperswitch");
+const override = resolve(runtime, "compose.e2e.yaml");
+const versionsFile = resolve(runtime, "versions.json");
+const databasePort = Number(process.env.HS_DB_PORT ?? 15432);
+if (!Number.isInteger(databasePort) || databasePort < 1 || databasePort > 65535)
+  throw new Error("HS_DB_PORT must be a valid TCP port");
+const image =
+  process.env.HS_IMAGE ??
+  "docker.juspay.io/juspaydotin/hyperswitch-router:latest";
+const externalUcs = process.env.UCS_BASE_URL;
+const ucsUrl = new URL(externalUcs ?? "http://ucs:8000");
+if (
+  !["http:", "https:"].includes(ucsUrl.protocol) ||
+  ucsUrl.username ||
+  ucsUrl.password ||
+  ucsUrl.pathname !== "/" ||
+  ucsUrl.search ||
+  ucsUrl.hash
+)
+  throw new Error(
+    "UCS_BASE_URL must be an http(s) gRPC origin without credentials or a path",
+  );
+const probeArgs = [
+  `-addr=${ucsUrl.hostname}:${ucsUrl.port || (ucsUrl.protocol === "https:" ? "443" : "80")}`,
+  "-connect-timeout=5s",
+  "-rpc-timeout=5s",
+  ...(ucsUrl.protocol === "https:" ? ["-tls"] : []),
+];
+const ucsImage =
+  process.env.UCS_IMAGE ?? "juspaydotin/hyperswitch-prism:latest";
+const action = process.argv[2];
+if (!["up", "down", "prepare"].includes(action))
+  throw new Error("Use stack.mjs up|down|prepare");
+function run(command, args, options = {}) {
+  const result = spawnSync(command, args, { stdio: "inherit", ...options });
+  if (result.error) throw result.error;
+  if (result.status !== 0)
+    throw new Error(`${command} exited ${result.status}`);
+}
+mkdirSync(runtime, { recursive: true });
+if (action !== "down") {
+  // Resolve configuration and migrations from the binary's own source revision.
+  // Floating image and main tags are not guaranteed to describe the same build.
+  let sourceRef = process.env.HS_REF;
+  if (!process.env.HS_SOURCE_DIR) {
+    if (!sourceRef) {
+      if (action === "up") run("docker", ["pull", image]);
+      const version = spawnSync(
+        "docker",
+        [
+          "run",
+          "--rm",
+          "--network",
+          "none",
+          "--entrypoint",
+          "/local/bin/router",
+          image,
+          "--version",
+        ],
+        { encoding: "utf8" },
+      );
+      if (version.status !== 0)
+        throw new Error(
+          "Cannot read HS image version; ensure Docker is running and the image is available",
+        );
+      sourceRef = version.stdout.match(/-[0-9a-f]{7,40}-/)?.[0].slice(1, -1);
+      if (!sourceRef)
+        throw new Error(
+          "HS image does not report a source revision; set HS_REF or HS_SOURCE_DIR to its matching source",
+        );
+    }
+    // Reuse a verified checkout for this exact image revision without an API call.
+    // This also keeps repeated runs independent of GitHub API rate limits.
+    const cachedCommits = readdirSync(runtime)
+      .map((name) => name.match(/^hyperswitch-([0-9a-f]{40})$/)?.[1])
+      .filter((sha) => sha?.startsWith(sourceRef));
+    let sourceCommit = /^[0-9a-f]{40}$/.test(sourceRef) ? sourceRef : undefined;
+    if (!sourceCommit && cachedCommits.length === 1) {
+      const candidate = cachedCommits[0];
+      const head = spawnSync(
+        "git",
+        [
+          "-C",
+          resolve(runtime, `hyperswitch-${candidate}`),
+          "rev-parse",
+          "HEAD",
+        ],
+        { encoding: "utf8" },
+      );
+      if (head.status === 0 && head.stdout.trim() === candidate)
+        sourceCommit = candidate;
+    }
+    if (!sourceCommit) {
+      const response = await fetch(
+        `https://api.github.com/repos/juspay/hyperswitch/commits/${encodeURIComponent(sourceRef)}`,
+        { signal: AbortSignal.timeout(30_000) },
+      );
+      if (!response.ok)
+        throw new Error(
+          `Cannot resolve HS source revision (GitHub HTTP ${response.status}); retry or set HS_SOURCE_DIR`,
+        );
+      sourceCommit = (await response.json()).sha;
+    }
+    if (!/^[0-9a-f]{40}$/.test(sourceCommit))
+      throw new Error("Invalid HS source revision");
+    checkout = resolve(runtime, `hyperswitch-${sourceCommit}`);
+    if (!existsSync(checkout)) {
+      // Download only runtime assets. Publish the cache only after checkout succeeds.
+      const pending = `${checkout}.partial`;
+      rmSync(pending, { recursive: true, force: true });
+      mkdirSync(pending, { recursive: true });
+      run("git", ["init", "--quiet", pending]);
+      run("git", [
+        "-C",
+        pending,
+        "remote",
+        "add",
+        "origin",
+        "https://github.com/juspay/hyperswitch.git",
+      ]);
+      run("git", [
+        "-C",
+        pending,
+        "fetch",
+        "--depth",
+        "1",
+        "--filter=blob:none",
+        "origin",
+        sourceCommit,
+      ]);
+      run("git", [
+        "-C",
+        pending,
+        "sparse-checkout",
+        "set",
+        "config",
+        "migrations",
+        "scripts",
+        "files",
+      ]);
+      run("git", ["-C", pending, "checkout", "--detach", "FETCH_HEAD"]);
+      renameSync(pending, checkout);
+    }
+  }
+  const config = resolve(runtime, "hs.toml");
+  let contents = readFileSync(
+    resolve(checkout, "config/docker_compose.toml"),
+    "utf8",
+  );
+  // Support both existing and absent UCS sections without duplicate TOML tables.
+  contents = contents.replace(
+    /^\[grpc_client\.unified_connector_service\][\s\S]*?(?=^\[|$(?![\s\S]))/m,
+    "",
+  );
+  contents +=
+    "\n[grpc_client.unified_connector_service]\n" +
+    `base_url = ${JSON.stringify(ucsUrl.origin)}\n` +
+    "connection_timeout = 10\nrequest_timeout = 60\n" +
+    'ucs_only_connectors = "stripe,adyen,paypal,authorizedotnet,cybersource,checkout"\n';
+  writeFileSync(config, contents);
+  // Runtime migrations must not regenerate or patch the source checkout's schema.
+  const dieselConfig = resolve(runtime, "diesel.toml");
+  writeFileSync(
+    dieselConfig,
+    '[migrations_directory]\ndir = "/app/migrations"\n',
+  );
+  const migrationCommand = [
+    "set -eu",
+    "apt-get update",
+    "apt-get install -y curl xz-utils",
+    "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/diesel-rs/diesel/releases/download/v2.3.5/diesel_cli-installer.sh -o /tmp/install-diesel.sh",
+    "bash /tmp/install-diesel.sh",
+    '/root/.cargo/bin/diesel migration run --database-url "$${DATABASE_URL}" --migration-dir /app/migrations --config-file /e2e-diesel.toml',
+  ].join(" && ");
+  writeFileSync(
+    override,
+    // Redis is accessed by its Compose service name; no host port is needed.
+    // YAML's reset tag removes the port inherited from upstream Compose.
+    "services:\n" +
+      `  pg:\n    ports: !override ["127.0.0.1:${databasePort}:5432"]\n` +
+      "  redis-standalone:\n    ports: !reset []\n" +
+      (externalUcs
+        ? "  ucs-ready: " +
+          JSON.stringify({
+            image: "ghcr.io/grpc-ecosystem/grpc-health-probe:v0.4.38",
+            command: probeArgs,
+            networks: ["router_net"],
+            extra_hosts: ["host.docker.internal:host-gateway"],
+          }) +
+          "\n"
+        : "  ucs: " +
+          JSON.stringify({
+            build: {
+              context: resolve(root, "docker"),
+              dockerfile: "ucs.Dockerfile",
+              args: { UCS_IMAGE: ucsImage },
+              // Explicit images may be local verification builds. Docker still
+              // fetches a missing base; refresh the default floating image only.
+              pull: !process.env.UCS_IMAGE,
+            },
+            environment: {
+              CS__SERVER__HOST: "0.0.0.0",
+              CS__SERVER__PORT: "8000",
+              CS__COMMON__ENVIRONMENT: "development",
+              CS__LOG__CONSOLE__ENABLED: "true",
+              CS__LOG__CONSOLE__LEVEL: "info",
+              CS__LOG__CONSOLE__LOG_FORMAT: "json",
+            },
+            networks: ["router_net"],
+            healthcheck: {
+              test: [
+                "CMD",
+                "/bin/grpc_health_probe",
+                "-addr=localhost:8000",
+                "-connect-timeout=2s",
+                "-rpc-timeout=2s",
+              ],
+              interval: "3s",
+              timeout: "5s",
+              retries: 30,
+              start_period: "10s",
+            },
+          }) +
+          "\n") +
+      "  migration_runner: " +
+      JSON.stringify({
+        command: ["bash", "-c", migrationCommand],
+        volumes: [`${dieselConfig}:/e2e-diesel.toml:ro`],
+        depends_on: { pg: { condition: "service_healthy" } },
+      }) +
+      "\n" +
+      "  superposition-init: " +
+      JSON.stringify({
+        command: [
+          "sh",
+          "-c",
+          "apk add --no-cache bash curl jq yq && bash /seed_superposition.sh",
+        ],
+      }) +
+      "\n" +
+      "  hyperswitch-server: " +
+      JSON.stringify({
+        image,
+        pull_policy: "missing",
+        // A bind-mounted config changing does not otherwise restart a process.
+        labels: {
+          "e2e.hs-config": createHash("sha256").update(contents).digest("hex"),
+        },
+        depends_on: externalUcs
+          ? { "ucs-ready": { condition: "service_completed_successfully" } }
+          : { ucs: { condition: "service_healthy" } },
+        command: ["/local/bin/router", "-f", "/local/config/e2e.toml"],
+        volumes: [`${config}:/local/config/e2e.toml:ro`],
+        extra_hosts: ["host.docker.internal:host-gateway"],
+        healthcheck: { start_period: "60s", retries: 30 },
+      }) +
+      "\n",
+  );
+  writeFileSync(
+    versionsFile,
+    JSON.stringify(
+      {
+        image,
+        ucs: ucsUrl.origin,
+        ucsImage: externalUcs ? null : ucsImage,
+        hsSourceDir: checkout,
+        hsCommit: spawnSync("git", ["-C", checkout, "rev-parse", "HEAD"], {
+          encoding: "utf8",
+        }).stdout.trim(),
+      },
+      null,
+      2,
+    ),
+  );
+} else {
+  if (!existsSync(override)) throw new Error("No E2E stack has been prepared");
+  if (existsSync(versionsFile)) {
+    checkout =
+      JSON.parse(readFileSync(versionsFile, "utf8")).hsSourceDir ?? checkout;
+  }
+}
+if (action === "prepare") {
+  console.log(`Prepared ${override}`);
+  process.exit(0);
+}
+const args = [
+  "compose",
+  "--project-name",
+  "ucs-e2e",
+  "--project-directory",
+  checkout,
+  "-f",
+  resolve(checkout, "docker-compose.yml"),
+  "-f",
+  override,
+];
+// Build the small probe wrapper explicitly; Compose versions differ in whether
+// `up --build <service>` also builds dependencies that have no image attribute.
+if (action === "up" && !externalUcs) run("docker", [...args, "build", "ucs"]);
+// Compose starts the router and its declared dependencies only (no dashboard/SDK yet).
+run("docker", [
+  ...args,
+  ...(action === "up"
+    ? ["up", "-d", "--wait", "--wait-timeout", "600", "hyperswitch-server"]
+    : ["down"]),
+]);
