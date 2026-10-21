@@ -1052,12 +1052,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             && payment_method == PaymentMethod::Card
         {
             match (redirect_state, completed_step) {
-                // Entering the ladder is deliberately left to an explicit PreAuthenticate call.
-                // Routing it from here would send every existing Adyen 3DS card payment on
-                // CompositeAuthorize through PreAuthenticate, and `native_three_ds` cannot be
-                // turned on over the wire yet (`AdyenConfig` carries no such field), so those
-                // merchants would get a standalone authentication they did not ask for. Change
-                // this arm to `AuthenticationStep::PreAuthenticate` once the opt-in is readable.
+                // Entering the ladder is deliberately left to an explicit PreAuthenticate call,
+                // for two reasons. This hook receives no connector config, so it cannot tell
+                // whether `native_three_ds` is on for the merchant; and `completed_step` does
+                // not survive between composite requests - `AuthorizeCompositeState::default()`
+                // is rebuilt per request in composite-service/src/payments.rs - so the shopper's
+                // second and third returns both arrive as `(RedirectWithParams, None)` and would
+                // fall through to Authorize, authorising without the authentication result.
+                // Hyperswitch does not use the composite service: it drives these legs through
+                // its own ConnectorSpecifications predicates and the PaymentMethodAuthentication
+                // RPCs, which is the path this flow is verified on. Routing from here needs the
+                // composite loop to carry `completed_step` across requests first.
                 (RedirectState::InitialRequest, None) => AuthenticationStep::Authorize,
                 (RedirectState::RedirectWithParams, Some(AuthenticationStep::PreAuthenticate)) => {
                     AuthenticationStep::Authenticate

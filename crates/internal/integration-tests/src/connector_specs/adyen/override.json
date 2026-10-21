@@ -434,5 +434,44 @@
         }
       }
     }
+  },
+  "PaymentMethodAuthenticationService/PreAuthenticate": {
+    "threeds_card_pre_authenticate": {
+      "grpc_req": {
+        "browser_info": {
+          "ip_address": "127.0.0.1",
+          "accept_header": "application/json",
+          "user_agent": "Mozilla/5.0 (integration-tests)",
+          "accept_language": "en-US",
+          "language": "en-US",
+          "color_depth": 24,
+          "screen_height": 1080,
+          "screen_width": 1920,
+          "java_enabled": false,
+          "java_script_enabled": true,
+          "time_zone_offset_minutes": 0
+        },
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "5454545454545454"
+            },
+            "card_exp_month": {
+              "value": "03"
+            },
+            "card_exp_year": {
+              "value": "2030"
+            },
+            "card_cvc": {
+              "value": "737"
+            },
+            "card_holder_name": {
+              "value": "John Smith"
+            },
+            "card_type": "credit"
+          }
+        }
+      }
+    }
   }
 }

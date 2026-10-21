@@ -10489,13 +10489,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
         };
 
-        // returnUrl must bring the shopper back to the complete-authorize route.
-        let continue_redirection_url = request.continue_redirection_url.as_ref().ok_or_else(|| {
-            standalone_3ds_missing_field(
-                "continue_redirection_url",
-                "send continue_redirection_url (the URL the shopper returns to after the 3DS steps)",
-            )
-        })?;
+        // returnUrl must bring the shopper back to the complete-authorize route, so prefer
+        // continue_redirection_url; a caller that only sets return_url (the global
+        // PreAuthenticate scenario does) still gets a usable authentication.
+        let continue_redirection_url = request
+            .continue_redirection_url
+            .as_ref()
+            .or(request.router_return_url.as_ref())
+            .ok_or_else(|| {
+                standalone_3ds_missing_field(
+                    "continue_redirection_url",
+                    "send continue_redirection_url, or return_url, as the URL the shopper \
+                     returns to after the 3DS steps",
+                )
+            })?;
         let origin = continue_redirection_url.origin().ascii_serialization();
 
         // browserInfo is required for channel Web; each getter names its own field.

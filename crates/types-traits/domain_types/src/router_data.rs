@@ -2194,9 +2194,7 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 base_url: adyen.base_url,
                 dispute_base_url: adyen.dispute_base_url,
                 endpoint_prefix: adyen.endpoint_prefix,
-                // `AdyenConfig` has no `native_three_ds` field yet, so the opt-in cannot be
-                // set over the wire: it stays `None` until the proto carries it.
-                native_three_ds: None,
+                native_three_ds: adyen.native_three_ds,
             }),
             AuthType::Airwallex(airwallex) => Ok(Self::Airwallex {
                 api_key: airwallex.api_key.ok_or_else(err)?,
