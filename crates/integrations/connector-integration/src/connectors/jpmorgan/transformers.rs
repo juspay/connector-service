@@ -187,9 +187,13 @@ fn build_retail_addenda(
         .or(fallback_order_tax_amount)
         .filter(|tax_amount| tax_amount.get_amount_as_i64() > 0);
 
-    let is_taxable = l2_l3_data
-        .get_tax_status()
-        .map(|tax_status| matches!(tax_status, common_enums::TaxStatus::Taxable));
+    let tax_status = l2_l3_data.get_tax_status();
+    let is_taxable =
+        tax_status.map(|tax_status| matches!(tax_status, common_enums::TaxStatus::Taxable));
+    let taxable_indicator = tax_status.map(|tax_status| match tax_status {
+        common_enums::TaxStatus::Taxable => requests::JpmorganTaxableIndicator::Taxable,
+        common_enums::TaxStatus::Exempt => requests::JpmorganTaxableIndicator::Exempt,
+    });
 
     let summary_item_commodity_code = l2_l3_data
         .get_order_commodity_code()
@@ -202,7 +206,7 @@ fn build_retail_addenda(
         order_date,
         tax_amount,
         is_taxable,
-        taxable_indicator: is_taxable,
+        taxable_indicator,
         customer_vat_registration_number: l2_l3_data.get_customer_tax_registration_id(),
         merchant_vat_registration_number: l2_l3_data.get_merchant_vat_registration_id(),
         pst_tax_registration_number: l2_l3_data.get_merchant_tax_registration_id(),
@@ -293,7 +297,7 @@ fn merchant_order_number(merchant_order_id: Option<&str>, reference: &str) -> St
     merchant_order_id
         .filter(|id| !id.trim().is_empty())
         .unwrap_or(reference)
-        .to_owned()
+        .replace('_', "")
 }
 
 impl TryFrom<Option<common_enums::BankType>> for requests::JpmorganAchAccountType {
@@ -2216,6 +2220,74 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             account_on_file: requests::JpmorganAccountOnFile::Stored,
             is_amount_final: true,
         })
+    }
+}
+
+#[cfg(test)]
+mod taxable_indicator_tests {
+    use super::*;
+    use domain_types::{connector_types::TaxInfo, utils::ForeignTryFrom};
+    use serde_json::json;
+
+    fn addenda_for_status(
+        tax_status: Option<grpc_api_types::payments::TaxStatus>,
+    ) -> serde_json::Value {
+        let proto_tax_info = grpc_api_types::payments::TaxInfo {
+            tax_status: tax_status.map(i32::from),
+            ..Default::default()
+        };
+        let data = L2L3Data {
+            tax_info: Some(
+                TaxInfo::foreign_try_from((&proto_tax_info, common_enums::Currency::USD))
+                    .expect("convert optional tax status from gRPC"),
+            ),
+            ..Default::default()
+        };
+        serde_json::to_value(build_retail_addenda(
+            Some(&data),
+            Some(MinorUnit::new(100)),
+            None,
+        ))
+        .expect("serialize taxable indicator")
+    }
+
+    #[test]
+    fn all_jpmorgan_taxable_indicator_values_serialize_as_strings() {
+        assert_eq!(
+            serde_json::to_value([
+                requests::JpmorganTaxableIndicator::Taxable,
+                requests::JpmorganTaxableIndicator::ZeroRated,
+                requests::JpmorganTaxableIndicator::Exempt,
+            ])
+            .expect("serialize all supported indicator values"),
+            json!(["TAXABLE", "ZERO_RATED", "EXEMPT"])
+        );
+    }
+
+    #[test]
+    fn tax_status_maps_to_a_string_indicator_and_boolean_is_taxable() {
+        for (status, is_taxable, indicator) in [
+            (
+                grpc_api_types::payments::TaxStatus::Taxable,
+                true,
+                "TAXABLE",
+            ),
+            (grpc_api_types::payments::TaxStatus::Exempt, false, "EXEMPT"),
+        ] {
+            assert_eq!(
+                addenda_for_status(Some(status)),
+                json!({
+                    "taxAmount": 100,
+                    "isTaxable": is_taxable,
+                    "taxableIndicator": indicator
+                })
+            );
+        }
+    }
+
+    #[test]
+    fn absent_tax_status_omits_both_indicators_even_when_tax_amount_is_present() {
+        assert_eq!(addenda_for_status(None), json!({"taxAmount": 100}));
     }
 }
 

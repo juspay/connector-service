@@ -61,7 +61,7 @@ pub struct JpmorganRetailAddenda {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_taxable: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub taxable_indicator: Option<bool>,
+    pub taxable_indicator: Option<JpmorganTaxableIndicator>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub customer_vat_registration_number: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -74,6 +74,14 @@ pub struct JpmorganRetailAddenda {
     /// Level 3 line-item data.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub level3: Option<JpmorganLevel3>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum JpmorganTaxableIndicator {
+    Taxable,
+    ZeroRated,
+    Exempt,
 }
 
 /// Level 3 commercial-card data (`retailAddenda.level3`).
