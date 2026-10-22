@@ -134,7 +134,7 @@ def _build_proxy_setup_recurring_request():
             mandate_type=payment_pb2.MandateType(  # Type of mandate (single_use or multi_use) with amount details.
                 multi_use=payment_pb2.MandateAmountData(
                     amount=10000,  # Use amount_money instead (will be removed in a future release).
-                    currency=payment_pb2.Currency.Value("AED"),  # Use amount_money.currency instead (will be removed in a future release).
+                    currency=common_types_pb2.Currency.Value("AED"),  # Use amount_money.currency instead (will be removed in a future release).
                 ),
             ),
         ),
@@ -201,9 +201,9 @@ def _build_refund_get_request():
 def _build_setup_recurring_request():
     return payment_pb2.PaymentServiceSetupRecurringRequest(
         merchant_recurring_payment_id="probe_mandate_001",  # Identification.
-        amount=payment_pb2.Money(  # Mandate Details.
-            minor_amount=0,  # Amount in minor units (e.g., 1000 = $10.00).
-            currency=payment_pb2.Currency.Value("USD"),  # ISO 4217 currency code (e.g., "USD", "EUR").
+        amount=common_types_pb2.Money(  # Mandate Details.
+            minor_amount=0,
+            currency=common_types_pb2.Currency.Value("USD"),
         ),
         payment_method=payment_methods_pb2.PaymentMethod(
             card=payment_methods_pb2.CardDetails(
@@ -215,7 +215,7 @@ def _build_setup_recurring_request():
             ),
         ),
         address=payment_pb2.PaymentAddress(  # Address Information.
-            billing_address=payment_pb2.Address(),
+            billing_address=common_types_pb2.Address(),
         ),
         auth_type=payment_pb2.AuthenticationType.Value("NO_THREE_DS"),  # Type of authentication to be used.
         enrolled_for_3ds=False,  # Indicates if the customer is enrolled for 3D Secure.
@@ -232,7 +232,7 @@ def _build_setup_recurring_request():
             mandate_type=payment_pb2.MandateType(  # Type of mandate (single_use or multi_use) with amount details.
                 multi_use=payment_pb2.MandateAmountData(
                     amount=10000,  # Use amount_money instead (will be removed in a future release).
-                    currency=payment_pb2.Currency.Value("AED"),  # Use amount_money.currency instead (will be removed in a future release).
+                    currency=common_types_pb2.Currency.Value("AED"),  # Use amount_money.currency instead (will be removed in a future release).
                 ),
             ),
         ),

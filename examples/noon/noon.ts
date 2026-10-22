@@ -220,8 +220,8 @@ function _buildSetupRecurringRequest(): types.IPaymentServiceSetupRecurringReque
     return {
         "merchantRecurringPaymentId": "probe_mandate_001",  // Identification.
         "amount": {  // Mandate Details.
-            "minorAmount": 0,  // Amount in minor units (e.g., 1000 = $10.00).
-            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+            "minorAmount": 0,
+            "currency": Currency.USD
         },
         "paymentMethod": {
             "card": {  // Generic card payment.

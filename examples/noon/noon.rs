@@ -295,8 +295,8 @@ pub fn build_setup_recurring_request() -> PaymentServiceSetupRecurringRequest {
         merchant_recurring_payment_id: "probe_mandate_001".to_string(), // Identification.
         amount: Some(Money {
             // Mandate Details.
-            minor_amount: 0, // Amount in minor units (e.g., 1000 = $10.00).
-            currency: Currency::Usd.into(), // ISO 4217 currency code (e.g., "USD", "EUR").
+            minor_amount: 0,
+            currency: Currency::Usd.into(),
         }),
         payment_method: Some(PaymentMethod {
             payment_method: Some(payment_method::PaymentMethod::Card(CardDetails {

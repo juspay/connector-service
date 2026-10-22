@@ -423,8 +423,8 @@ fun setupRecurring(txnId: String, config: ConnectorConfig = _defaultConfig) {
     val request = PaymentServiceSetupRecurringRequest.newBuilder().apply {
         merchantRecurringPaymentId = "probe_mandate_001"  // Identification.
         amountBuilder.apply {  // Mandate Details.
-            minorAmount = 0L  // Amount in minor units (e.g., 1000 = $10.00).
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+            minorAmount = 0L
+            currency = Currency.USD
         }
         paymentMethodBuilder.apply {
             cardBuilder.apply {  // Generic card payment.
