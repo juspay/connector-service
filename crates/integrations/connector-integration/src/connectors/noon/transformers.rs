@@ -515,13 +515,14 @@ pub(crate) fn build_noon_payment_data<
 /// to a single space, no leading/trailing whitespace, at most 50 characters (Noon's
 /// limit). `None` when nothing is left, so a blank description counts as absent.
 pub(crate) fn normalize_noon_order_name(raw: &str) -> Option<String> {
-    let name: String = raw
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ")
-        .chars()
-        .take(50)
-        .collect();
+    let collapsed = raw.split_whitespace().fold(String::new(), |mut acc, word| {
+        if !acc.is_empty() {
+            acc.push(' ');
+        }
+        acc.push_str(word);
+        acc
+    });
+    let name: String = collapsed.chars().take(50).collect();
     let name = name.trim_end().to_string();
     (!name.is_empty()).then_some(name)
 }
@@ -622,7 +623,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = data
             .connector
             .amount_converter
-            .convert(item.request.amount.amount, item.request.currency)
+            .convert(item.request.amount.amount, item.request.amount.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: IntegrationErrorContext {
                     suggested_action: Some(
@@ -711,7 +712,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let order = NoonOrder {
             amount,
-            currency: Some(item.request.currency),
+            currency: Some(item.request.amount.currency),
             channel: NoonChannels::Web,
             category: Some(category),
             reference: item
@@ -1022,10 +1023,12 @@ pub(crate) fn map_noon_payments_response(
             });
             // The merchant reference is what RSync's getbyreference lookup needs; callers
             // carry it back through connector_feature_data.
-            let connector_metadata = order
-                .reference
-                .as_ref()
-                .map(|reference| serde_json::json!({ "order_reference": reference }));
+            let connector_metadata = order.reference.as_ref().and_then(|order_reference| {
+                serde_json::to_value(NoonConnectorMetadata {
+                    order_reference: order_reference.clone(),
+                })
+                .ok()
+            });
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id.clone()),
                 redirection_data,
@@ -1142,7 +1145,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = data
             .connector
             .amount_converter
-            .convert(item.request.amount_to_capture.amount, item.request.currency)
+            .convert(
+                item.request.amount_to_capture.amount,
+                item.request.amount_to_capture.currency,
+            )
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: IntegrationErrorContext {
                     suggested_action: Some(
@@ -1157,7 +1163,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             })?;
         let transaction = NoonActionTransaction {
             amount,
-            currency: item.request.currency,
+            currency: item.request.amount_to_capture.currency,
             transaction_reference: None,
         };
         Ok(Self {
@@ -1513,6 +1519,12 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
     }
 }
 
+/// `connector_metadata` Authorize hands back and RSync reads from `connector_feature_data`.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NoonConnectorMetadata {
+    pub order_reference: String,
+}
+
 /// Path key for RSync's `GET payment/v1/order/getbyreference/{reference}`: the payment's
 /// merchant reference (`order.reference`). Hyperswitch sends it as `connector_order_id`;
 /// gRPC/SDK callers carry it back from Authorize via `connector_feature_data.order_reference`.
@@ -1527,11 +1539,10 @@ pub fn get_refund_sync_order_reference(
         .cloned()
         .or_else(|| {
             request.connector_feature_data.as_ref().and_then(|data| {
-                data.peek()
-                    .get("order_reference")
-                    .and_then(serde_json::Value::as_str)
+                serde_json::from_value::<NoonConnectorMetadata>(data.peek().clone())
+                    .ok()
+                    .map(|metadata| metadata.order_reference)
                     .filter(|reference| !reference.is_empty())
-                    .map(str::to_string)
             })
         })
         .ok_or_else(|| {
@@ -2139,7 +2150,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .amount_converter
             .convert(
                 router_data.request.amount.amount,
-                router_data.request.currency,
+                router_data.request.amount.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: IntegrationErrorContext {
