@@ -247,8 +247,6 @@ pub struct JpmorganMitCardByNti<T: PaymentMethodDataTypes> {
     pub original_network_transaction_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub original_transaction_link_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub authentication: Option<JpmorganWalletAuthentication>,
 }
 
 /// SetupMandate's payment method type — always carries `card`.

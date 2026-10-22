@@ -2237,45 +2237,6 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganRepeatPaymentRequest<T> {
             wallet_provider: provider,
             original_network_transaction_id: ntid,
             original_transaction_link_id: tlid,
-            authentication: match &request.payment_method_data {
-                // Mastercard requires a cryptogram for the first token use, including MIT.
-                // Forward it when supplied because this request cannot establish prior token use.
-                // See https://developer.payments.jpmorgan.com/docs/commerce/online-payments/capabilities/online-payments/payment-enhancements/tokenization
-                PaymentMethodData::NetworkToken(token)
-                    if network == common_enums::CardNetwork::Mastercard =>
-                {
-                    token
-                        .token_cryptogram
-                        .as_ref()
-                        .map(|cryptogram| {
-                            requests::JpmorganCard::<T>::network_token_authentication(
-                                token, cryptogram,
-                            )
-                        })
-                        .transpose()?
-                }
-                PaymentMethodData::NetworkToken(_)
-                | PaymentMethodData::Card(_)
-                | PaymentMethodData::CardWithNoCvc(_)
-                | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
-                | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
-                | PaymentMethodData::CardRedirect(_)
-                | PaymentMethodData::Wallet(_)
-                | PaymentMethodData::PayLater(_)
-                | PaymentMethodData::BankRedirect(_)
-                | PaymentMethodData::BankDebit(_)
-                | PaymentMethodData::BankTransfer(_)
-                | PaymentMethodData::Crypto(_)
-                | PaymentMethodData::MandatePayment
-                | PaymentMethodData::Reward
-                | PaymentMethodData::RealTimePayment(_)
-                | PaymentMethodData::Upi(_)
-                | PaymentMethodData::Voucher(_)
-                | PaymentMethodData::GiftCard(_)
-                | PaymentMethodData::PaymentMethodToken(_)
-                | PaymentMethodData::OpenBanking(_)
-                | PaymentMethodData::MobilePayment(_) => None,
-            },
         })
     }
 }
