@@ -6576,6 +6576,13 @@ impl SenderDetails {
             Self::Corporate(corporate) => corporate.address.as_ref(),
         }
     }
+
+    pub fn get_email(&self) -> Option<&Email> {
+        match self {
+            Self::Individual(individual) => individual.email.as_ref(),
+            Self::Corporate(corporate) => corporate.email.as_ref(),
+        }
+    }
 }
 
 /// Connector-specific additional details passed through the payment request.
