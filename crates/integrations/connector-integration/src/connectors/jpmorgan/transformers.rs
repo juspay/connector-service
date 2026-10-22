@@ -2067,13 +2067,6 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganRepeatPaymentRequest<T> {
                 "Processor tokens without complete Safetech credentials are not supported by this direct network-reference flow",
             )),
         };
-        if ntid.trim().is_empty() || tlid.as_ref().is_some_and(|id| id.trim().is_empty()) {
-            return Err(IntegrationError::InvalidDataFormat {
-                field_name: "mandate_reference.network_transaction_id or transaction_link_id",
-                context: Default::default(),
-            }
-            .into());
-        }
         Ok((ntid, tlid))
     }
 
@@ -2223,13 +2216,6 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganRepeatPaymentRequest<T> {
                     "MIT requires card details for a network transaction ID, a network token, or decrypted wallet token details",
                 )),
             };
-        if !(1..=12).contains(&month) || !(1000..=9999).contains(&year) {
-            return Err(IntegrationError::InvalidDataFormat {
-                field_name: "payment_method_data.expiry",
-                context: Default::default(),
-            }
-            .into());
-        }
         let network = supplied_network.ok_or(IntegrationError::MissingRequiredField {
             field_name: "payment_method_data.card_network",
             context: Default::default(),
@@ -2324,11 +2310,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let merchant = requests::JpmorganMerchant::try_from(&auth)?;
 
         let request = &router_data.request;
-        if request.off_session == Some(false) || request.authentication_data.is_some() {
-            return Err(Self::unsupported(
-                "Off-session false or separately authenticated merchant-initiated payments",
-            ));
-        }
         let (ntid, tlid) = Self::network_references(&request.mandate_reference)?;
         let capture_method = map_capture_method(router_data.request.capture_method)?;
         let amount = item
