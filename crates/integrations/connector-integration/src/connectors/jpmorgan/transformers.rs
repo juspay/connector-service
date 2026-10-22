@@ -2162,8 +2162,24 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganRepeatPaymentRequest<T> {
                     };
                     let account_number_type = match provider {
                         requests::JpmorganWalletProvider::ApplePay => requests::JpmorganAccountNumberType::DeviceToken,
-                        requests::JpmorganWalletProvider::GooglePay if token.cryptogram.is_some() => requests::JpmorganAccountNumberType::DeviceToken,
-                        requests::JpmorganWalletProvider::GooglePay => requests::JpmorganAccountNumberType::Pan,
+                        requests::JpmorganWalletProvider::GooglePay => {
+                            use domain_types::payment_method_data::{AdditionalPaymentData, WalletAdditionalData};
+                            let auth_method = match request.additional_payment_data.as_ref() {
+                                Some(AdditionalPaymentData::Wallet(WalletAdditionalData::GooglePay(data))) => data.payment_method_data_type.as_deref(),
+                                _ => None,
+                            };
+                            match auth_method {
+                                Some("PAN_ONLY") => requests::JpmorganAccountNumberType::Pan,
+                                Some("CRYPTOGRAM_3DS") => requests::JpmorganAccountNumberType::DeviceToken,
+                                _ => return Err(IntegrationError::InvalidDataFormat {
+                                    field_name: "additional_payment_data.wallet.google_pay.payment_method_data_type",
+                                    context: IntegrationErrorContext {
+                                        additional_context: Some("Supply PAN_ONLY or CRYPTOGRAM_3DS for Google Pay credentials.".to_owned()),
+                                        ..Default::default()
+                                    },
+                                }.into()),
+                            }
+                        },
                     };
                     (
                         RawCardNumber(T::inner_from_card_number(
