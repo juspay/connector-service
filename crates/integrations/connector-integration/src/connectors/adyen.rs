@@ -655,6 +655,11 @@ const ADYEN_IDEMPOTENCY_OP_SETUP: &str = "setup";
 const ADYEN_IDEMPOTENCY_OP_MIT: &str = "mit";
 /// `Idempotency-Key` operation for `POST /payments/{paymentPspReference}/captures`.
 const ADYEN_IDEMPOTENCY_OP_CAPTURES: &str = "captures";
+/// `Idempotency-Key` operation for the standalone-authentication `POST /payments`. Deliberately
+/// not `payments`: that leg and Authorize share a `connector_request_reference_id`, so one
+/// operation name would give both the same key and Adyen would replay the authentication
+/// response for the money call.
+const ADYEN_IDEMPOTENCY_OP_AUTHN: &str = "authn";
 /// `Idempotency-Key` operation for `POST /payments/{paymentPspReference}/cancels`.
 const ADYEN_IDEMPOTENCY_OP_CANCELS: &str = "cancels";
 /// `Idempotency-Key` operation for `POST /payments/{paymentPspReference}/refunds`.
@@ -721,6 +726,8 @@ macros::macro_connector_implementation!(
 );
 
 macros::macro_connector_implementation!(
+    // get_error_response_v2 is overridden below with the Authentication-flow error mapping, so it
+    // must not also come from the defaults.
     connector_default_implementations: [get_content_type],
     connector: Adyen,
     curl_request: Json(AdyenPreAuthenticateRequest),
@@ -737,7 +744,13 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
-            self.build_headers(req)
+            // This leg is a `POST /payments` that mints a pspReference, so a retry without a key
+            // would start a second authentication for the same attempt.
+            self.build_headers_with_idempotency(
+                req,
+                ADYEN_IDEMPOTENCY_OP_AUTHN,
+                &req.resource_common_data.connector_request_reference_id,
+            )
         }
         fn get_url(
             &self,
@@ -750,11 +763,29 @@ macros::macro_connector_implementation!(
             )?;
             Ok(format!("{endpoint}{ADYEN_AUTHENTICATION_API_VERSION}/payments"))
         }
+        fn get_error_response_v2(
+            &self,
+            res: Response,
+            event_builder: Option<&mut events::Event>,
+            _connector_config: &ConnectorSpecificConfig,
+        ) -> CustomResult<ErrorResponse, ConnectorError> {
+            build_adyen_error_response(res, event_builder, AdyenErrorFlow::Authentication)
+        }
+        fn get_5xx_error_response(
+            &self,
+            res: Response,
+            event_builder: Option<&mut events::Event>,
+            _connector_config: &ConnectorSpecificConfig,
+        ) -> CustomResult<ErrorResponse, ConnectorError> {
+            build_adyen_error_response(res, event_builder, AdyenErrorFlow::Authentication)
+        }
     }
 );
 
 macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
+    // get_error_response_v2 is overridden below with the Authentication-flow error mapping, so it
+    // must not also come from the defaults.
+    connector_default_implementations: [get_content_type],
     connector: Adyen,
     curl_request: Json(AdyenAuthenticateRequest),
     curl_response: AdyenAuthenticationResponse,
@@ -783,11 +814,29 @@ macros::macro_connector_implementation!(
             )?;
             Ok(format!("{endpoint}{ADYEN_AUTHENTICATION_API_VERSION}/payments/details"))
         }
+        fn get_error_response_v2(
+            &self,
+            res: Response,
+            event_builder: Option<&mut events::Event>,
+            _connector_config: &ConnectorSpecificConfig,
+        ) -> CustomResult<ErrorResponse, ConnectorError> {
+            build_adyen_error_response(res, event_builder, AdyenErrorFlow::Authentication)
+        }
+        fn get_5xx_error_response(
+            &self,
+            res: Response,
+            event_builder: Option<&mut events::Event>,
+            _connector_config: &ConnectorSpecificConfig,
+        ) -> CustomResult<ErrorResponse, ConnectorError> {
+            build_adyen_error_response(res, event_builder, AdyenErrorFlow::Authentication)
+        }
     }
 );
 
 macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
+    // get_error_response_v2 is overridden below with the Authentication-flow error mapping, so it
+    // must not also come from the defaults.
+    connector_default_implementations: [get_content_type],
     connector: Adyen,
     curl_request: Json(AdyenPostAuthenticateRequest),
     curl_response: AdyenPostAuthenticationResponse,
@@ -815,6 +864,22 @@ macros::macro_connector_implementation!(
                 &req.connector_config,
             )?;
             Ok(format!("{endpoint}{ADYEN_AUTHENTICATION_API_VERSION}/payments/details"))
+        }
+        fn get_error_response_v2(
+            &self,
+            res: Response,
+            event_builder: Option<&mut events::Event>,
+            _connector_config: &ConnectorSpecificConfig,
+        ) -> CustomResult<ErrorResponse, ConnectorError> {
+            build_adyen_error_response(res, event_builder, AdyenErrorFlow::Authentication)
+        }
+        fn get_5xx_error_response(
+            &self,
+            res: Response,
+            event_builder: Option<&mut events::Event>,
+            _connector_config: &ConnectorSpecificConfig,
+        ) -> CustomResult<ErrorResponse, ConnectorError> {
+            build_adyen_error_response(res, event_builder, AdyenErrorFlow::Authentication)
         }
     }
 );
@@ -1070,7 +1135,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 (RedirectState::RedirectWithParams, Some(AuthenticationStep::Authenticate)) => {
                     AuthenticationStep::PostAuthenticate
                 }
-                (_, Some(AuthenticationStep::PostAuthenticate)) => AuthenticationStep::Authorize,
                 _ => AuthenticationStep::Authorize,
             }
         } else {

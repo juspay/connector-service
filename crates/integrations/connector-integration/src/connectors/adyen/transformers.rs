@@ -9986,7 +9986,7 @@ fn get_adyen_three_ds_state(
         Some(carrier) if carrier.peek().get(THREE_DS_DATA_KEY).is_some() => carrier,
         _ => return Ok(None),
     };
-    serde_json::from_value::<AdyenThreeDsMetadata>(carrier.peek().clone())
+    AdyenThreeDsMetadata::deserialize(carrier.peek())
         .map(|metadata| Some(metadata.three_ds_data))
         .map_err(|_| {
             standalone_3ds_bad_format(
@@ -10286,10 +10286,15 @@ fn get_adyen_native_outcome(
         // No authentication needed, or still in flight: Authorize proceeds without mpiData.
         AdyenAuthenticationStatus::AuthenticationNotRequired
         | AdyenAuthenticationStatus::Received
-        | AdyenAuthenticationStatus::Pending
-        | AdyenAuthenticationStatus::Unknown => {
+        | AdyenAuthenticationStatus::Pending => {
             Ok((AttemptStatus::Pending, AdyenNativeOutcome::default()))
         }
+        // `Unknown` is the `serde(other)` catch-all: a resultCode this integration has never
+        // seen. Grouping it with AuthenticationNotRequired would authorise the payment with no
+        // mpiData on the strength of a response nobody has read, so it fails closed instead.
+        AdyenAuthenticationStatus::Unknown => Err(failed(Some(
+            "adyen returned a resultCode this integration does not recognise".to_string(),
+        ))),
         AdyenAuthenticationStatus::Refused
         | AdyenAuthenticationStatus::Error
         | AdyenAuthenticationStatus::Cancelled => Err(failed(None)),
@@ -10313,30 +10318,6 @@ fn get_adyen_native_outcome(
             ),
         )),
     }
-}
-
-/// Value of one shopper-return key: the key of the return URL query
-/// (`redirect_response.params`, query-string decoded once like the PSync redirect path), else
-/// the string value of that key in the posted form body (`redirect_response.payload`).
-fn get_adyen_redirect_response_value(
-    redirect_response: Option<&connector_types::ContinueRedirectionResponse>,
-    key: &str,
-) -> Option<String> {
-    let redirect_response = redirect_response?;
-    let from_params = redirect_response.params.as_ref().and_then(|params| {
-        url::form_urlencoded::parse(params.peek().as_bytes())
-            .find(|(name, value)| name == key && !value.trim().is_empty())
-            .map(|(_, value)| value.into_owned())
-    });
-    from_params.or_else(|| {
-        redirect_response.payload.as_ref().and_then(|payload| {
-            payload
-                .peek()
-                .get(key)
-                .and_then(serde_json::Value::as_str)
-                .map(str::to_string)
-        })
-    })
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -10429,10 +10410,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             java_enabled: browser.get_java_enabled()?,
         };
 
-        let currency = request
-            .currency
-            .ok_or_else(|| standalone_3ds_missing_field("currency", "send the amount currency"))?;
-
         let auth_type = AdyenAuthType::try_from(&router_data.connector_config)?;
         let card_holder_name = card.card_holder_name.clone().or_else(|| {
             router_data
@@ -10444,8 +10421,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .and_then(Result::ok);
 
         Ok(Self {
+            // Both halves come from the one `Money`, so the value can never be sent under a
+            // different currency than it was priced in.
             amount: Amount {
-                currency,
+                currency: request.amount.currency,
                 value: request.amount.amount,
             },
             merchant_account: auth_type.merchant_account,
@@ -10560,14 +10539,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 "forward the connector_feature_data returned by the challenge leg unchanged",
             )
         })?;
-        let trans_status = get_adyen_redirect_response_value(
-            item.router_data.request.redirect_response.as_ref(),
-            "transStatus",
-        )
-        .unwrap_or_else(|| ADYEN_CHALLENGE_COMPLETED_TRANS_STATUS.to_string());
+        // The ACS posts its CRes to Adyen's own `threeDSNotificationURL`, never back here, so
+        // there is no shopper-supplied `transStatus` to read - and Adyen does not take ours on
+        // trust either. Measured against the sandbox: a challenge answered with the wrong ACS
+        // password, with this leg still sending `Y`, came back `Refused` with
+        // `threeDS2Result.transStatus: "N"`, `eci 07`, `refusalReason: "3D Not Authenticated"`.
+        // Adyen resolves the real outcome from `authorisationToken`, which is its own handle on
+        // the challenge; this field only says the browser step finished.
         Ok(Self(AdyenDetailsRequest {
             details: AdyenPostAuthenticateDetails::ThreeDsResult {
-                three_ds_result: encode_adyen_three_ds_result(&trans_status, &authorisation_token),
+                three_ds_result: encode_adyen_three_ds_result(
+                    ADYEN_CHALLENGE_COMPLETED_TRANS_STATUS,
+                    &authorisation_token,
+                ),
             },
             // `paymentData` is not sent on this leg: `authorisationToken` identifies the
             // authentication Adyen is finishing.
