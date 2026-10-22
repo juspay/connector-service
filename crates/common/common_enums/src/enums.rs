@@ -3245,7 +3245,7 @@ impl CanadaStatesAbbreviation {
             "nunavut" => Some(Self::NU),
             "ontario" => Some(Self::ON),
             "princeedwardisland" => Some(Self::PE),
-            "quebec" => Some(Self::QC),
+            "quebec" | "québec" => Some(Self::QC),
             "saskatchewan" => Some(Self::SK),
             "yukon" => Some(Self::YT),
             _ => None,
