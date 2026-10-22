@@ -168,13 +168,6 @@ impl responses::JpmorganVerificationResponse {
     }
 }
 
-fn merchant_order_number(merchant_order_id: Option<&str>, reference: &str) -> String {
-    merchant_order_id
-        .filter(|id| !id.trim().is_empty())
-        .unwrap_or(reference)
-        .to_owned()
-}
-
 impl TryFrom<Option<common_enums::BankType>> for requests::JpmorganAchAccountType {
     type Error = error_stack::Report<IntegrationError>;
 
@@ -731,12 +724,7 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganPaymentsRequest<T> {
             },
             account_holder: None,
             statement_descriptor: None,
-            merchant_order_number: Some(merchant_order_number(
-                router_data.request.merchant_order_id.as_deref(),
-                &router_data
-                    .resource_common_data
-                    .connector_request_reference_id,
-            )),
+            merchant_order_number: router_data.request.merchant_order_id.clone(),
             initiator_type: Some(requests::JpmorganInitiatorType::Cardholder),
             account_on_file: Some(account_on_file),
             is_amount_final: Some(true),
@@ -868,12 +856,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     payment_method_type,
                     account_holder: None,
                     statement_descriptor: None,
-                    merchant_order_number: Some(merchant_order_number(
-                        router_data.request.merchant_order_id.as_deref(),
-                        &router_data
-                            .resource_common_data
-                            .connector_request_reference_id,
-                    )),
+                    merchant_order_number: router_data.request.merchant_order_id.clone(),
                     initiator_type: Some(requests::JpmorganInitiatorType::Cardholder),
                     account_on_file: Some(account_on_file),
                     is_amount_final: Some(true),
@@ -972,12 +955,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     payment_method_type,
                     account_holder: None,
                     statement_descriptor: None,
-                    merchant_order_number: Some(merchant_order_number(
-                        router_data.request.merchant_order_id.as_deref(),
-                        &router_data
-                            .resource_common_data
-                            .connector_request_reference_id,
-                    )),
+                    merchant_order_number: router_data.request.merchant_order_id.clone(),
                     initiator_type: Some(requests::JpmorganInitiatorType::Cardholder),
                     account_on_file: Some(account_on_file),
                     is_amount_final: Some(true),
@@ -1999,12 +1977,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             merchant: requests::JpmorganMerchant::try_from(&auth)?,
             payment_method_type: requests::JpmorganSetupMandatePaymentMethodType { card },
             recurring_sequence,
-            merchant_order_number: Some(merchant_order_number(
-                request.merchant_order_id.as_deref(),
-                &router_data
-                    .resource_common_data
-                    .connector_request_reference_id,
-            )),
+            merchant_order_number: request.merchant_order_id.clone(),
             initiator_type: requests::JpmorganInitiatorType::Cardholder,
             account_on_file: requests::JpmorganAccountOnFile::ToBeStored,
         })
@@ -2100,7 +2073,7 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganRepeatPaymentRequest<T> {
         ntid: String,
         tlid: Option<String>,
     ) -> Result<requests::JpmorganMitCardByNti<T>, Error> {
-        let (number, month, year, kind, provider, supplied_network) =
+        let (number, month, year, provider, supplied_network) =
             match &request.payment_method_data {
                 PaymentMethodData::CardDetailsForNetworkTransactionId(card) => (
                     card.card_number.clone(),
@@ -2111,7 +2084,6 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganRepeatPaymentRequest<T> {
                         .change_context(IntegrationError::RequestEncodingFailed {
                             context: Default::default(),
                         })?,
-                    requests::JpmorganAccountNumberType::Pan,
                     None,
                     card.card_network.clone(),
                 ),
@@ -2140,7 +2112,6 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganRepeatPaymentRequest<T> {
                         .change_context(IntegrationError::RequestEncodingFailed {
                             context: Default::default(),
                         })?,
-                    requests::JpmorganAccountNumberType::NetworkToken,
                     None,
                     token.card_network.clone(),
                 ),
@@ -2159,27 +2130,6 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganRepeatPaymentRequest<T> {
                             }
                             .into())
                         }
-                    };
-                    let account_number_type = match provider {
-                        requests::JpmorganWalletProvider::ApplePay => requests::JpmorganAccountNumberType::DeviceToken,
-                        requests::JpmorganWalletProvider::GooglePay => {
-                            use domain_types::payment_method_data::{AdditionalPaymentData, WalletAdditionalData};
-                            let auth_method = match request.additional_payment_data.as_ref() {
-                                Some(AdditionalPaymentData::Wallet(WalletAdditionalData::GooglePay(data))) => data.payment_method_data_type.as_deref(),
-                                _ => None,
-                            };
-                            match auth_method {
-                                Some("PAN_ONLY") => requests::JpmorganAccountNumberType::Pan,
-                                Some("CRYPTOGRAM_3DS") => requests::JpmorganAccountNumberType::DeviceToken,
-                                _ => return Err(IntegrationError::InvalidDataFormat {
-                                    field_name: "additional_payment_data.wallet.google_pay.payment_method_data_type",
-                                    context: IntegrationErrorContext {
-                                        additional_context: Some("Supply PAN_ONLY or CRYPTOGRAM_3DS for Google Pay credentials.".to_owned()),
-                                        ..Default::default()
-                                    },
-                                }.into()),
-                            }
-                        },
                     };
                     (
                         RawCardNumber(T::inner_from_card_number(
@@ -2200,7 +2150,6 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganRepeatPaymentRequest<T> {
                             .change_context(IntegrationError::RequestEncodingFailed {
                                 context: Default::default(),
                             })?,
-                        account_number_type,
                         Some(provider),
                         token.card_network.clone(),
                     )
@@ -2243,7 +2192,6 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganRepeatPaymentRequest<T> {
                 month: Secret::new(month),
                 year: Secret::new(year),
             },
-            account_number_type: kind,
             wallet_provider: provider,
             original_network_transaction_id: ntid,
             original_transaction_link_id: tlid,
@@ -2308,12 +2256,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             merchant,
             payment_method_type,
             recurring,
-            merchant_order_number: Some(merchant_order_number(
-                request.merchant_order_id.as_deref(),
-                &router_data
-                    .resource_common_data
-                    .connector_request_reference_id,
-            )),
+            merchant_order_number: request.merchant_order_id.clone(),
             initiator_type: requests::JpmorganInitiatorType::Merchant,
             account_on_file: requests::JpmorganAccountOnFile::Stored,
             is_amount_final: true,

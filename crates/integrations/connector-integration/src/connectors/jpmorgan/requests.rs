@@ -241,7 +241,6 @@ pub struct JpmorganSetupMandateCard<T: PaymentMethodDataTypes> {
 pub struct JpmorganMitCardByNti<T: PaymentMethodDataTypes> {
     pub account_number: RawCardNumber<T>,
     pub expiry: Expiry,
-    pub account_number_type: JpmorganAccountNumberType,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub wallet_provider: Option<JpmorganWalletProvider>,
     pub original_network_transaction_id: String,
