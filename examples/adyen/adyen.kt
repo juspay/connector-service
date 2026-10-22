@@ -117,8 +117,8 @@ private fun buildGetRequest(connectorTransactionIdStr: String): PaymentServiceGe
         connectorTransactionId = connectorTransactionIdStr
         encodedData = "redirectResult=probe_redirect_result"
         amountBuilder.apply {  // Amount Information.
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+            minorAmount = 1000L
+            currency = Currency.USD
         }
     }.build()
 }
@@ -398,8 +398,8 @@ fun preAuthenticate(txnId: String, config: ConnectorConfig = _defaultConfig) {
     val client = PaymentMethodAuthenticationClient(config)
     val request = PaymentMethodAuthenticationServicePreAuthenticateRequest.newBuilder().apply {
         amountBuilder.apply {  // Amount Information.
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+            minorAmount = 1000L
+            currency = Currency.USD
         }
         paymentMethodBuilder.apply {  // Payment Method.
             cardBuilder.apply {  // Generic card payment.

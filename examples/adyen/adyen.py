@@ -139,9 +139,9 @@ def _build_get_request(connector_transaction_id: str):
         merchant_transaction_id="probe_merchant_txn_001",  # Identification.
         connector_transaction_id=connector_transaction_id,
         encoded_data="redirectResult=probe_redirect_result",
-        amount=payment_pb2.Money(  # Amount Information.
-            minor_amount=1000,  # Amount in minor units (e.g., 1000 = $10.00).
-            currency=payment_pb2.Currency.Value("USD"),  # ISO 4217 currency code (e.g., "USD", "EUR").
+        amount=common_types_pb2.Money(  # Amount Information.
+            minor_amount=1000,
+            currency=common_types_pb2.Currency.Value("USD"),
         ),
     )
 
@@ -168,9 +168,9 @@ def _build_parse_event_request():
 
 def _build_pre_authenticate_request():
     return payment_pb2.PaymentMethodAuthenticationServicePreAuthenticateRequest(
-        amount=payment_pb2.Money(  # Amount Information.
-            minor_amount=1000,  # Amount in minor units (e.g., 1000 = $10.00).
-            currency=payment_pb2.Currency.Value("USD"),  # ISO 4217 currency code (e.g., "USD", "EUR").
+        amount=common_types_pb2.Money(  # Amount Information.
+            minor_amount=1000,
+            currency=common_types_pb2.Currency.Value("USD"),
         ),
         payment_method=payment_methods_pb2.PaymentMethod(  # Payment Method.
             card=payment_methods_pb2.CardDetails(
@@ -182,7 +182,7 @@ def _build_pre_authenticate_request():
             ),
         ),
         address=payment_pb2.PaymentAddress(  # Address Information.
-            billing_address=payment_pb2.Address(),
+            billing_address=common_types_pb2.Address(),
         ),
         enrolled_for_3ds=False,  # Authentication Details.
         return_url="https://example.com/3ds-return",  # URLs for Redirection.
