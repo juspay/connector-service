@@ -978,6 +978,9 @@ jobs:
     env:
       RUSTFLAGS: "-D warnings"
       PROFILE: release-fast
+      CC_x86_64_unknown_linux_gnu: x86_64-linux-gnu-gcc
+      CXX_x86_64_unknown_linux_gnu: x86_64-linux-gnu-g++
+      CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: x86_64-linux-gnu-gcc
 
     outputs:
       cache-key: ${{ steps.cache-key.outputs.key }}
@@ -1113,6 +1116,9 @@ jobs:
     env:
       RUSTFLAGS: "-D warnings"
       PROFILE: release-fast
+      CC_x86_64_unknown_linux_gnu: x86_64-linux-gnu-gcc
+      CXX_x86_64_unknown_linux_gnu: x86_64-linux-gnu-g++
+      CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: x86_64-linux-gnu-gcc
 
     steps:
       - name: Checkout code
