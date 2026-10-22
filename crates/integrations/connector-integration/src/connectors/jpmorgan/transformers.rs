@@ -2160,12 +2160,6 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganRepeatPaymentRequest<T> {
                             .into())
                         }
                     };
-                    if token.cryptogram.as_ref().is_some_and(|value| value.peek().trim().is_empty()) {
-                        return Err(IntegrationError::InvalidDataFormat {
-                            field_name: "cryptogram",
-                            context: Default::default(),
-                        }.into());
-                    }
                     let account_number_type = match provider {
                         requests::JpmorganWalletProvider::ApplePay => requests::JpmorganAccountNumberType::DeviceToken,
                         requests::JpmorganWalletProvider::GooglePay if token.cryptogram.is_some() => requests::JpmorganAccountNumberType::DeviceToken,
