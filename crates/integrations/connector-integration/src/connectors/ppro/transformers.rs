@@ -712,7 +712,9 @@ fn ppro_raw_connector_status<S: std::fmt::Display>(
     failure: Option<&PproFailure>,
 ) -> RawConnectorStatus {
     RawConnectorStatus {
-        code: Some(status.to_string()),
+        code: failure
+                .and_then(|f| f.failure_code.clone())
+                .or(Some(status.to_string())),
         message: failure.map(|f| f.failure_message.clone()),
         reason: failure.map(|f| {
             format!(
