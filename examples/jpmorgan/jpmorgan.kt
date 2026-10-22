@@ -12,7 +12,6 @@ import types.Events.*
 import types.PaymentMethods.*
 import payments.PaymentClient
 import payments.MerchantAuthenticationClient
-import payments.RefundClient
 import payments.AcceptanceType
 import payments.AuthenticationType
 import payments.CaptureMethod
