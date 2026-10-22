@@ -374,8 +374,8 @@ pub fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidR
         connector_transaction_id: connector_transaction_id.to_string(),
         amount: Some(Money {
             // Amount Information.
-            minor_amount: 1000, // Amount in minor units (e.g., 1000 = $10.00).
-            currency: Currency::Usd.into(), // ISO 4217 currency code (e.g., "USD", "EUR").
+            minor_amount: 1000,
+            currency: Currency::Usd.into(),
         }),
         state: Some(ConnectorState {
             // State Information.
