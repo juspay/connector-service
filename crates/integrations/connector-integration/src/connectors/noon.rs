@@ -923,6 +923,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
 // SourceVerification implementations for authentication flows
 
+#[cfg(test)]
+mod test;
+
 macros::macro_connector_flow_status_impls!(
     connector: Noon,
     generic_type: T,
