@@ -1548,13 +1548,13 @@ pub struct PacoPaymentStatusInfo {
     pub payment_step: PacoPaymentStep,
 }
 
-impl From<&PacoPaymentStatusInfo> for PostCaptureVoidStatus {
-    fn from(info: &PacoPaymentStatusInfo) -> Self {
-        match (&info.payment_status, &info.payment_step) {
-            (PacoPaymentStatus::V, PacoPaymentStep::VD) => Self::Succeeded,
-            (PacoPaymentStatus::F, PacoPaymentStep::VD) => Self::Failed,
-            _ => Self::Pending,
-        }
+/// Returns the void outcome only for a terminal VD-step result; `None` means PACO has not
+/// reported a final void status yet.
+fn map_post_capture_void_status(info: &PacoPaymentStatusInfo) -> Option<PostCaptureVoidStatus> {
+    match (&info.payment_status, &info.payment_step) {
+        (PacoPaymentStatus::V, PacoPaymentStep::VD) => Some(PostCaptureVoidStatus::Succeeded),
+        (PacoPaymentStatus::F, PacoPaymentStep::VD) => Some(PostCaptureVoidStatus::Failed),
+        _ => None,
     }
 }
 
@@ -1948,7 +1948,8 @@ impl TryFrom<ResponseRouterData<TwocTwopPacoNonUiResponse, Self>>
         let post_capture_void_status = result
             .as_ref()
             .and_then(|block| block.payment_status_info.as_ref())
-            .map_or(PostCaptureVoidStatus::Pending, PostCaptureVoidStatus::from);
+            .and_then(map_post_capture_void_status)
+            .unwrap_or(PostCaptureVoidStatus::Pending);
         let description = post_capture_void_status
             .is_post_capture_void_failure()
             .then(|| error_code_message(&api_response, &prior).1);
