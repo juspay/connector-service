@@ -1010,7 +1010,7 @@ examples_python: examples/worldpay/worldpay.py
 connector_id: worldpayraft
 doc: docs/connectors/worldpayraft.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment
-payment_methods: Card
+payment_methods: ApplePayDecrypted, Card, GooglePayDecrypted
 flows: authorize, capture, proxy_authorize, proxy_setup_recurring, recurring_charge, refund, setup_recurring, void
 examples_python: examples/worldpayraft/worldpayraft.py
 
