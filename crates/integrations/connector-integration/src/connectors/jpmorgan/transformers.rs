@@ -1421,6 +1421,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             merchant,
             amount,
             currency: item.router_data.request.currency,
+            payment_method_type: requests::JpmorganRefundPaymentMethodType {
+                transaction_reference: requests::JpmorganTransactionReference {
+                    transaction_reference_id: item.router_data.request.connector_transaction_id,
+                },
+            },
         })
     }
 }

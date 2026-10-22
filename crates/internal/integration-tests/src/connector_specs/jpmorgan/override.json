@@ -82,6 +82,12 @@
       }
     }
   },
+  "PaymentService/Refund": {
+    "refund_with_order_context": {
+      "extends": "refund_partial_amount",
+      "grpc_req": { "connector_order_id": "JPM order.1-1" }
+    }
+  },
   "PaymentService/Authorize": {
     "no3ds_auto_capture_credit_card": {
       "grpc_req": { "setup_future_usage": "OFF_SESSION", "merchant_order_id": null },
