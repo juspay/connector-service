@@ -1298,7 +1298,7 @@ mod tests {
                     arrival: Some("2025-06-01T12:00:00Z".to_owned()),
                     origin: Some("SAO".to_owned()),
                     destination: Some("RIO".to_owned()),
-                    travel_class: Some("ECON".to_owned()),
+                    travel_class: Some(common_enums::TravelClass::Economy),
                     passengers: vec![Traveller {
                         first_name: Some(Secret::new("Joao".to_owned())),
                         last_name: Some(Secret::new("Silva".to_owned())),
@@ -1337,9 +1337,11 @@ mod tests {
                     hotel_country: Some("BR".to_owned()),
                     reservation_at: Some("2025-05-01T10:00:00Z".to_owned()),
                     reservation_expires_at: Some("2025-05-02T10:00:00Z".to_owned()),
-                    check_in: Some("2025-06-01".to_owned()),
-                    check_out: Some("2025-06-05".to_owned()),
+                    checkin: Some("2025-06-01".to_owned()),
+                    checkout: Some("2025-06-05".to_owned()),
+                    ..HotelSegment::default()
                 }],
+                ..HotelData::default()
             }),
             ..DomainData::default()
         };

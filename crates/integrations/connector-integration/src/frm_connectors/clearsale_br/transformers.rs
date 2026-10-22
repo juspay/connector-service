@@ -2116,7 +2116,7 @@ pub(crate) fn travel_segment_to_clear_sale_connection(
         company,
         identification_number,
         date: Some(date),
-        seat_class: segment.travel_class.clone(),
+        seat_class: segment.travel_class.map(travel_class_to_seat_class),
         origin: segment.origin.as_deref()?.trim().to_owned(),
         destination: segment.destination.as_deref()?.trim().to_owned(),
         boarding: segment
@@ -2130,8 +2130,19 @@ pub(crate) fn travel_segment_to_clear_sale_connection(
     })
 }
 
-pub(crate) fn carrier_code_from_identifier(identifier: &str) -> Option<String> {
-    let token = identifier.trim();
+/// Domain `TravelClass` (Economy / PremiumEconomy / Business / First) →
+/// ClearSale `seatClass` vocabulary on the wire. The wire field is a free-form
+/// string, so we send the canonical PascalCase name.
+pub(crate) fn travel_class_to_seat_class(class: common_enums::TravelClass) -> String {
+    match class {
+        common_enums::TravelClass::Economy => "Economy".to_owned(),
+        common_enums::TravelClass::PremiumEconomy => "PremiumEconomy".to_owned(),
+        common_enums::TravelClass::Business => "Business".to_owned(),
+        common_enums::TravelClass::First => "First".to_owned(),
+    }
+}
+
+pub(crate) fn carrier_code_from_identifier(identifier: &str) -> Option<String> {    let token = identifier.trim();
     if token.is_empty() {
         return None;
     }
@@ -2167,8 +2178,8 @@ pub(crate) fn accommodation_to_clear_sale(a: &HotelSegment) -> Option<ClearSaleH
         country: a.hotel_country.clone(),
         reservation_date: a.reservation_at.as_deref().map(to_clearsale_datetime),
         reserve_expiration_date: a.reservation_expires_at.as_deref().map(to_clearsale_datetime),
-        check_in_date: a.check_in.as_deref().map(to_clearsale_datetime),
-        check_out_date: a.check_out.as_deref().map(to_clearsale_datetime),
+        check_in_date: a.checkin.as_deref().map(to_clearsale_datetime),
+        check_out_date: a.checkout.as_deref().map(to_clearsale_datetime),
     })
 }
 
