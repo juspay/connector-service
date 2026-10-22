@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::types::ResponseRouterData;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use common_enums::{AttemptStatus, Currency, PostCaptureVoidStatus, RefundStatus};
-use common_utils::{pii::Email, request::Method, MinorUnit};
+use common_utils::{pii::Email, request::Method, types::Money, MinorUnit};
 use domain_types::errors::{
     ConnectorError, IntegrationError, IntegrationErrorContext, ResponseTransformationErrorContext,
 };
@@ -463,20 +463,18 @@ pub struct DatatransMcpAmount {
 pub trait DatatransMcpPayload: Sized {
     fn from_quote(
         quote: &domain_types::connector_types::CurrencyConversionQuote,
-        hyperswitch_customer_amount: MinorUnit,
-        hyperswitch_customer_currency: Currency,
+        hyperswitch_customer_money: &Money,
     ) -> Result<Self, error_stack::Report<IntegrationError>>;
 }
 
 impl DatatransMcpPayload for DatatransMcpAmount {
     fn from_quote(
         _quote: &domain_types::connector_types::CurrencyConversionQuote,
-        hyperswitch_customer_amount: MinorUnit,
-        hyperswitch_customer_currency: Currency,
+        hyperswitch_customer_money: &Money,
     ) -> Result<Self, error_stack::Report<IntegrationError>> {
         Ok(Self {
-            currency: hyperswitch_customer_currency,
-            amount: hyperswitch_customer_amount,
+            currency: hyperswitch_customer_money.currency,
+            amount: hyperswitch_customer_money.amount,
         })
     }
 }
@@ -485,8 +483,7 @@ impl DatatransMcpPayload for DatatransMcpAmount {
 /// customer-facing fields in `mcp`. Without MCP, keeps the original payment fields.
 impl<Mcp: DatatransMcpPayload> DatatransMoney<Mcp> {
     fn new(
-        hyperswitch_customer_amount: MinorUnit,
-        hyperswitch_customer_currency: Currency,
+        hyperswitch_customer_money: &Money,
         mcp_request: Option<&CurrencyConversionData>,
     ) -> Result<Self, error_stack::Report<IntegrationError>> {
         match mcp_request
@@ -494,8 +491,8 @@ impl<Mcp: DatatransMcpPayload> DatatransMoney<Mcp> {
             .filter(|quote| quote.currency_conversion_type == Some(CurrencyConversionType::Mcp))
         {
             None => Ok(Self {
-                amount: Some(hyperswitch_customer_amount),
-                currency: hyperswitch_customer_currency,
+                amount: Some(hyperswitch_customer_money.amount),
+                currency: hyperswitch_customer_money.currency,
                 mcp: None,
             }),
             Some(quote) => {
@@ -510,11 +507,7 @@ impl<Mcp: DatatransMcpPayload> DatatransMoney<Mcp> {
                 Ok(Self {
                     amount: Some(settlement.amount),
                     currency: settlement.currency,
-                    mcp: Some(Mcp::from_quote(
-                        quote,
-                        hyperswitch_customer_amount,
-                        hyperswitch_customer_currency,
-                    )?),
+                    mcp: Some(Mcp::from_quote(quote, hyperswitch_customer_money)?),
                 })
             }
         }
@@ -532,8 +525,7 @@ impl<Mcp: DatatransMcpPayload> DatatransMoney<Mcp> {
 impl DatatransMcpPayload for DatatransMcp {
     fn from_quote(
         quote: &domain_types::connector_types::CurrencyConversionQuote,
-        hyperswitch_customer_amount: MinorUnit,
-        hyperswitch_customer_currency: Currency,
+        hyperswitch_customer_money: &Money,
     ) -> Result<Self, error_stack::Report<IntegrationError>> {
         let conversion_rate = quote
             .exchange_rate
@@ -571,8 +563,8 @@ impl DatatransMcpPayload for DatatransMcp {
             .transpose()?;
 
         Ok(Self {
-            currency: hyperswitch_customer_currency,
-            amount: hyperswitch_customer_amount,
+            currency: hyperswitch_customer_money.currency,
+            amount: hyperswitch_customer_money.amount,
             conversion_rate,
             transaction_date,
             retrieval_reference_number: quote.exchange_rate_id.clone(),
@@ -827,8 +819,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let auto_settle = Some(router_data.request.is_auto_capture());
 
         let money = DatatransMoney::new(
-            router_data.request.amount.amount,
-            router_data.request.currency,
+            &router_data.request.amount,
             router_data.request.currency_conversion_data.as_ref(),
         )?;
 
@@ -1552,8 +1543,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         });
 
         let money = DatatransMoney::new(
-            router_data.request.amount.amount,
-            router_data.request.currency,
+            &router_data.request.amount,
             router_data.request.currency_conversion_data.as_ref(),
         )?;
 
@@ -2006,13 +1996,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        // The customer-facing capture amount (what the shopper was charged).
-        let customer_amount = router_data.request.amount_to_capture.amount;
-        let customer_currency = router_data.request.currency;
-
         let money = DatatransMoney::new(
-            customer_amount,
-            customer_currency,
+            &router_data.request.amount_to_capture,
             router_data.request.currency_conversion_data.as_ref(),
         )?;
 
@@ -2111,11 +2096,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let customer_amount = router_data.request.refund_amount.amount;
-        let customer_currency = router_data.request.currency;
         let money = DatatransMoney::new(
-            customer_amount,
-            customer_currency,
+            &router_data.request.refund_amount,
             router_data.request.currency_conversion_data.as_ref(),
         )?;
 
