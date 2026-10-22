@@ -1292,10 +1292,10 @@ mod tests {
             number_of_passengers: Some(2),
             travel_segments: vec![
                 TravelSegment {
-                    identifier: Some("101".to_owned()),
-                    departure: Some("2025-06-01T08:00:00Z".to_owned()),
-                    boarding: Some("2025-06-01T07:30:00Z".to_owned()),
-                    arrival: Some("2025-06-01T12:00:00Z".to_owned()),
+                    identification_number: Some("101".to_owned()),
+                    departure_date_time: Some("2025-06-01T08:00:00Z".to_owned()),
+                    boarding_date_time: Some("2025-06-01T07:30:00Z".to_owned()),
+                    arrival_date_time: Some("2025-06-01T12:00:00Z".to_owned()),
                     origin: Some("SAO".to_owned()),
                     destination: Some("RIO".to_owned()),
                     travel_class: Some(common_enums::TravelClass::Economy),
@@ -1313,8 +1313,8 @@ mod tests {
                     }],
                 },
                 TravelSegment {
-                    identifier: Some("G3-1234".to_owned()),
-                    departure: Some("2025-06-10T09:00:00Z".to_owned()),
+                    identification_number: Some("G3-1234".to_owned()),
+                    departure_date_time: Some("2025-06-10T09:00:00Z".to_owned()),
                     origin: Some("RIO".to_owned()),
                     destination: Some("SAO".to_owned()),
                     passengers: vec![Traveller {
@@ -1335,8 +1335,8 @@ mod tests {
                     hotel_city: Some("Rio de Janeiro".to_owned()),
                     hotel_state: Some("RJ".to_owned()),
                     hotel_country: Some("BR".to_owned()),
-                    reservation_at: Some("2025-05-01T10:00:00Z".to_owned()),
-                    reservation_expires_at: Some("2025-05-02T10:00:00Z".to_owned()),
+                    reservation_date_time: Some("2025-05-01T10:00:00Z".to_owned()),
+                    reservation_expires_date_time: Some("2025-05-02T10:00:00Z".to_owned()),
                     checkin: Some("2025-06-01".to_owned()),
                     checkout: Some("2025-06-05".to_owned()),
                     ..HotelSegment::default()

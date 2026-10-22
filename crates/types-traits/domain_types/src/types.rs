@@ -5357,8 +5357,8 @@ impl ForeignTryFrom<grpc_payment_types::HotelSegment> for connector_types::Hotel
                 .map(common_utils::types::Money::foreign_try_from)
                 .transpose()?,
             hotel_state: segment.hotel_state,
-            reservation_at: segment.reservation_at,
-            reservation_expires_at: segment.reservation_expires_at,
+            reservation_date_time: segment.reservation_date_time,
+            reservation_expires_date_time: segment.reservation_expires_date_time,
         })
     }
 }
@@ -5428,10 +5428,10 @@ impl ForeignTryFrom<grpc_payment_types::TravelSegment> for connector_types::Trav
                 .into_iter()
                 .map(connector_types::Traveller::foreign_try_from)
                 .collect::<Result<Vec<_>, _>>()?,
-            arrival: segment.arrival,
-            boarding: segment.boarding,
-            departure: segment.departure,
-            identifier: segment.identifier,
+            arrival_date_time: segment.arrival_date_time,
+            boarding_date_time: segment.boarding_date_time,
+            departure_date_time: segment.departure_date_time,
+            identification_number: segment.identification_number,
         })
     }
 }

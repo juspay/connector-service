@@ -2083,7 +2083,7 @@ pub(crate) fn passenger_to_clear_sale(p: &Traveller) -> Option<ClearSalePassenge
 ///
 /// The booking-level `TravelData` supplies the carrier and travel date
 /// (`carrier_name` / `travel_date`); the segment supplies the leg detail
-/// (`origin`, `destination`, `travel_class`, times, `identifier`). When
+/// (`origin`, `destination`, `travel_class`, times, `identification_number`). When
 /// `carrier_name` is absent, the identifier's leading airline-code prefix
 /// ("G3-1234" → "G3") is used so a flight-number-only booking still projects.
 pub(crate) fn travel_segment_to_clear_sale_connection(
@@ -2092,7 +2092,11 @@ pub(crate) fn travel_segment_to_clear_sale_connection(
 ) -> Option<ClearSaleConnection> {
     // Only a fully-numeric identifier becomes identificationNumber (e.g.
     // "101" → 101). "G3-1234" does not parse and is dropped from the wire.
-    let identifier = segment.identifier.as_deref().map(str::trim).unwrap_or("");
+    let identifier = segment
+        .identification_number
+        .as_deref()
+        .map(str::trim)
+        .unwrap_or("");
     let identification_number = if identifier.is_empty() {
         None
     } else {
@@ -2100,9 +2104,9 @@ pub(crate) fn travel_segment_to_clear_sale_connection(
     };
     // Fall back: departure → boarding → booking travel date → fail
     let date = segment
-        .departure
+        .departure_date_time
         .clone()
-        .or_else(|| segment.boarding.clone())
+        .or_else(|| segment.boarding_date_time.clone())
         .or_else(|| leg.travel_date.clone())
         .map(|date| to_clearsale_datetime(&date))?;
     let company = leg
@@ -2120,10 +2124,13 @@ pub(crate) fn travel_segment_to_clear_sale_connection(
         origin: segment.origin.as_deref()?.trim().to_owned(),
         destination: segment.destination.as_deref()?.trim().to_owned(),
         boarding: segment
-            .boarding
+            .boarding_date_time
             .as_deref()
             .map(to_clearsale_datetime),
-        arriving: segment.arrival.as_deref().map(to_clearsale_datetime),
+        arriving: segment
+            .arrival_date_time
+            .as_deref()
+            .map(to_clearsale_datetime),
         // No separate fare-basis carrier on `TravelSegment` — `travel_class`
         // already feeds `seatClass`.
         fare_class: None,
@@ -2142,7 +2149,8 @@ pub(crate) fn travel_class_to_seat_class(class: common_enums::TravelClass) -> St
     }
 }
 
-pub(crate) fn carrier_code_from_identifier(identifier: &str) -> Option<String> {    let token = identifier.trim();
+pub(crate) fn carrier_code_from_identifier(identifier: &str) -> Option<String> {
+    let token = identifier.trim();
     if token.is_empty() {
         return None;
     }
@@ -2176,8 +2184,14 @@ pub(crate) fn accommodation_to_clear_sale(a: &HotelSegment) -> Option<ClearSaleH
         city: a.hotel_city.clone(),
         state: a.hotel_state.clone(),
         country: a.hotel_country.clone(),
-        reservation_date: a.reservation_at.as_deref().map(to_clearsale_datetime),
-        reserve_expiration_date: a.reservation_expires_at.as_deref().map(to_clearsale_datetime),
+        reservation_date: a
+            .reservation_date_time
+            .as_deref()
+            .map(to_clearsale_datetime),
+        reserve_expiration_date: a
+            .reservation_expires_date_time
+            .as_deref()
+            .map(to_clearsale_datetime),
         check_in_date: a.checkin.as_deref().map(to_clearsale_datetime),
         check_out_date: a.checkout.as_deref().map(to_clearsale_datetime),
     })

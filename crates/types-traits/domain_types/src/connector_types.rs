@@ -5162,10 +5162,10 @@ pub struct HotelSegment {
     pub daily_rate: Option<common_utils::types::Money>,
     /// State / province of the property (UF for BR) — ClearSale hotels[].state.
     pub hotel_state: Option<String>,
-    /// Reservation creation timestamp — ClearSale hotels[].reservationDate.
-    pub reservation_at: Option<String>,
-    /// Reservation hold expiry — ClearSale hotels[].reserveExpirationDate.
-    pub reservation_expires_at: Option<String>,
+    /// Reservation creation timestamp (RFC 3339) — ClearSale hotels[].reservationDate.
+    pub reservation_date_time: Option<String>,
+    /// Reservation hold expiry timestamp (RFC 3339) — ClearSale hotels[].reserveExpirationDate.
+    pub reservation_expires_date_time: Option<String>,
 }
 
 /// Host details for hosted accommodations (rental / homestay platforms).
@@ -5212,15 +5212,15 @@ pub struct TravelSegment {
     pub travel_class: Option<common_enums::TravelClass>,
     /// Passenger details for this leg.
     pub passengers: Vec<Traveller>,
-    /// Arrival (RFC 3339) — ClearSale connections[].arriving.
-    pub arrival: Option<String>,
-    /// Boarding gate opening (RFC 3339) — ClearSale connections[].boarding.
-    pub boarding: Option<String>,
-    /// Departure (RFC 3339) — ClearSale connections[].date.
-    pub departure: Option<String>,
+    /// Arrival timestamp (RFC 3339) — ClearSale connections[].arriving.
+    pub arrival_date_time: Option<String>,
+    /// Boarding gate opening timestamp (RFC 3339) — ClearSale connections[].boarding.
+    pub boarding_date_time: Option<String>,
+    /// Departure timestamp (RFC 3339) — ClearSale connections[].date.
+    pub departure_date_time: Option<String>,
     /// Trip / service / coach / flight number —
     /// ClearSale connections[].identificationNumber when numeric.
-    pub identifier: Option<String>,
+    pub identification_number: Option<String>,
 }
 
 /// A passenger on a ground / sea travel booking.
