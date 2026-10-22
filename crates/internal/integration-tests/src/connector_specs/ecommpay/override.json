@@ -368,5 +368,17 @@
         "mandate_reference.connector_mandate_id.connector_mandate_id": null
       }
     }
+  },
+  "PaymentService/Refund": {
+    "refund_full_amount": {
+      "grpc_req": {
+        "reason": "customer_requested"
+      }
+    },
+    "refund_partial_amount": {
+      "grpc_req": {
+        "reason": "customer_requested"
+      }
+    }
   }
 }

@@ -68,9 +68,6 @@ const CANCEL_DOC_URL: &str = "https://developers.ecommpay.com/en/en_platform_dms
 const REFUND_DOC_URL: &str = "https://developers.ecommpay.com/en/en_Gate_Refund.html";
 const ACCOUNT_VERIFICATION_DOC_URL: &str =
     "https://developers.ecommpay.com/en/en_gate_account_verification.html";
-/// `payment.description` of a refund when the caller gave no reason: the field is required by
-/// the Gate, and this is the value the Ecommpay refund example sends (UD-16).
-const DEFAULT_REFUND_DESCRIPTION: &str = "refund";
 /// `errors[].code` of a status request for a payment the Gate has not registered (yet).
 const TRANSACTION_NOT_FOUND_CODE: &str = "3061";
 
@@ -515,8 +512,9 @@ pub struct EcommpayGeneral {
     pub merchant_callback_url: Option<String>,
 }
 
+/// `customer.billing` and `customer.shipping` carry the same five address fields.
 #[derive(Debug, Clone, Default, Serialize)]
-pub struct EcommpayBilling {
+pub struct EcommpayAddress {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub country: Option<CountryAlpha2>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -527,20 +525,6 @@ pub struct EcommpayBilling {
     pub address: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub postal: Option<Secret<String>>,
-}
-
-#[derive(Debug, Clone, Default, Serialize)]
-pub struct EcommpayShipping {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub address: Option<Secret<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub city: Option<Secret<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub country: Option<CountryAlpha2>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub postal: Option<Secret<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub region: Option<Secret<String>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -558,9 +542,9 @@ pub struct EcommpayCustomer {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_name: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub billing: Option<EcommpayBilling>,
+    pub billing: Option<EcommpayAddress>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub shipping: Option<EcommpayShipping>,
+    pub shipping: Option<EcommpayAddress>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub accept_header: Option<String>,
     /// The browser User-Agent (max 512).
@@ -1017,7 +1001,13 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
                 ),
             })?;
 
-        let customer = build_customer(request, common, customer_id, ip_address)?;
+        let customer = build_customer(
+            request.browser_info.as_ref(),
+            request.email.clone(),
+            common,
+            customer_id,
+            ip_address,
+        )?;
 
         // G-Authorize__Wallet-07: a PAYMENT_GATEWAY Google Pay token needs customer.email.
         if matches!(source, EcommpayPaymentSource::GooglePayToken(_)) && customer.email.is_none() {
@@ -1496,8 +1486,8 @@ fn join_lines(
 /// `customer.billing.*` (requirement row 22). `None` when no billing field is present.
 fn build_billing(
     common: &PaymentFlowData,
-) -> Result<Option<EcommpayBilling>, error_stack::Report<IntegrationError>> {
-    let billing = EcommpayBilling {
+) -> Result<Option<EcommpayAddress>, error_stack::Report<IntegrationError>> {
+    let billing = EcommpayAddress {
         country: common.get_optional_billing_country(),
         region: within_limit(
             non_empty_secret(common.get_optional_billing_state()),
@@ -1534,8 +1524,8 @@ fn build_billing(
 /// `customer.shipping.*` (requirement row 23). `None` when no shipping field is present.
 fn build_shipping(
     common: &PaymentFlowData,
-) -> Result<Option<EcommpayShipping>, error_stack::Report<IntegrationError>> {
-    let shipping = EcommpayShipping {
+) -> Result<Option<EcommpayAddress>, error_stack::Report<IntegrationError>> {
+    let shipping = EcommpayAddress {
         address: within_limit(
             join_lines(
                 common.get_optional_shipping_line1(),
@@ -1577,13 +1567,15 @@ fn build_avs_data(common: &PaymentFlowData) -> Option<EcommpayAvsData> {
     })
 }
 
-fn build_customer<T: PaymentMethodDataTypes>(
-    request: &PaymentsAuthorizeData<T>,
+/// `customer.*` shared by the Authorize and SetupMandate legs: every optional field is sent
+/// whenever the request carries it.
+fn build_customer(
+    browser_info: Option<&BrowserInformation>,
+    email: Option<Email>,
     common: &PaymentFlowData,
     id: String,
     ip_address: Secret<String, IpAddress>,
 ) -> Result<EcommpayCustomer, error_stack::Report<IntegrationError>> {
-    let browser_info = request.browser_info.as_ref();
     let screen_res = browser_info.and_then(|info| {
         info.screen_width
             .zip(info.screen_height)
@@ -1604,7 +1596,7 @@ fn build_customer<T: PaymentMethodDataTypes>(
     Ok(EcommpayCustomer {
         id,
         ip_address,
-        email: non_empty_email(request.email.clone())
+        email: non_empty_email(email)
             .or_else(|| non_empty_email(common.get_optional_billing_email())),
         phone: normalise_phone(common),
         screen_res,
@@ -2111,25 +2103,13 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
             );
         }
 
-        let customer = EcommpayCustomer {
-            id: customer_id,
+        let customer = build_customer(
+            request.browser_info.as_ref(),
+            request.email.clone(),
+            common,
+            customer_id,
             ip_address,
-            email: non_empty_email(request.email.clone())
-                .or_else(|| non_empty_email(common.get_optional_billing_email())),
-            phone: normalise_phone(common),
-            screen_res: None,
-            first_name: None,
-            last_name: None,
-            billing: None,
-            shipping: None,
-            accept_header: None,
-            browser: None,
-            language: None,
-            color_depth: None,
-            java_enabled: None,
-            js_enabled: None,
-            timezone_offset: None,
-        };
+        )?;
 
         // COF type from the intended MIT category (same mapping as a COF-registering purchase).
         let recurring_type = match request.mit_category {
@@ -3080,11 +3060,16 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
                 return Err(too_long("merchant_refund_id", MAX_ID_LENGTH, length));
             }
         }
-        // UD-16: payment.description is required by the Gate; the caller's reason when given,
-        // else the constant the Ecommpay refund example sends. A reason over the 255-character
+        // UD-16: payment.description is required by the Gate (RefundPaymentInfo). Without it the
+        // sandbox accepts the call but never registers the refund, so a missing reason is refused
+        // up front rather than filled with a made-up value. A reason over the 255-character
         // limit is refused rather than truncated.
-        let description = non_empty(request.reason.clone())
-            .unwrap_or_else(|| DEFAULT_REFUND_DESCRIPTION.to_string());
+        let description = non_empty(request.reason.clone()).ok_or_else(|| {
+            missing_field(
+                "reason",
+                "Ecommpay requires payment.description (the refund reason) on every refund",
+            )
+        })?;
         let description_length = description.chars().count();
         if description_length > MAX_ID_LENGTH {
             return Err(too_long("reason", MAX_ID_LENGTH, description_length));
@@ -3592,12 +3577,16 @@ pub fn verified_status_response(
 pub fn map_payment_status(status: EcommpayPaymentStatus) -> AttemptStatus {
     match status {
         EcommpayPaymentStatus::Processing => AttemptStatus::Pending,
+        // The customer has to act (3DS, redirect, payment-system step, merchant-requested
+        // authentication) before the payment can move on.
         EcommpayPaymentStatus::Awaiting3dsResult
-        | EcommpayPaymentStatus::AwaitingRedirectResult => AttemptStatus::AuthenticationPending,
-        EcommpayPaymentStatus::AwaitingCustomerAction
-        | EcommpayPaymentStatus::AwaitingMerchantAuth
-        | EcommpayPaymentStatus::AwaitingClarification
-        | EcommpayPaymentStatus::AwaitingCustomer => AttemptStatus::Pending,
+        | EcommpayPaymentStatus::AwaitingRedirectResult
+        | EcommpayPaymentStatus::AwaitingCustomerAction
+        | EcommpayPaymentStatus::AwaitingMerchantAuth => AttemptStatus::AuthenticationPending,
+        // Waiting on additional data or a customer retry: nothing to redirect to.
+        EcommpayPaymentStatus::AwaitingClarification | EcommpayPaymentStatus::AwaitingCustomer => {
+            AttemptStatus::Pending
+        }
         EcommpayPaymentStatus::AwaitingCapture => AttemptStatus::Authorized,
         EcommpayPaymentStatus::Success => AttemptStatus::Charged,
         EcommpayPaymentStatus::Decline | EcommpayPaymentStatus::Error => AttemptStatus::Failure,
