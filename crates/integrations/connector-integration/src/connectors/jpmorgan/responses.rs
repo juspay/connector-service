@@ -1,7 +1,7 @@
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
-use super::requests::CapMethod;
+use crate::connectors::jpmorgan::requests;
 
 /// 3DS 2.x transaction status from the directory server
 /// (Visa/Mastercard `transStatus` values).
@@ -30,7 +30,7 @@ pub enum JpmorganThreeDsStatus {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct JpmorganAuthUpdateResponse {
     pub access_token: Secret<String>,
-    pub scope: String,
+    pub scope: Option<String>,
     pub token_type: String,
     pub expires_in: i64,
 }
@@ -41,6 +41,19 @@ pub struct JpmorganErrorResponse {
     pub response_status: JpmorganTransactionStatus,
     pub response_code: String,
     pub response_message: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct JpmorganOAuthErrorResponse {
+    pub error: String,
+    pub error_description: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum JpmorganApiErrorResponse {
+    Payment(JpmorganErrorResponse),
+    OAuth(JpmorganOAuthErrorResponse),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -81,7 +94,7 @@ pub struct JpmorganPaymentsResponse {
     pub response_code: String,
     pub response_message: Option<String>,
     pub payment_method_type: Option<PaymentMethodType>,
-    pub capture_method: Option<CapMethod>,
+    pub capture_method: Option<requests::CapMethod>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_authentication_result: Option<PaymentAuthenticationResult>,
 }
@@ -210,7 +223,7 @@ pub struct JpmorganRefundResponse {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct JpmorganClientAuthResponse {
     pub access_token: Secret<String>,
-    pub scope: String,
+    pub scope: Option<String>,
     pub token_type: String,
     pub expires_in: i64,
 }
@@ -232,7 +245,6 @@ pub struct JpmorganVerificationResponse {
     pub response_message: String,
     pub host_message: String,
     pub payment_method_type: PaymentMethodType,
-    pub verification_authentication_result: Option<Secret<serde_json::Value>>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -249,8 +261,8 @@ pub type JpmorganSetupMandateResponse = JpmorganVerificationResponse;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(untagged)]
-pub enum JpmorganTransactionResponse {
-    Payment(JpmorganPaymentsResponse),
-    Verification(JpmorganVerificationResponse),
+pub enum JpmorganPSyncResponse {
+    Payment(Box<JpmorganPaymentsResponse>),
+    Verification(Box<JpmorganVerificationResponse>),
 }
 pub type JpmorganRepeatPaymentResponse = JpmorganPaymentsResponse;

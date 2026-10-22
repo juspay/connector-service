@@ -391,6 +391,8 @@ pub enum ConnectorSpecificConfig {
         api_key: Secret<String>,
         merchant_id: Secret<String>,
         base_url: Option<String>,
+        /// HMAC-SHA256 webhook signing secret used to verify the `ppro-signature` header.
+        webhook_secret: Option<Secret<String>>,
     },
     Easebuzz {
         api_key: Secret<String>,
@@ -470,7 +472,9 @@ pub enum ConnectorSpecificConfig {
     },
     Jpmorgan {
         client_id: Secret<String>,
-        client_secret: Secret<String>,
+        thumbprint: Secret<String>,
+        private_key: Secret<String>,
+        resource_id: Secret<String>,
         base_url: Option<String>,
         secondary_base_url: Option<String>,
         company_name: Option<Secret<String>>,
@@ -1227,7 +1231,9 @@ impl ConnectorSpecificConfig {
             },
             Jpmorgan {
                 client_id,
-                client_secret
+                thumbprint,
+                private_key,
+                resource_id
             },
             Loonio {
                 merchant_id,
@@ -1763,7 +1769,9 @@ impl ConnectorSpecificConfig {
                 },
                 Jpmorgan {
                     client_id,
-                    client_secret
+                    thumbprint,
+                    private_key,
+                    resource_id
                 },
                 Loonio {
                     merchant_id,
@@ -2326,7 +2334,9 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
             }),
             AuthType::Jpmorgan(jpmorgan) => Ok(Self::Jpmorgan {
                 client_id: jpmorgan.client_id.ok_or_else(err)?,
-                client_secret: jpmorgan.client_secret.ok_or_else(err)?,
+                thumbprint: jpmorgan.thumbprint.ok_or_else(err)?,
+                private_key: jpmorgan.private_key.ok_or_else(err)?,
+                resource_id: jpmorgan.resource_id.ok_or_else(err)?,
                 base_url: jpmorgan.base_url,
                 secondary_base_url: jpmorgan.secondary_base_url,
                 company_name: jpmorgan.company_name,
@@ -2702,6 +2712,7 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 api_key: ppro.api_key.ok_or_else(err)?,
                 merchant_id: ppro.merchant_id.ok_or_else(err)?,
                 base_url: ppro.base_url,
+                webhook_secret: ppro.webhook_secret,
             }),
             AuthType::PinelabsOnline(pinelabs_online) => Ok(Self::PinelabsOnline {
                 client_id: pinelabs_online.client_id.ok_or_else(err)?,
@@ -3212,9 +3223,16 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorVariant)>
                     _ => Err(err().into()),
                 },
                 ConnectorEnum::Jpmorgan => match auth {
-                    ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::Jpmorgan {
+                    ConnectorAuthType::MultiAuthKey {
+                        api_key,
+                        key1,
+                        api_secret,
+                        key2,
+                    } => Ok(Self::Jpmorgan {
                         client_id: api_key.clone(),
-                        client_secret: key1.clone(),
+                        thumbprint: key1.clone(),
+                        private_key: api_secret.clone(),
+                        resource_id: key2.clone(),
                         base_url: None,
                         secondary_base_url: None,
                         company_name: None,
@@ -4042,6 +4060,7 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorVariant)>
                             api_key: api_key.clone(),
                             merchant_id: key1.clone(),
                             base_url: None,
+                            webhook_secret: None,
                         })
                     }
                     _ => Err(err().into()),

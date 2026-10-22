@@ -3,19 +3,15 @@ use domain_types::payment_method_data::{PaymentMethodDataTypes, RawCardNumber};
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
-/// Client Authentication Token request — obtains an OAuth2 access token
-/// for client-side SDK initialization via JP Morgan's token endpoint.
-/// Uses form-urlencoded format matching the ServerAuthenticationToken flow.
-#[derive(Debug, Clone, Serialize)]
-pub struct JpmorganClientAuthRequest {
-    pub grant_type: String,
-    pub scope: String,
-}
+pub type JpmorganClientAuthRequest = JpmorganTokenRequest;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct JpmorganTokenRequest {
     pub grant_type: String,
-    pub scope: String,
+    pub client_id: Secret<String>,
+    pub client_assertion_type: String,
+    pub client_assertion: Secret<String>,
+    pub resource: Secret<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -71,18 +67,15 @@ pub struct JpmorganCard<T: PaymentMethodDataTypes> {
     pub payment_authentication_request: Option<JpmorganPaymentAuthenticationRequest>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum JpmorganAccountNumberType {
     Pan,
     DeviceToken,
     NetworkToken,
-    SafetechToken,
-    SafetechPageEncryption,
-    Track,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum JpmorganWalletProvider {
     ApplePay,
@@ -267,24 +260,18 @@ pub enum JpmorganRecurringSequence {
     Subsequent,
 }
 
-/// Mandate amount type for a multi-use agreement.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum JpmorganAmountType {
-    Exact,
-    Variable,
-}
-
 /// JPMorgan recurring agreement details.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganRecurring {
     pub recurring_sequence: JpmorganRecurringSequence,
-    pub agreement_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agreement_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_variable_amount: Option<bool>,
 }
 
-/// Card or decrypted wallet data for a verification without a funds hold.
+/// Card or decrypted wallet data for verification without a funds hold.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganSetupMandateCard<T: PaymentMethodDataTypes> {
@@ -294,17 +281,13 @@ pub struct JpmorganSetupMandateCard<T: PaymentMethodDataTypes> {
     pub cvv: Option<Secret<String>>,
 }
 
-/// JPMorgan card body used by RepeatPayment when the upstream mandate is a
-/// network transaction reference. JPMorgan requires `accountNumber` + `expiry`
-/// on a SUBSEQUENT MIT; the original network transaction references link the
-/// payment to the original customer-initiated transaction.
+/// Credential and original network references for a merchant-initiated payment.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganMitCardByNti<T: PaymentMethodDataTypes> {
     pub account_number: RawCardNumber<T>,
     pub expiry: Expiry,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub account_number_type: Option<JpmorganAccountNumberType>,
+    pub account_number_type: JpmorganAccountNumberType,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub wallet_provider: Option<JpmorganWalletProvider>,
     pub original_network_transaction_id: String,
@@ -319,8 +302,7 @@ pub struct JpmorganSetupMandatePaymentMethodType<T: PaymentMethodDataTypes> {
     pub card: JpmorganSetupMandateCard<T>,
 }
 
-/// RepeatPayment's payment method type — carries the card or decrypted wallet
-/// credential linked by the original network references.
+/// Direct credential used for a merchant-initiated payment.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganRepeatPaymentMethodType<T: PaymentMethodDataTypes> {
@@ -411,42 +393,26 @@ pub struct GooglePayIntermediateSigningKey {
 pub struct GooglePaySignedMessage {
     pub ephemeral_public_key: Secret<String>,
 }
-#[derive(Clone, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(super) struct JpmorganStoredCredential {
-    pub(super) initialization_reference: String,
-    pub(super) source: JpmorganStorageSource,
+
+#[derive(Serialize)]
+pub struct JpmorganVerificationMetadata {
+    pub resource: JpmorganResourceContext,
 }
 
-#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct JpmorganResourceContext {
+    #[serde(rename = "type")]
+    pub resource_type: JpmorganResourceType,
+}
+
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub(super) enum JpmorganStorageSource {
-    Payment,
+pub enum JpmorganResourceType {
     Verification,
 }
 
-#[derive(Clone, serde::Serialize, serde::Deserialize)]
-pub(super) struct JpmorganStoredContext {
-    pub(super) stored_credential: JpmorganStoredCredential,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) recurring: Option<JpmorganRecurring>,
-}
-
-/// Connector feature data preserved across JPMorgan flows.
-#[derive(Debug, serde::Deserialize)]
-pub(super) struct JpmorganPreservedFeatureData {
-    #[serde(default)]
-    pub(super) jpmorgan: JpmorganPreservedContext,
-}
-
-/// The connector-owned keys of the preserved feature data.
-#[derive(Debug, Default, serde::Deserialize)]
-pub(super) struct JpmorganPreservedContext {
-    #[serde(default)]
-    pub(super) recurring: Option<serde_json::Value>,
-}
-
-pub(super) enum JpmorganSyncResource {
+pub enum JpmorganSyncResource {
     Payment(String),
     Verification(String),
 }
