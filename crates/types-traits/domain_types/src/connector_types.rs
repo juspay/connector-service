@@ -1326,6 +1326,13 @@ impl PaymentFlowData {
             })
     }
 
+    pub fn get_optional_billing_state_code_iso(&self) -> Option<Secret<String>> {
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| billing_address.address.as_ref())
+            .and_then(|billing_details| billing_details.state_code_iso.clone())
+    }
+
     pub fn get_optional_billing_first_name(&self) -> Option<Secret<String>> {
         self.address
             .get_payment_method_billing()
