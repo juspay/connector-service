@@ -240,7 +240,9 @@ token = ""                      # secret: CS__SUPERPOSITION__TOKEN from the k8s 
 org_id = "hyperswitch"
 workspace_id = ""               # the prism workspace
 polling_interval = 15           # seconds
+# polling_interval_milliseconds = 15000  # optional: milliseconds, wins over polling_interval when set
 # request_timeout = 60          # parity with hyperswitch; the provider only logs it today
+# request_timeout_milliseconds = 60000   # optional: milliseconds, wins over request_timeout when set
 # backup_file_path = ""         # default: the baked config/superposition.toml
 
 # --- Déjà record/replay ---------------------------------------------------------
