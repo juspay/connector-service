@@ -5943,6 +5943,7 @@ impl<
             payment_channel,
             enable_partial_authorization: value.enable_partial_authorization,
             locale: value.locale.clone(),
+            order_category: value.order_category.clone(),
             mit_category: value.mit_category,
             connector_testing_data,
             split_payments: value
@@ -13733,12 +13734,22 @@ impl<
 
         let setup_future_usage = value.setup_future_usage();
 
+        // The mandate type (and its amount) comes from setup_mandate_details when the
+        // caller sends it; customer acceptance stays sourced from the request itself.
+        // Only mandate_type is converted here: the embedded customer_acceptance and
+        // update_mandate_id are not parsed on this path, so they cannot fail SetupRecurring.
+        let mandate_type = foreign_mandate_data_type(
+            value
+                .setup_mandate_details
+                .as_ref()
+                .and_then(|details| details.mandate_type.clone()),
+        )?;
         let setup_mandate_details = MandateData {
             update_mandate_id: None,
             customer_acceptance: Some(mandates::CustomerAcceptance::foreign_try_from(
                 customer_acceptance.clone(),
             )?),
-            mandate_type: None,
+            mandate_type,
         };
 
         let billing_descriptor =
@@ -13834,6 +13845,7 @@ impl<
             payment_channel,
             enable_partial_authorization: value.enable_partial_authorization,
             locale: value.locale.clone(),
+            order_category: value.order_category.clone(),
             connector_testing_data: value.connector_testing_data.and_then(|s| {
                 serde_json::from_str(&s.expose())
                     .ok()
@@ -14345,11 +14357,26 @@ impl ForeignTryFrom<grpc_api_types::payments::SetupMandateDetails> for MandateDa
         value: grpc_api_types::payments::SetupMandateDetails,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // Map the mandate_type from grpc type to domain type
-        #[allow(deprecated)]
-        let mandate_type = match value
-            .mandate_type
-            .and_then(|grpc_mandate_type| grpc_mandate_type.mandate_type)
-        {
+        let mandate_type = foreign_mandate_data_type(value.mandate_type)?;
+
+        Ok(Self {
+            update_mandate_id: value.update_mandate_id,
+            customer_acceptance: value
+                .customer_acceptance
+                .map(mandates::CustomerAcceptance::foreign_try_from)
+                .transpose()?,
+            mandate_type,
+        })
+    }
+}
+
+/// Converts a grpc `MandateType` into the domain `MandateDataType`.
+fn foreign_mandate_data_type(
+    mandate_type: Option<grpc_api_types::payments::MandateType>,
+) -> Result<Option<mandates::MandateDataType>, error_stack::Report<IntegrationError>> {
+    #[allow(deprecated)]
+    let mandate_type =
+        match mandate_type.and_then(|grpc_mandate_type| grpc_mandate_type.mandate_type) {
             Some(grpc_api_types::payments::mandate_type::MandateType::SingleUse(amount_data)) => {
                 Some(mandates::MandateDataType::SingleUse(
                     mandates::MandateAmountData::foreign_try_from(amount_data)?,
@@ -14362,16 +14389,7 @@ impl ForeignTryFrom<grpc_api_types::payments::SetupMandateDetails> for MandateDa
             }
             None => None,
         };
-
-        Ok(Self {
-            update_mandate_id: value.update_mandate_id,
-            customer_acceptance: value
-                .customer_acceptance
-                .map(mandates::CustomerAcceptance::foreign_try_from)
-                .transpose()?,
-            mandate_type,
-        })
-    }
+    Ok(mandate_type)
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::FutureUsage> for common_enums::FutureUsage {
@@ -22814,5 +22832,81 @@ impl From<connector_types::WebhookResourceReference> for grpc_api_types::payment
                 })),
             },
         }
+    }
+}
+
+#[cfg(test)]
+mod mandate_type_conversion_tests {
+    use grpc_api_types::payments as grpc;
+
+    use super::foreign_mandate_data_type;
+    use crate::mandates::MandateDataType;
+
+    fn money(minor_amount: i64) -> grpc::Money {
+        grpc::Money {
+            minor_amount,
+            currency: grpc::Currency::Usd as i32,
+        }
+    }
+
+    fn amount_data(amount_money: Option<grpc::Money>) -> grpc::MandateAmountData {
+        grpc::MandateAmountData {
+            amount_money,
+            amount_type: Some("max".to_string()),
+            frequency: Some("monthly".to_string()),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn absent_mandate_type_stays_none() -> Result<(), Box<dyn std::error::Error>> {
+        let converted = foreign_mandate_data_type(None).map_err(|e| format!("{e:?}"))?;
+        assert_eq!(converted, None);
+        Ok(())
+    }
+
+    #[test]
+    fn single_use_keeps_amount_and_ppro_fields() -> Result<(), Box<dyn std::error::Error>> {
+        let converted = foreign_mandate_data_type(Some(grpc::MandateType {
+            mandate_type: Some(grpc::mandate_type::MandateType::SingleUse(amount_data(
+                Some(money(5000)),
+            ))),
+        }))
+        .map_err(|e| format!("{e:?}"))?;
+        match converted {
+            Some(MandateDataType::SingleUse(data)) => {
+                assert_eq!(data.amount.amount.get_amount_as_i64(), 5000);
+                assert_eq!(data.amount_type.as_deref(), Some("max"));
+                assert_eq!(data.frequency.as_deref(), Some("monthly"));
+            }
+            other => return Err(format!("expected SingleUse, got {other:?}").into()),
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn multi_use_is_wrapped_in_some() -> Result<(), Box<dyn std::error::Error>> {
+        let converted = foreign_mandate_data_type(Some(grpc::MandateType {
+            mandate_type: Some(grpc::mandate_type::MandateType::MultiUse(amount_data(
+                Some(money(100)),
+            ))),
+        }))
+        .map_err(|e| format!("{e:?}"))?;
+        assert!(matches!(
+            converted,
+            Some(MandateDataType::MultiUse(Some(_)))
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn malformed_mandate_type_fails_instead_of_being_ignored() {
+        // No amount_money and no legacy amount/currency: SetupRecurring now refuses this.
+        let converted = foreign_mandate_data_type(Some(grpc::MandateType {
+            mandate_type: Some(grpc::mandate_type::MandateType::SingleUse(amount_data(
+                None,
+            ))),
+        }));
+        assert!(converted.is_err());
     }
 }
