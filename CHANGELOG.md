@@ -19,6 +19,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.10.22.1
+
+### Features
+
+- **ci:** Add connectors in regression coverage ([#2457](https://github.com/juspay/connector-service/pull/2457)) ([`ffdb408`](https://github.com/juspay/connector-service/commit/ffdb40882084bfb6667bb334634c752eb8dbf6f2))
+- **jpmorgan:** Add zero verification and verification sync ([#2530](https://github.com/juspay/connector-service/pull/2530)) ([`8410ae1`](https://github.com/juspay/connector-service/commit/8410ae125537e07fb571f39093be77d589bb0204))
+
+### Bug Fixes
+
+- **connector:** [WorldpayXML][Checkout] map issuer errors and allow optional return-code attributes ([#2524](https://github.com/juspay/connector-service/pull/2524)) ([`f5f291d`](https://github.com/juspay/connector-service/commit/f5f291d30859b6efbaab274114b55bc724a327fc))
+- **logs:** Skip span lifecycle logs for transformed API logs ([#2528](https://github.com/juspay/connector-service/pull/2528)) ([`c7ec9f6`](https://github.com/juspay/connector-service/commit/c7ec9f60fb4f20d4de1b90d9977cc1442485a8d9))
+
+**Full Changelog:** [`2026.10.22.0...2026.10.22.1`](https://github.com/juspay/connector-service/compare/2026.10.22.0...2026.10.22.1)
+
+- - -
+
 ## 2026.10.22.0
 
 ### Features
