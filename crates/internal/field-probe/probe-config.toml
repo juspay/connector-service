@@ -263,12 +263,6 @@ default = '{}'
 #           + totalShippingAmount + dutyAmount + shippingValueAddedTaxAmount
 #           - totalTransactionDiscountAmount
 #
-# The single line item states total_amount = 2000, which also matches what the
-# connector would derive (1000 x 2 + 100 tax - 50 x 2 discount). With shipping
-# 200, duty 50, shipping tax 20 and an order discount of 30, the request amount
-# must be 2240. Changing any amount here without re-balancing the rest makes
-# the probe emit Level 2 only.
-#
 # tax_rate is a percentage: 2.1 means 2.1%, which goes out as taxPercent
 # "2100" because JPMorgan implies three decimal places on that field.
 #

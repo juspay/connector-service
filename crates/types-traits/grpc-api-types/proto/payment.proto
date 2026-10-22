@@ -1290,7 +1290,7 @@ message TaxInfo {
   // Value added tax (VAT) amount for the order (in minor currency units)
   optional int64 value_added_tax_amount = 6;
 
-  // Value added tax (VAT) rate for the order, as a percentage
+  // Value added tax (VAT) rate for the order, as a percentage: 2.5 means 2.5%, not 0.025.
   optional double value_added_tax_percent = 7;
 
   // Reference number of the value added tax (VAT) invoice for the order

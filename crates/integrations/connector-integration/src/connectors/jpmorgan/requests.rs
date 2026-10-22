@@ -43,11 +43,7 @@ pub struct JpmorganPaymentsRequest<T: PaymentMethodDataTypes> {
     pub ship_to: Option<JpmorganShipTo>,
 }
 
-/// Level 2 commercial-card data (`retailAddenda`).
-///
-/// Which members a card network requires — and which it rejects outright —
-/// differs per network, so every field is optional on the wire and the
-/// per-network gating lives in `transformers::build_retail_addenda`.
+/// Level 2 commercial-card data
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganRetailAddenda {

@@ -47,6 +47,13 @@ const JPMORGAN_PURCHASE_ORDER_NUMBER_MAX_LENGTH: usize = 17;
 const JPMORGAN_MAX_LINE_ITEMS: usize = 998;
 const JPMORGAN_MAX_VAT_PERCENT: i64 = 9999;
 
+// JPMorgan's line-item taxPercent implies three decimal places, so 1.3% is sent as "1300".
+const JPMORGAN_LINE_ITEM_TAX_PERCENT_MULTIPLIER: f64 = 1000.0;
+// JPMorgan's valueAddedTaxPercent implies two decimal places, so 2.5% is sent as "250".
+const JPMORGAN_VAT_PERCENT_MULTIPLIER: f64 = 100.0;
+// Four digits with two implied decimals allow at most 99.99%, encoded as "9999".
+const JPMORGAN_MAX_VAT_PERCENTAGE: f64 = 99.99;
+
 fn build_line_item(detail: &OrderDetailsWithAmount) -> requests::JpmorganLineItem {
     let line_item_description_text = detail
         .description
@@ -68,7 +75,17 @@ fn build_line_item(detail: &OrderDetailsWithAmount) -> requests::JpmorganLineIte
         .filter(|tax| tax.get_amount_as_i64() > 0)
         .map(|tax| requests::JpmorganLineItemTax {
             line_item_tax_amount: Some(tax),
-            tax_percent: detail.tax_rate.map(|rate| format!("{:.0}", rate * 1000.0)),
+            tax_percent: detail
+                .tax_rate
+                .filter(|rate| {
+                    *rate >= 0.0 && (rate * JPMORGAN_LINE_ITEM_TAX_PERCENT_MULTIPLIER).is_finite()
+                })
+                .map(|rate| {
+                    utils::scaled_percentage_to_string(
+                        rate,
+                        JPMORGAN_LINE_ITEM_TAX_PERCENT_MULTIPLIER,
+                    )
+                }),
             tax_type_code: detail.product_tax_code.clone(),
         })
         .map_or_else(Vec::new, |tax| vec![tax]);
@@ -117,12 +134,14 @@ fn build_level3(
         .get_vat_invoice_reference_number()
         .filter(|reference| !reference.trim().is_empty());
 
-    // JPMorgan implies two decimal places on the VAT percent fields — their
-    // reference gives 250 for 2.5% — so the percentage is scaled by 100:
-    // 20 of tax on 200 of shipping is 10%, sent as "1000".
     let value_added_tax_percent = l2_l3_data
         .get_value_added_tax_percent()
-        .map(|percent| format!("{:.0}", percent * 100.0));
+        .filter(|percent| {
+            percent.is_finite() && (0.0..=JPMORGAN_MAX_VAT_PERCENTAGE).contains(percent)
+        })
+        .map(|percent| {
+            utils::scaled_percentage_to_string(percent, JPMORGAN_VAT_PERCENT_MULTIPLIER)
+        });
 
     let shipping_value_added_tax_percent = shipping_value_added_tax_amount
         .zip(total_shipping_amount)
@@ -424,7 +443,11 @@ fn merchant_order_number(merchant_order_id: Option<&str>, reference: &str) -> St
     merchant_order_id
         .filter(|id| !id.trim().is_empty())
         .unwrap_or(reference)
-        .replace('_', "")
+        .chars()
+        .filter(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, ' ' | '.' | '-')
+        })
+        .collect()
 }
 
 impl TryFrom<Option<common_enums::BankType>> for requests::JpmorganAchAccountType {
@@ -966,8 +989,8 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganPaymentsRequest<T> {
             .into());
         }
         let auth = JpmorganAuthType::try_from(&router_data.connector_config)?;
-        let (retail_addenda, ship_to) = authorize_level2_data(router_data);
         let (account_on_file, recurring) = Self::prepare_cit(&router_data.request)?;
+        let (retail_addenda, ship_to) = authorize_level2_data(router_data);
         let request = Self {
             capture_method: map_capture_method(router_data.request.capture_method)?,
             amount: JpmorganAmountConvertor::convert(
@@ -1027,7 +1050,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let (retail_addenda, ship_to) = authorize_level2_data(router_data);
 
         if router_data.request.off_session == Some(true) {
             return Err(IntegrationError::NotSupported {
@@ -1116,6 +1138,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     router_data.request.currency,
                 )?;
 
+                let (retail_addenda, ship_to) = authorize_level2_data(router_data);
                 let request = Self {
                     capture_method,
                     currency: router_data.request.currency,
@@ -1222,6 +1245,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     router_data.request.currency,
                 )?;
 
+                let (retail_addenda, ship_to) = authorize_level2_data(router_data);
                 let request = Self {
                     capture_method,
                     currency: router_data.request.currency,
@@ -1342,6 +1366,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 };
                 let statement_descriptor = Secret::new("Statement Descriptor".to_string());
 
+                let (retail_addenda, ship_to) = authorize_level2_data(router_data);
                 Ok(Self {
                     capture_method,
                     currency: router_data.request.currency,
@@ -1476,6 +1501,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 token: None,
                             };
 
+                            let (retail_addenda, ship_to) = authorize_level2_data(router_data);
                             Ok(Self {
                                 capture_method,
                                 currency: router_data.request.currency,
@@ -2164,7 +2190,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 field_name: "amount",
                 context: context.clone(),
             })?;
-        if amount != common_utils::types::MinorUnit::zero() {
+        if amount != MinorUnit::zero() {
             return Err(IntegrationError::NotSupported {
                 message: "Nonzero setup amount".to_owned(),
                 connector: "jpmorgan",
