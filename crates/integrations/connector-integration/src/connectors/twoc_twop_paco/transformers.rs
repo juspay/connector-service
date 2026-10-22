@@ -10,14 +10,14 @@ use common_utils::{
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void, VoidPC},
     connector_types::{
-        self, ConnectorResponseData, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        self, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RawConnectorStatus, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
-    router_data::{ConnectorSpecificConfig, ErrorResponse, FlowStatus},
+    router_data::{ConnectorResponseData, ConnectorSpecificConfig, ErrorResponse, FlowStatus},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
