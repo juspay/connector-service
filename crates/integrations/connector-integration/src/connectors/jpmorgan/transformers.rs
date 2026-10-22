@@ -2239,6 +2239,8 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganRepeatPaymentRequest<T> {
             original_transaction_link_id: tlid,
             authentication: match &request.payment_method_data {
                 // Mastercard requires a cryptogram for the first token use, including MIT.
+                // Forward it when supplied because this request cannot establish prior token use.
+                // See https://developer.payments.jpmorgan.com/docs/commerce/online-payments/capabilities/online-payments/payment-enhancements/tokenization
                 PaymentMethodData::NetworkToken(token)
                     if network == common_enums::CardNetwork::Mastercard =>
                 {
