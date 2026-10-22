@@ -981,6 +981,9 @@ jobs:
       CC_x86_64_unknown_linux_gnu: x86_64-linux-gnu-gcc
       CXX_x86_64_unknown_linux_gnu: x86_64-linux-gnu-g++
       CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: x86_64-linux-gnu-gcc
+      PKG_CONFIG_ALLOW_CROSS: "1"
+      PKG_CONFIG_PATH_x86_64_unknown_linux_gnu: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig
+      PKG_CONFIG_LIBDIR_x86_64_unknown_linux_gnu: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig
 
     outputs:
       cache-key: ${{ steps.cache-key.outputs.key }}
@@ -996,6 +999,19 @@ jobs:
 
       - name: Install SDK build target
         run: rustup target add x86_64-unknown-linux-gnu
+
+      # Temporary compatibility step until the runner image includes the
+      # target architecture's native development libraries. Remove after the
+      # Hyperswitch runner image update is deployed.
+      - name: Install x86 SDK native dependencies
+        run: |
+          sudo dpkg --add-architecture amd64
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            libc6-dev:amd64 libgcc-s1:amd64 libstdc++6:amd64 \
+            libpq-dev:amd64 libssl-dev:amd64 zlib1g-dev:amd64 \
+            libzstd-dev:amd64 liblz4-dev:amd64 libsnappy-dev:amd64 \
+            libsasl2-dev:amd64 libcurl4-openssl-dev:amd64
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
@@ -1119,6 +1135,9 @@ jobs:
       CC_x86_64_unknown_linux_gnu: x86_64-linux-gnu-gcc
       CXX_x86_64_unknown_linux_gnu: x86_64-linux-gnu-g++
       CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: x86_64-linux-gnu-gcc
+      PKG_CONFIG_ALLOW_CROSS: "1"
+      PKG_CONFIG_PATH_x86_64_unknown_linux_gnu: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig
+      PKG_CONFIG_LIBDIR_x86_64_unknown_linux_gnu: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig
 
     steps:
       - name: Checkout code
@@ -1128,6 +1147,19 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
+
+      # Temporary compatibility step until the runner image includes the
+      # target architecture's native development libraries. Remove after the
+      # Hyperswitch runner image update is deployed.
+      - name: Install x86 SDK native dependencies
+        run: |
+          sudo dpkg --add-architecture amd64
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            libc6-dev:amd64 libgcc-s1:amd64 libstdc++6:amd64 \
+            libpq-dev:amd64 libssl-dev:amd64 zlib1g-dev:amd64 \
+            libzstd-dev:amd64 liblz4-dev:amd64 libsnappy-dev:amd64 \
+            libsasl2-dev:amd64 libcurl4-openssl-dev:amd64
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
