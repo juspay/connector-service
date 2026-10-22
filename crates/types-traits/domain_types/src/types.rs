@@ -35,9 +35,10 @@ use common_utils::{
 use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
     self as grpc_payment_types, recipient_account::AccountType as RecipientAccountType,
-    recipient_bank_account::BankAccountType as RecipientBankAccountType, AuthenticationType,
-    ConnectorState, DisputeResponse, DisputeServiceAcceptResponse, DisputeServiceDefendRequest,
-    DisputeServiceDefendResponse, DisputeServiceSubmitEvidenceResponse,
+    recipient_bank_account::BankAccountType as RecipientBankAccountType,
+    sender_details::SenderType, AuthenticationType, ConnectorState, DisputeResponse,
+    DisputeServiceAcceptResponse, DisputeServiceDefendRequest, DisputeServiceDefendResponse,
+    DisputeServiceSubmitEvidenceResponse,
     MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest,
     MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse,
     MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse,
@@ -3853,6 +3854,7 @@ pub struct AuthorizationRequest {
     pub currency_conversion_data: Option<grpc_payment_types::CurrencyConversionData>,
     pub is_account_funding_transaction: Option<bool>,
     pub recipient_details: Option<grpc_payment_types::RecipientDetails>,
+    pub sender_details: Option<grpc_payment_types::SenderDetails>,
     /// Connector-specific additional details (e.g. purpose of payment for Checkout.com).
     pub additional_connector_details: Option<grpc_payment_types::AdditionalConnectorDetails>,
     /// Merchant business country (ISO 3166-1 alpha-2) for country-specific connector rules.
@@ -3900,6 +3902,7 @@ pub struct SetupRecurringRequest {
         Option<grpc_payment_types::PartnerMerchantIdentifierDetails>,
     pub is_account_funding_transaction: Option<bool>,
     pub recipient_details: Option<grpc_payment_types::RecipientDetails>,
+    pub sender_details: Option<grpc_payment_types::SenderDetails>,
     /// Connector-specific additional details (e.g. purpose of payment for Checkout.com).
     pub additional_connector_details: Option<grpc_payment_types::AdditionalConnectorDetails>,
     /// Sandbox/test mode flag (true for test environment). Connectors that branch
@@ -3994,6 +3997,7 @@ impl From<grpc_payment_types::PaymentServiceAuthorizeRequest> for AuthorizationR
             currency_conversion_data: req.currency_conversion_data,
             is_account_funding_transaction: req.is_account_funding_transaction,
             recipient_details: req.recipient_details,
+            sender_details: req.sender_details,
             additional_connector_details: req.additional_connector_details,
             business_country: req.business_country,
             enable_avs_check: req.enable_avs_check,
@@ -4078,6 +4082,7 @@ impl From<grpc_payment_types::PaymentServiceProxyAuthorizeRequest> for Authoriza
             currency_conversion_data: None,
             is_account_funding_transaction: None,
             recipient_details: None,
+            sender_details: None,
             additional_connector_details: None,
             business_country: None,
             enable_avs_check: req.enable_avs_check,
@@ -4142,6 +4147,7 @@ impl From<grpc_payment_types::PaymentServiceSetupRecurringRequest> for SetupRecu
             partner_merchant_identifier_details: req.partner_merchant_identifier_details,
             is_account_funding_transaction: req.is_account_funding_transaction,
             recipient_details: req.recipient_details,
+            sender_details: req.sender_details,
             additional_connector_details: req.additional_connector_details,
             test_mode: req.test_mode,
             capture_method: req
@@ -4200,6 +4206,7 @@ impl From<grpc_payment_types::PaymentServiceProxySetupRecurringRequest> for Setu
             partner_merchant_identifier_details: None,
             is_account_funding_transaction: None,
             recipient_details: None,
+            sender_details: None,
             additional_connector_details: None,
             test_mode: req.test_mode,
             capture_method: None,
@@ -5791,6 +5798,10 @@ impl<
                 .recipient_details
                 .map(connector_types::RecipientDetails::foreign_try_from)
                 .transpose()?,
+            sender_details: value
+                .sender_details
+                .map(connector_types::SenderDetails::foreign_try_from)
+                .transpose()?,
             additional_connector_details: value
                 .additional_connector_details
                 .map(connector_types::AdditionalConnectorDetails::foreign_from),
@@ -5963,6 +5974,10 @@ impl<
             recipient_details: value
                 .recipient_details
                 .map(connector_types::RecipientDetails::foreign_try_from)
+                .transpose()?,
+            sender_details: value
+                .sender_details
+                .map(connector_types::SenderDetails::foreign_try_from)
                 .transpose()?,
             additional_connector_details: value
                 .additional_connector_details
@@ -13859,6 +13874,10 @@ impl<
                 .recipient_details
                 .map(connector_types::RecipientDetails::foreign_try_from)
                 .transpose()?,
+            sender_details: value
+                .sender_details
+                .map(connector_types::SenderDetails::foreign_try_from)
+                .transpose()?,
             additional_connector_details: value
                 .additional_connector_details
                 .map(connector_types::AdditionalConnectorDetails::foreign_from),
@@ -15600,6 +15619,146 @@ impl ForeignTryFrom<grpc_api_types::payments::RecipientDetails>
     }
 }
 
+/// Unwraps a mandatory sender field, rejecting both an absent and a blank value.
+fn required_sender_field(
+    value: Option<Secret<String>>,
+    field_name: &'static str,
+    variant: &str,
+) -> Result<Secret<String>, error_stack::Report<IntegrationError>> {
+    value
+        .filter(|secret| !secret.peek().trim().is_empty())
+        .ok_or_else(|| {
+            report!(IntegrationError::InvalidDataFormat {
+                field_name,
+                context: IntegrationErrorContext {
+                    additional_context: Some(format!(
+                        "{field_name} is required and must not be blank for the {variant} variant"
+                    )),
+                    suggested_action: Some(format!(
+                        "Provide a non-empty {field_name} in SenderDetails"
+                    )),
+                    doc_url: None,
+                },
+            })
+        })
+}
+
+fn sender_email(
+    email: Option<Secret<String>>,
+    field_name: &'static str,
+) -> Result<Option<Email>, error_stack::Report<IntegrationError>> {
+    email
+        .map(|email_secret| {
+            Email::try_from(email_secret.expose()).map_err(|_| {
+                report!(IntegrationError::InvalidDataFormat {
+                    field_name,
+                    context: IntegrationErrorContext {
+                        additional_context: Some(
+                            "The provided value is not a valid RFC 5322 email address".to_string(),
+                        ),
+                        suggested_action: Some(
+                            "Provide a valid email address for the sender".to_string(),
+                        ),
+                        doc_url: None,
+                    },
+                })
+            })
+        })
+        .transpose()
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::SenderAddress> for connector_types::SenderAddress {
+    type Error = IntegrationError;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::SenderAddress,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let country = match value.country_alpha2_code() {
+            grpc_api_types::payments::CountryAlpha2::Unspecified => None,
+            country_code => Some(CountryAlpha2::foreign_try_from(country_code)?),
+        };
+        Ok(Self {
+            line1: value.line1,
+            line2: value.line2,
+            city: value.city,
+            state: value.state,
+            zip: value.zip_code,
+            country,
+        })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::SenderDetails> for connector_types::SenderDetails {
+    type Error = IntegrationError;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::SenderDetails,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value.sender_type {
+            Some(SenderType::Individual(individual)) => {
+                Ok(Self::Individual(connector_types::IndividualSenderDetails {
+                    first_name: required_sender_field(
+                        individual.first_name,
+                        "sender_details.individual.first_name",
+                        "Individual",
+                    )?,
+                    last_name: required_sender_field(
+                        individual.last_name,
+                        "sender_details.individual.last_name",
+                        "Individual",
+                    )?,
+                    date_of_birth: individual
+                        .date_of_birth
+                        .map(|date_of_birth| {
+                            Secret::<time::Date>::foreign_try_from((
+                                date_of_birth.expose(),
+                                "sender_details.individual.date_of_birth",
+                            ))
+                        })
+                        .transpose()?,
+                    address: individual
+                        .address
+                        .map(connector_types::SenderAddress::foreign_try_from)
+                        .transpose()?,
+                    email: sender_email(individual.email, "sender_details.individual.email")?,
+                    phone_number: individual.phone_number,
+                    phone_country_code: individual.phone_country_code,
+                }))
+            }
+            Some(SenderType::Corporate(corporate)) => {
+                Ok(Self::Corporate(connector_types::CorporateSenderDetails {
+                    company_name: required_sender_field(
+                        corporate.company_name,
+                        "sender_details.corporate.company_name",
+                        "Corporate",
+                    )?,
+                    address: corporate
+                        .address
+                        .map(connector_types::SenderAddress::foreign_try_from)
+                        .transpose()?,
+                    email: sender_email(corporate.email, "sender_details.corporate.email")?,
+                    phone_number: corporate.phone_number,
+                    phone_country_code: corporate.phone_country_code,
+                }))
+            }
+            None => Err(report!(IntegrationError::InvalidDataFormat {
+                field_name: "sender_details.sender_type",
+                context: IntegrationErrorContext {
+                    additional_context: Some(
+                        "No sender variant was set; exactly one of individual or corporate \
+                         must be provided"
+                            .to_string(),
+                    ),
+                    suggested_action: Some(
+                        "Set exactly one sender_type variant in SenderDetails".to_string(),
+                    ),
+                    doc_url: None,
+                },
+            })),
+        }
+    }
+}
+
 impl ForeignFrom<grpc_api_types::payments::AdditionalConnectorDetails>
     for connector_types::AdditionalConnectorDetails
 {
@@ -17206,6 +17365,10 @@ impl<
             recipient_details: value
                 .recipient_details
                 .map(connector_types::RecipientDetails::foreign_try_from)
+                .transpose()?,
+            sender_details: value
+                .sender_details
+                .map(connector_types::SenderDetails::foreign_try_from)
                 .transpose()?,
             additional_connector_details: value
                 .additional_connector_details
@@ -21798,6 +21961,7 @@ pub fn tokenized_authorize_to_base(
         currency_conversion_data: None,
         is_account_funding_transaction: None,
         recipient_details: None,
+        sender_details: None,
         additional_connector_details: None,
         business_country: None,
         enable_avs_check: v.enable_avs_check,
@@ -21886,6 +22050,7 @@ pub fn tokenized_setup_recurring_to_base(
         partner_merchant_identifier_details: None,
         is_account_funding_transaction: None,
         recipient_details: None,
+        sender_details: None,
         additional_connector_details: None,
         // TokenSetupRecurringRequest has no test_mode or capture_method field
         test_mode: None,
@@ -21994,6 +22159,7 @@ pub fn proxied_authorize_to_base(
         currency_conversion_data: None,
         is_account_funding_transaction: None,
         recipient_details: None,
+        sender_details: None,
         additional_connector_details: None,
         business_country: None,
         enable_avs_check: v.enable_avs_check,
@@ -22118,6 +22284,7 @@ pub fn proxied_setup_recurring_to_base(
         partner_merchant_identifier_details: None,
         is_account_funding_transaction: None,
         recipient_details: None,
+        sender_details: None,
         additional_connector_details: None,
         test_mode: v.test_mode,
         capture_method: None,
@@ -22814,5 +22981,133 @@ impl From<connector_types::WebhookResourceReference> for grpc_api_types::payment
                 })),
             },
         }
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::expect_used, clippy::panic, clippy::indexing_slicing)]
+mod sender_details_tests {
+    use grpc_api_types::payments as grpc;
+    use hyperswitch_masking::{PeekInterface, Secret};
+
+    use super::{connector_types, ForeignTryFrom, SenderType};
+
+    fn secret(value: &str) -> Option<Secret<String>> {
+        Some(Secret::new(value.to_string()))
+    }
+
+    fn individual(first_name: &str, last_name: &str) -> grpc::IndividualSenderDetails {
+        grpc::IndividualSenderDetails {
+            first_name: secret(first_name),
+            last_name: secret(last_name),
+            ..Default::default()
+        }
+    }
+
+    fn convert(
+        sender_type: Option<SenderType>,
+    ) -> Result<connector_types::SenderDetails, error_stack::Report<super::IntegrationError>> {
+        connector_types::SenderDetails::foreign_try_from(grpc::SenderDetails { sender_type })
+    }
+
+    #[test]
+    fn individual_with_date_of_birth_and_address() {
+        let mut sender = individual("John", "Doe");
+        sender.date_of_birth = secret("1990-05-17");
+        sender.email = secret("john@example.com");
+        sender.address = Some(grpc::SenderAddress {
+            line1: secret("1 Main St"),
+            city: secret("London"),
+            zip_code: secret("N1 1AA"),
+            country_alpha2_code: Some(grpc::CountryAlpha2::Gb.into()),
+            ..Default::default()
+        });
+
+        let Ok(connector_types::SenderDetails::Individual(converted)) =
+            convert(Some(SenderType::Individual(sender)))
+        else {
+            panic!("expected an individual sender");
+        };
+        assert_eq!(converted.first_name.peek(), "John");
+        assert_eq!(converted.last_name.peek(), "Doe");
+        assert_eq!(
+            converted.date_of_birth.map(|dob| *dob.peek()),
+            Some(time::macros::date!(1990 - 05 - 17))
+        );
+        let address = converted.address.expect("address");
+        assert_eq!(address.country, Some(common_enums::CountryAlpha2::GB));
+        assert_eq!(
+            address.zip.as_ref().map(|zip| zip.peek().as_str()),
+            Some("N1 1AA")
+        );
+        assert!(!address.is_empty());
+    }
+
+    #[test]
+    fn corporate_sender() {
+        let corporate = grpc::CorporateSenderDetails {
+            company_name: secret("Acme Ltd"),
+            ..Default::default()
+        };
+        let Ok(connector_types::SenderDetails::Corporate(converted)) =
+            convert(Some(SenderType::Corporate(corporate)))
+        else {
+            panic!("expected a corporate sender");
+        };
+        assert_eq!(converted.company_name.peek(), "Acme Ltd");
+        assert!(converted.address.is_none());
+    }
+
+    #[test]
+    fn unspecified_country_and_no_fields_is_empty_address() {
+        let address = connector_types::SenderAddress::foreign_try_from(grpc::SenderAddress {
+            country_alpha2_code: Some(grpc::CountryAlpha2::Unspecified.into()),
+            ..Default::default()
+        })
+        .expect("address converts");
+        assert!(address.is_empty());
+    }
+
+    #[test]
+    fn missing_sender_type_is_rejected() {
+        assert!(convert(None).is_err());
+    }
+
+    #[test]
+    fn missing_or_blank_mandatory_names_are_rejected() {
+        let mut missing_first_name = individual("John", "Doe");
+        missing_first_name.first_name = None;
+        assert!(convert(Some(SenderType::Individual(missing_first_name))).is_err());
+        assert!(convert(Some(SenderType::Individual(individual("John", "  ")))).is_err());
+        assert!(
+            convert(Some(SenderType::Corporate(grpc::CorporateSenderDetails {
+                company_name: secret(""),
+                ..Default::default()
+            })))
+            .is_err()
+        );
+        assert!(convert(Some(SenderType::Corporate(
+            grpc::CorporateSenderDetails::default()
+        )))
+        .is_err());
+    }
+
+    #[test]
+    fn invalid_date_of_birth_is_rejected() {
+        for date_of_birth in ["17-05-1990", "1990-13-01", "not-a-date"] {
+            let mut sender = individual("John", "Doe");
+            sender.date_of_birth = secret(date_of_birth);
+            assert!(
+                convert(Some(SenderType::Individual(sender))).is_err(),
+                "{date_of_birth} should be rejected"
+            );
+        }
+    }
+
+    #[test]
+    fn invalid_email_is_rejected() {
+        let mut sender = individual("John", "Doe");
+        sender.email = secret("not-an-email");
+        assert!(convert(Some(SenderType::Individual(sender))).is_err());
     }
 }

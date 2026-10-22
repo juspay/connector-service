@@ -11,7 +11,8 @@ use domain_types::{
         PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RecipientAccount, RecipientBankAccount, RecipientDetails, RefundFlowData, RefundSyncData,
-        RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId, SenderAddress,
+        SenderDetails, SetupMandateRequestData,
     },
     errors::{ConnectorError, IntegrationError, IntegrationErrorContext},
     payment_method_data::{
@@ -339,20 +340,19 @@ pub struct CheckoutProcessing {
 }
 
 #[derive(Debug, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum CheckoutSenderType {
-    Individual,
-}
-
-#[skip_serializing_none]
-#[derive(Debug, Serialize)]
-pub struct CheckoutSender {
-    #[serde(rename = "type")]
-    pub sender_type: CheckoutSenderType,
-    pub first_name: Secret<String>,
-    pub last_name: Secret<String>,
-    pub address: CheckoutAddress,
-    pub date_of_birth: Secret<time::Date>,
+#[serde(tag = "type", rename_all = "lowercase")]
+pub enum CheckoutSender {
+    Individual {
+        first_name: Secret<String>,
+        last_name: Secret<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        date_of_birth: Option<Secret<time::Date>>,
+        address: CheckoutAddress,
+    },
+    Corporate {
+        company_name: Secret<String>,
+        address: CheckoutAddress,
+    },
 }
 
 #[skip_serializing_none]
@@ -475,28 +475,93 @@ fn build_checkout_recipient(
     })
 }
 
+fn build_checkout_sender_address(
+    address: &SenderAddress,
+) -> Result<CheckoutAddress, error_stack::Report<IntegrationError>> {
+    let country = address
+        .country
+        .ok_or_else(utils::missing_field_err("sender_details.address.country"))?;
+    Ok(CheckoutAddress {
+        address_line1: Some(
+            address
+                .line1
+                .clone()
+                .ok_or_else(utils::missing_field_err("sender_details.address.line1"))?,
+        ),
+        address_line2: address.line2.clone(),
+        city: Some(
+            address
+                .city
+                .clone()
+                .ok_or_else(utils::missing_field_err("sender_details.address.city"))?,
+        ),
+        state: CheckoutAftStateParams {
+            state: address.state.clone(),
+            country,
+            field_name: "sender_details.address.state",
+        }
+        .try_into()?,
+        zip: Some(
+            address
+                .zip
+                .clone()
+                .ok_or_else(utils::missing_field_err("sender_details.address.zip_code"))?,
+        ),
+        country: Some(country),
+    })
+}
+
+fn build_checkout_billing_address(
+    resource_common_data: &PaymentFlowData,
+) -> Result<CheckoutAddress, error_stack::Report<IntegrationError>> {
+    let country = resource_common_data.get_billing_country()?;
+    Ok(CheckoutAddress {
+        address_line1: Some(resource_common_data.get_billing_line1()?),
+        address_line2: resource_common_data.get_optional_billing_line2(),
+        city: Some(resource_common_data.get_billing_city()?),
+        state: CheckoutAftStateParams {
+            state: resource_common_data.get_optional_billing_state(),
+            country,
+            field_name: "payment_method_data.billing.address.state",
+        }
+        .try_into()?,
+        zip: Some(resource_common_data.get_billing_zip()?),
+        country: Some(country),
+    })
+}
+
+/// Builds the AFT sender from `sender_details` when provided. A missing or empty sender address
+/// falls back to the billing address; with no `sender_details` at all, the sender is an
+/// individual named after the billing address.
 fn build_checkout_sender(
     resource_common_data: &PaymentFlowData,
-    date_of_birth: Secret<time::Date>,
+    sender_details: Option<&SenderDetails>,
+    customer_date_of_birth: Option<Secret<time::Date>>,
 ) -> Result<CheckoutSender, error_stack::Report<IntegrationError>> {
-    let country = resource_common_data.get_billing_country()?;
-    Ok(CheckoutSender {
-        sender_type: CheckoutSenderType::Individual,
-        first_name: resource_common_data.get_billing_first_name()?,
-        last_name: resource_common_data.get_billing_last_name()?,
-        date_of_birth,
-        address: CheckoutAddress {
-            address_line1: Some(resource_common_data.get_billing_line1()?),
-            address_line2: resource_common_data.get_optional_billing_line2(),
-            city: Some(resource_common_data.get_billing_city()?),
-            state: CheckoutAftStateParams {
-                state: resource_common_data.get_optional_billing_state(),
-                country,
-                field_name: "payment_method_data.billing.address.state",
-            }
-            .try_into()?,
-            zip: Some(resource_common_data.get_billing_zip()?),
-            country: Some(country),
+    let address = match sender_details
+        .and_then(SenderDetails::get_address)
+        .filter(|address| !address.is_empty())
+    {
+        Some(sender_address) => build_checkout_sender_address(sender_address)?,
+        None => build_checkout_billing_address(resource_common_data)?,
+    };
+
+    Ok(match sender_details {
+        Some(SenderDetails::Individual(individual)) => CheckoutSender::Individual {
+            first_name: individual.first_name.clone(),
+            last_name: individual.last_name.clone(),
+            date_of_birth: individual.date_of_birth.clone().or(customer_date_of_birth),
+            address,
+        },
+        Some(SenderDetails::Corporate(corporate)) => CheckoutSender::Corporate {
+            company_name: corporate.company_name.clone(),
+            address,
+        },
+        None => CheckoutSender::Individual {
+            first_name: resource_common_data.get_billing_first_name()?,
+            last_name: resource_common_data.get_billing_last_name()?,
+            date_of_birth: customer_date_of_birth,
+            address,
         },
     })
 }
@@ -1393,13 +1458,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     "additional_connector_details.checkout.purpose_of_payment",
                 ))?;
 
-            let sender_date_of_birth = item
+            let customer_date_of_birth = item
                 .router_data
                 .request
                 .customer
                 .as_ref()
-                .and_then(|customer| customer.date_of_birth.clone())
-                .ok_or_else(utils::missing_field_err("customer.date_of_birth"))?;
+                .and_then(|customer| customer.date_of_birth.clone());
 
             (
                 Some(build_checkout_recipient(
@@ -1407,7 +1471,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 )?),
                 Some(build_checkout_sender(
                     &item.router_data.resource_common_data,
-                    sender_date_of_birth,
+                    item.router_data.request.sender_details.as_ref(),
+                    customer_date_of_birth,
                 )?),
                 Some(CheckoutInstruction { purpose }),
             )
@@ -1858,13 +1923,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     "additional_connector_details.checkout.purpose_of_payment",
                 ))?;
 
-            let sender_date_of_birth = item
+            let customer_date_of_birth = item
                 .router_data
                 .request
                 .customer
                 .as_ref()
-                .and_then(|customer| customer.date_of_birth.clone())
-                .ok_or_else(utils::missing_field_err("customer.date_of_birth"))?;
+                .and_then(|customer| customer.date_of_birth.clone());
 
             (
                 Some(build_checkout_recipient(
@@ -1872,7 +1936,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 )?),
                 Some(build_checkout_sender(
                     &item.router_data.resource_common_data,
-                    sender_date_of_birth,
+                    item.router_data.request.sender_details.as_ref(),
+                    customer_date_of_birth,
                 )?),
                 Some(CheckoutInstruction { purpose }),
             )
@@ -2253,13 +2318,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     "additional_connector_details.checkout.purpose_of_payment",
                 ))?;
 
-            let sender_date_of_birth = item
+            let customer_date_of_birth = item
                 .router_data
                 .request
                 .customer
                 .as_ref()
-                .and_then(|customer| customer.date_of_birth.clone())
-                .ok_or_else(utils::missing_field_err("customer.date_of_birth"))?;
+                .and_then(|customer| customer.date_of_birth.clone());
 
             (
                 Some(build_checkout_recipient(
@@ -2267,7 +2331,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 )?),
                 Some(build_checkout_sender(
                     &item.router_data.resource_common_data,
-                    sender_date_of_birth,
+                    item.router_data.request.sender_details.as_ref(),
+                    customer_date_of_birth,
                 )?),
                 Some(CheckoutInstruction { purpose }),
             )
@@ -3947,5 +4012,93 @@ impl TryFrom<CheckoutAftStateParams> for Option<Secret<String>> {
             )),
             _ => Ok(params.state),
         }
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::expect_used, clippy::panic, clippy::indexing_slicing)]
+mod sender_tests {
+    use domain_types::connector_types::SenderAddress;
+    use hyperswitch_masking::Secret;
+
+    use super::{build_checkout_sender_address, CheckoutAddress, CheckoutSender};
+
+    fn secret(value: &str) -> Secret<String> {
+        Secret::new(value.to_string())
+    }
+
+    fn address() -> CheckoutAddress {
+        CheckoutAddress {
+            address_line1: Some(secret("1 Main St")),
+            address_line2: None,
+            city: Some(secret("London")),
+            state: None,
+            zip: Some(secret("N1 1AA")),
+            country: Some(common_enums::CountryAlpha2::GB),
+        }
+    }
+
+    #[test]
+    fn individual_sender_serializes_with_type_tag() {
+        let sender = CheckoutSender::Individual {
+            first_name: secret("John"),
+            last_name: secret("Doe"),
+            date_of_birth: Some(Secret::new(time::macros::date!(1990 - 05 - 17))),
+            address: address(),
+        };
+        let value = serde_json::to_value(&sender).expect("serializes");
+        assert_eq!(value["type"], "individual");
+        assert_eq!(value["first_name"], "John");
+        assert_eq!(value["last_name"], "Doe");
+        assert_eq!(value["date_of_birth"], "1990-05-17");
+        assert_eq!(value["address"]["country"], "GB");
+    }
+
+    #[test]
+    fn individual_sender_omits_missing_date_of_birth() {
+        let sender = CheckoutSender::Individual {
+            first_name: secret("John"),
+            last_name: secret("Doe"),
+            date_of_birth: None,
+            address: address(),
+        };
+        let value = serde_json::to_value(&sender).expect("serializes");
+        assert!(value.get("date_of_birth").is_none());
+    }
+
+    #[test]
+    fn corporate_sender_serializes_with_type_tag() {
+        let sender = CheckoutSender::Corporate {
+            company_name: secret("Acme Ltd"),
+            address: address(),
+        };
+        let value = serde_json::to_value(&sender).expect("serializes");
+        assert_eq!(value["type"], "corporate");
+        assert_eq!(value["company_name"], "Acme Ltd");
+        assert!(value.get("first_name").is_none());
+        assert_eq!(value["address"]["zip"], "N1 1AA");
+    }
+
+    #[test]
+    fn sender_address_requires_checkout_mandatory_fields() {
+        let complete = SenderAddress {
+            line1: Some(secret("1 Main St")),
+            line2: None,
+            city: Some(secret("London")),
+            state: None,
+            zip: Some(secret("N1 1AA")),
+            country: Some(common_enums::CountryAlpha2::GB),
+        };
+        assert!(build_checkout_sender_address(&complete).is_ok());
+        assert!(build_checkout_sender_address(&SenderAddress {
+            city: None,
+            ..complete.clone()
+        })
+        .is_err());
+        assert!(build_checkout_sender_address(&SenderAddress {
+            country: None,
+            ..complete
+        })
+        .is_err());
     }
 }
