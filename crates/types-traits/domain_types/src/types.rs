@@ -2627,6 +2627,7 @@ impl<
                             token_exp_month: decrypted_wallet_token_details_for_nti.token_exp_month.ok_or_else(|| IntegrationError::InvalidDataFormat { field_name: "unknown", context: IntegrationErrorContext { additional_context: Some("Missing decrypted token expiration month".to_string()), ..Default::default() } })?,
                             token_exp_year: decrypted_wallet_token_details_for_nti.token_exp_year.ok_or_else(|| IntegrationError::InvalidDataFormat { field_name: "unknown", context: IntegrationErrorContext { additional_context: Some("Missing decrypted token expiration year".to_string()), ..Default::default() } })?,
                             card_holder_name: decrypted_wallet_token_details_for_nti.card_holder_name,
+                            cryptogram: decrypted_wallet_token_details_for_nti.cryptogram,
                             device_manufacturer_identifier: decrypted_wallet_token_details_for_nti.device_manufacturer_identifier,
                             eci: decrypted_wallet_token_details_for_nti.eci,
                             token_source: decrypted_wallet_token_details_for_nti.token_source
@@ -11019,9 +11020,12 @@ impl ForeignTryFrom<PaymentServiceIncrementalAuthorizationRequest>
             .map(|metadata| serde_json::from_str(&metadata.expose()))
             .transpose()
             .change_context(IntegrationError::InvalidDataFormat {
-                field_name: "unknown",
+                field_name: "connector_feature_data",
                 context: IntegrationErrorContext {
-                    additional_context: Some("Failed to parse connector metadata".to_string()),
+                    additional_context: Some(
+                        "Incremental authorization connector_feature_data must contain valid JSON"
+                            .to_string(),
+                    ),
                     ..Default::default()
                 },
             })?;
@@ -11031,14 +11035,19 @@ impl ForeignTryFrom<PaymentServiceIncrementalAuthorizationRequest>
             context: IntegrationErrorContext::default(),
         })?;
 
+        let amount = common_utils::types::Money::foreign_try_from(amount)?;
+        let additional_amount = value
+            .additional_amount
+            .map(common_utils::types::Money::foreign_try_from)
+            .transpose()?;
+
         Ok(Self {
-            amount: common_utils::types::Money {
-                amount: common_utils::types::MinorUnit::new(amount.minor_amount),
-                currency: common_enums::Currency::foreign_try_from(amount.currency())?,
-            },
+            currency: amount.currency,
+            amount,
+            additional_amount,
+            network_transaction_id: value.network_transaction_id,
             connector_transaction_id,
             connector_feature_data,
-            currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             reason: value.reason,
         })
     }

@@ -2171,6 +2171,7 @@ message DecryptedWalletTokenDetailsForNetworkTransactionId {
     optional TokenSource token_source = 6;
     optional CardNetwork card_network = 7;
     optional SecretString device_manufacturer_identifier = 8;
+    optional SecretString cryptogram = 9;
 }
 
 /// Source of the token

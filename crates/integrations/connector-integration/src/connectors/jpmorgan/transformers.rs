@@ -1,3 +1,4 @@
+use base64::Engine;
 use common_enums::{AttemptStatus, CaptureMethod};
 use common_utils::consts::NO_ERROR_MESSAGE;
 use common_utils::{fp_utils::when, pii::SecretSerdeValue};
@@ -25,7 +26,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{PeekInterface, Secret};
+use hyperswitch_masking::{Maskable, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use crate::connectors::jpmorgan::{requests, responses, JpmorganAmountConvertor};
@@ -174,27 +175,6 @@ fn merchant_order_number(merchant_order_id: Option<&str>, reference: &str) -> St
         .to_owned()
 }
 
-impl requests::JpmorganMitMetadata {
-    fn from_value(value: &serde_json::Value) -> Result<Self, Error> {
-        serde_json::from_value(value.clone()).map_err(|_| {
-            Self::invalid_with_reason("The JPMorgan metadata has an invalid field type.")
-        })
-    }
-}
-
-impl requests::JpmorganMitMetadata {
-    fn invalid_with_reason(reason: &'static str) -> Error {
-        IntegrationError::InvalidDataFormat {
-            field_name: "metadata",
-            context: IntegrationErrorContext {
-                suggested_action: Some("Supply the original recurring terms or wallet classification for the direct MIT request.".to_owned()),
-                additional_context: Some(reason.to_owned()),
-                ..Default::default()
-            },
-        }.into()
-    }
-}
-
 impl TryFrom<Option<common_enums::BankType>> for requests::JpmorganAchAccountType {
     type Error = error_stack::Report<IntegrationError>;
 
@@ -236,7 +216,9 @@ fn jpmorgan_missing_field_context(field_name: &str) -> IntegrationErrorContext {
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganAuthType {
     pub client_id: Secret<String>,
-    pub client_secret: Secret<String>,
+    pub thumbprint: Secret<String>,
+    pub private_key: Secret<String>,
+    pub resource_id: Secret<String>,
     pub company_name: Option<Secret<String>>,
     pub product_name: Option<Secret<String>>,
     pub merchant_purchase_description: Option<Secret<String>>,
@@ -249,7 +231,9 @@ impl TryFrom<&ConnectorSpecificConfig> for JpmorganAuthType {
         match auth_type {
             ConnectorSpecificConfig::Jpmorgan {
                 client_id,
-                client_secret,
+                thumbprint,
+                private_key,
+                resource_id,
                 company_name,
                 product_name,
                 merchant_purchase_description,
@@ -257,7 +241,9 @@ impl TryFrom<&ConnectorSpecificConfig> for JpmorganAuthType {
                 ..
             } => Ok(Self {
                 client_id: client_id.clone(),
-                client_secret: client_secret.clone(),
+                thumbprint: thumbprint.clone(),
+                private_key: private_key.clone(),
+                resource_id: resource_id.clone(),
                 company_name: company_name.clone(),
                 product_name: product_name.clone(),
                 merchant_purchase_description: merchant_purchase_description.clone(),
@@ -268,6 +254,119 @@ impl TryFrom<&ConnectorSpecificConfig> for JpmorganAuthType {
             }
             .into()),
         }
+    }
+}
+
+const JPMORGAN_OAUTH_DOC: &str =
+    "https://developer.payments.jpmorgan.com/api/commerce/online-payments/oauth-authentication";
+const CLIENT_ASSERTION_TYPE: &str = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
+const CLIENT_ASSERTION_TTL_SECONDS: i64 = 300;
+
+fn invalid_oauth_config(field: &'static str) -> IntegrationError {
+    IntegrationError::InvalidConnectorConfig {
+        config: field,
+        context: IntegrationErrorContext {
+            doc_url: Some(JPMORGAN_OAUTH_DOC.to_string()),
+            ..Default::default()
+        },
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct JpmorganClientAssertionClaims {
+    jti: String,
+    iat: i64,
+    exp: i64,
+    aud: String,
+    iss: Secret<String>,
+    sub: Secret<String>,
+}
+
+impl JpmorganAuthType {
+    fn validate_credentials(&self) -> Result<(), Error> {
+        for (value, name) in [
+            (self.client_id.peek().as_str(), "client_id"),
+            (self.thumbprint.peek().as_str(), "thumbprint"),
+            (self.private_key.peek().as_str(), "private_key"),
+            (self.resource_id.peek().as_str(), "resource_id"),
+        ] {
+            if value.trim().is_empty() {
+                return Err(invalid_oauth_config(name).into());
+            }
+        }
+        Ok(())
+    }
+
+    pub(super) fn token_headers(&self) -> Result<Vec<(String, Maskable<String>)>, Error> {
+        self.validate_credentials()?;
+        Ok(vec![(
+            super::headers::CONTENT_TYPE.to_string(),
+            "application/x-www-form-urlencoded".to_string().into(),
+        )])
+    }
+
+    pub(super) fn token_url(secondary_base_url: Option<&str>) -> Result<String, Error> {
+        let base_url =
+            secondary_base_url.ok_or(IntegrationError::FailedToObtainIntegrationUrl {
+                context: IntegrationErrorContext {
+                    doc_url: Some(JPMORGAN_OAUTH_DOC.to_string()),
+                    suggested_action: Some(
+                        "Set JPMorgan secondary_base_url to the HTTPS OAuth host.".to_string(),
+                    ),
+                    ..Default::default()
+                },
+            })?;
+        let token_url = url::Url::parse(base_url)
+            .change_context(invalid_oauth_config("secondary_base_url"))?
+            .join("/adfs/oauth2/token")
+            .change_context(invalid_oauth_config("secondary_base_url"))?;
+
+        Ok(token_url.to_string())
+    }
+
+    pub(super) fn token_request(
+        &self,
+        secondary_base_url: Option<&str>,
+    ) -> Result<requests::JpmorganTokenRequest, Error> {
+        self.validate_credentials()?;
+        let token_url = Self::token_url(secondary_base_url)?;
+        let thumbprint = &self.thumbprint;
+        let private_key = &self.private_key;
+        let resource_id = &self.resource_id;
+        let kid = thumbprint
+            .peek()
+            .trim()
+            .replace(':', "")
+            .to_ascii_uppercase();
+        if kid.is_empty() || !kid.bytes().all(|c| c.is_ascii_hexdigit()) {
+            return Err(invalid_oauth_config("thumbprint").into());
+        }
+        let pem = super::BASE64_ENGINE
+            .decode(private_key.peek())
+            .change_context(invalid_oauth_config("private_key"))?;
+        let signing_key = jsonwebtoken::EncodingKey::from_rsa_pem(&pem)
+            .change_context(invalid_oauth_config("private_key"))?;
+        let mut header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::RS256);
+        header.typ = Some("JWT".to_string());
+        header.kid = Some(kid);
+        let now = common_utils::date_time::now_unix_timestamp();
+        let claims = JpmorganClientAssertionClaims {
+            jti: common_utils::fp_utils::generate_uuid_v4(),
+            iat: now,
+            exp: now + CLIENT_ASSERTION_TTL_SECONDS,
+            aud: token_url,
+            iss: self.client_id.clone(),
+            sub: self.client_id.clone(),
+        };
+        let assertion = jsonwebtoken::encode(&header, &claims, &signing_key)
+            .change_context(invalid_oauth_config("private_key"))?;
+        Ok(requests::JpmorganTokenRequest {
+            grant_type: "client_credentials".to_string(),
+            client_id: self.client_id.clone(),
+            client_assertion_type: CLIENT_ASSERTION_TYPE.to_string(),
+            client_assertion: Secret::new(assertion),
+            resource: resource_id.clone(),
+        })
     }
 }
 
@@ -308,7 +407,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
     type Error = Error;
     fn try_from(
-        _item: JpmorganRouterData<
+        item: JpmorganRouterData<
             RouterDataV2<
                 ServerAuthenticationToken,
                 MerchantAuthenticationFlowData,
@@ -318,10 +417,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            grant_type: String::from("client_credentials"),
-            scope: String::from("jpm:payments:sandbox"),
-        })
+        JpmorganAuthType::try_from(&item.router_data.connector_config)?.token_request(
+            item.router_data
+                .resource_common_data
+                .connectors
+                .jpmorgan
+                .secondary_base_url
+                .as_deref(),
+        )
     }
 }
 
@@ -1665,20 +1768,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let scope = if item
-            .router_data
-            .resource_common_data
-            .test_mode
-            .unwrap_or(true)
-        {
-            String::from("jpm:payments:sandbox")
-        } else {
-            String::from("jpm:payments")
-        };
-        Ok(Self {
-            grant_type: String::from("client_credentials"),
-            scope,
-        })
+        JpmorganAuthType::try_from(&item.router_data.connector_config)?.token_request(
+            item.router_data
+                .resource_common_data
+                .connectors
+                .jpmorgan
+                .secondary_base_url
+                .as_deref(),
+        )
     }
 }
 
@@ -1982,27 +2079,16 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganRepeatPaymentRequest<T> {
 
     fn mit_recurring(
         request: &RepeatPaymentData<T>,
-        context: &requests::JpmorganMitMetadata,
     ) -> Result<Option<requests::JpmorganRecurring>, Error> {
         match request.mit_category {
             Some(common_enums::MitCategory::Unscheduled) => Ok(None),
             Some(
                 common_enums::MitCategory::Recurring | common_enums::MitCategory::Subscription,
-            ) => {
-                let original =
-                    context
-                        .recurring
-                        .as_ref()
-                        .ok_or(IntegrationError::MissingRequiredField {
-                            field_name: "metadata.recurring",
-                            context: Default::default(),
-                        })?;
-                Ok(Some(requests::JpmorganRecurring {
-                    recurring_sequence: requests::JpmorganRecurringSequence::Subsequent,
-                    agreement_id: Some(original.agreement_id.clone()),
-                    is_variable_amount: Some(original.is_variable_amount),
-                }))
-            }
+            ) => Ok(Some(requests::JpmorganRecurring {
+                recurring_sequence: requests::JpmorganRecurringSequence::Subsequent,
+                agreement_id: None,
+                is_variable_amount: Some(true),
+            })),
             None => Err(IntegrationError::MissingRequiredField {
                 field_name: "mit_category",
                 context: Default::default(),
@@ -2016,80 +2102,13 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganRepeatPaymentRequest<T> {
         }
     }
 
-    fn stored_wallet(
-        context: &requests::JpmorganMitMetadata,
-        provider: &requests::JpmorganWalletProvider,
-    ) -> Result<requests::JpmorganStoredWallet, Error> {
-        let wallet = context
-            .wallet
-            .clone()
-            .or_else(|| {
-                context
-                    .wallet_account_number_type
-                    .clone()
-                    .map(|account_number_type| requests::JpmorganStoredWallet {
-                        provider: provider.clone(),
-                        account_number_type,
-                    })
-            })
-            .ok_or(IntegrationError::MissingRequiredField {
-                field_name: "metadata.wallet or metadata.wallet_account_number_type",
-                context: Default::default(),
-            })?;
-        if wallet.provider != *provider
-            || !matches!(
-                wallet.account_number_type,
-                requests::JpmorganAccountNumberType::Pan
-                    | requests::JpmorganAccountNumberType::DeviceToken
-            )
-            || (*provider == requests::JpmorganWalletProvider::ApplePay
-                && wallet.account_number_type != requests::JpmorganAccountNumberType::DeviceToken)
-            || context
-                .wallet_account_number_type
-                .as_ref()
-                .is_some_and(|kind| kind != &wallet.account_number_type)
-        {
-            return Err(Self::unsupported(
-                "Conflicting or unsupported wallet classification",
-            ));
-        }
-        Ok(wallet)
-    }
-
     fn mit_card(
         request: &RepeatPaymentData<T>,
-        context: &requests::JpmorganMitMetadata,
         ntid: String,
         tlid: Option<String>,
     ) -> Result<requests::JpmorganMitCardByNti<T>, Error> {
         let (number, month, year, kind, provider, supplied_network) =
             match &request.payment_method_data {
-                PaymentMethodData::Card(card) => (
-                    card.card_number.clone(),
-                    i32::from(card.get_expiry_month_as_u8()?),
-                    i32::from(card.get_expiry_year_4_digit_as_u16()?),
-                    requests::JpmorganAccountNumberType::Pan,
-                    None,
-                    card.card_network.clone(),
-                ),
-                PaymentMethodData::CardWithNoCvc(card) => (
-                    RawCardNumber(T::inner_from_card_number(card.card_number.clone())),
-                    card.get_card_expiry_month_2_digit()?
-                        .peek()
-                        .parse::<i32>()
-                        .change_context(IntegrationError::RequestEncodingFailed {
-                            context: Default::default(),
-                        })?,
-                    card.get_expiry_year_4_digit()
-                        .peek()
-                        .parse::<i32>()
-                        .change_context(IntegrationError::RequestEncodingFailed {
-                            context: Default::default(),
-                        })?,
-                    requests::JpmorganAccountNumberType::Pan,
-                    None,
-                    card.card_network.clone(),
-                ),
                 PaymentMethodData::CardDetailsForNetworkTransactionId(card) => (
                     card.card_number.clone(),
                     i32::from(*card.get_expiry_month_as_i8()?.peek()),
@@ -2148,7 +2167,17 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganRepeatPaymentRequest<T> {
                             .into())
                         }
                     };
-                    let wallet = Self::stored_wallet(context, &provider)?;
+                    if token.cryptogram.as_ref().is_some_and(|value| value.peek().trim().is_empty()) {
+                        return Err(IntegrationError::InvalidDataFormat {
+                            field_name: "cryptogram",
+                            context: Default::default(),
+                        }.into());
+                    }
+                    let account_number_type = match provider {
+                        requests::JpmorganWalletProvider::ApplePay => requests::JpmorganAccountNumberType::DeviceToken,
+                        requests::JpmorganWalletProvider::GooglePay if token.cryptogram.is_some() => requests::JpmorganAccountNumberType::DeviceToken,
+                        requests::JpmorganWalletProvider::GooglePay => requests::JpmorganAccountNumberType::Pan,
+                    };
                     (
                         RawCardNumber(T::inner_from_card_number(
                             token
@@ -2168,12 +2197,14 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganRepeatPaymentRequest<T> {
                             .change_context(IntegrationError::RequestEncodingFailed {
                                 context: Default::default(),
                             })?,
-                        wallet.account_number_type,
+                        account_number_type,
                         Some(provider),
                         token.card_network.clone(),
                     )
                 }
-                PaymentMethodData::CardRedirect(_)
+                PaymentMethodData::Card(_)
+                | PaymentMethodData::CardWithNoCvc(_)
+                | PaymentMethodData::CardRedirect(_)
                 | PaymentMethodData::Wallet(_)
                 | PaymentMethodData::PayLater(_)
                 | PaymentMethodData::BankRedirect(_)
@@ -2189,7 +2220,7 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganRepeatPaymentRequest<T> {
                 | PaymentMethodData::PaymentMethodToken(_)
                 | PaymentMethodData::OpenBanking(_)
                 | PaymentMethodData::MobilePayment(_) => return Err(Self::unsupported(
-                    "Direct payments without a card, network token, or decrypted wallet credential",
+                    "MIT requires card details for a network transaction ID, a network token, or decrypted wallet token details",
                 )),
             };
         if !(1..=12).contains(&month) || !(1000..=9999).contains(&year) {
@@ -2221,14 +2252,22 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganRepeatPaymentRequest<T> {
             original_network_transaction_id: ntid,
             original_transaction_link_id: tlid,
             authentication: match &request.payment_method_data {
-                PaymentMethodData::NetworkToken(token) => token
-                    .token_cryptogram
-                    .as_ref()
-                    .map(|cryptogram| {
-                        requests::JpmorganCard::<T>::network_token_authentication(token, cryptogram)
-                    })
-                    .transpose()?,
-                PaymentMethodData::Card(_)
+                // Mastercard requires a cryptogram for the first token use, including MIT.
+                PaymentMethodData::NetworkToken(token)
+                    if network == common_enums::CardNetwork::Mastercard =>
+                {
+                    token
+                        .token_cryptogram
+                        .as_ref()
+                        .map(|cryptogram| {
+                            requests::JpmorganCard::<T>::network_token_authentication(
+                                token, cryptogram,
+                            )
+                        })
+                        .transpose()?
+                }
+                PaymentMethodData::NetworkToken(_)
+                | PaymentMethodData::Card(_)
                 | PaymentMethodData::CardWithNoCvc(_)
                 | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
                 | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
@@ -2290,12 +2329,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 "Off-session false or separately authenticated merchant-initiated payments",
             ));
         }
-        let context = request
-            .metadata
-            .as_ref()
-            .map(|value| requests::JpmorganMitMetadata::from_value(value.peek()))
-            .transpose()?
-            .unwrap_or_default();
         let (ntid, tlid) = Self::network_references(&request.mandate_reference)?;
         let capture_method = map_capture_method(router_data.request.capture_method)?;
         let amount = item
@@ -2310,9 +2343,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             })?;
 
         let payment_method_type = requests::JpmorganRepeatPaymentMethodType {
-            card: Self::mit_card(request, &context, ntid, tlid)?,
+            card: Self::mit_card(request, ntid, tlid)?,
         };
-        let recurring = Self::mit_recurring(request, &context)?;
+        let recurring = Self::mit_recurring(request)?;
 
         Ok(Self {
             capture_method,

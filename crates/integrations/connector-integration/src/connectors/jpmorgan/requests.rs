@@ -3,19 +3,15 @@ use domain_types::payment_method_data::{PaymentMethodDataTypes, RawCardNumber};
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
-/// Client Authentication Token request — obtains an OAuth2 access token
-/// for client-side SDK initialization via JP Morgan's token endpoint.
-/// Uses form-urlencoded format matching the ServerAuthenticationToken flow.
-#[derive(Debug, Clone, Serialize)]
-pub struct JpmorganClientAuthRequest {
-    pub grant_type: String,
-    pub scope: String,
-}
+pub type JpmorganClientAuthRequest = JpmorganTokenRequest;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct JpmorganTokenRequest {
     pub grant_type: String,
-    pub scope: String,
+    pub client_id: Secret<String>,
+    pub client_assertion_type: String,
+    pub client_assertion: Secret<String>,
+    pub resource: Secret<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -352,30 +348,6 @@ pub struct GooglePayIntermediateSigningKey {
 #[serde(rename_all = "camelCase")]
 pub struct GooglePaySignedMessage {
     pub ephemeral_public_key: Secret<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct JpmorganStoredWallet {
-    pub provider: JpmorganWalletProvider,
-    pub account_number_type: JpmorganAccountNumberType,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct JpmorganMitRecurring {
-    /// JPMorgan requires 1–100 characters. JPMorgan validates the length.
-    pub agreement_id: String,
-    pub is_variable_amount: bool,
-}
-
-#[derive(Default, Deserialize)]
-pub struct JpmorganMitMetadata {
-    #[serde(default)]
-    pub recurring: Option<JpmorganMitRecurring>,
-    #[serde(default)]
-    pub wallet: Option<JpmorganStoredWallet>,
-    #[serde(default)]
-    pub wallet_account_number_type: Option<JpmorganAccountNumberType>,
 }
 
 #[derive(Serialize)]

@@ -40,6 +40,7 @@
   "RecurringPaymentService/Charge": {
     "recurring_charge": {
       "grpc_req": {
+        "payment_method": { "card_details_for_network_transaction_id": { "card_network": "VISA" } },
         "connector_recurring_payment_id": { "connector_mandate_id": null },
         "off_session": true,
         "mit_category": "UNSCHEDULED_MIT"
@@ -47,6 +48,7 @@
     },
     "RecurringPaymentService/Charge": {
       "grpc_req": {
+        "payment_method": { "card_details_for_network_transaction_id": { "card_network": "VISA" } },
         "connector_recurring_payment_id": { "connector_mandate_id": null },
         "off_session": true,
         "mit_category": "UNSCHEDULED_MIT"
@@ -54,6 +56,7 @@
     },
     "recurring_charge_low_amount": {
       "grpc_req": {
+        "payment_method": { "card_details_for_network_transaction_id": { "card_network": "VISA" } },
         "connector_recurring_payment_id": { "connector_mandate_id": null },
         "off_session": true,
         "mit_category": "UNSCHEDULED_MIT"
@@ -61,6 +64,7 @@
     },
     "recurring_charge_with_order_context": {
       "grpc_req": {
+        "payment_method": { "card_details_for_network_transaction_id": { "card_network": "VISA" } },
         "connector_recurring_payment_id": { "connector_mandate_id": null },
         "off_session": true,
         "mit_category": "UNSCHEDULED_MIT"
