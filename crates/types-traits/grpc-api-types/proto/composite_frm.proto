@@ -149,10 +149,6 @@ message CompositeFrmPostRiskCheckRequest {
   // Browser/device information for risk scoring (same as CompositeFrmPreRiskCheckRequest).
   optional BrowserInformation browser_info = 18;
 
-  // Recurring / mandate details for subscription risk scoring (same as
-  // CompositeFrmPreRiskCheckRequest).
-  optional MandateAmountData mandate_details = 19;
-
   // Merchant details (id + MCC) for risk scoring (same as CompositeFrmPreRiskCheckRequest).
   optional MerchantDetails merchant_details = 20;
 

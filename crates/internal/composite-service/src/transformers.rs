@@ -1500,8 +1500,6 @@ impl
             address: item.address.clone(),
             billing_document_data: item.billing_document_data.clone(),
             shipping_document_data: item.shipping_document_data.clone(),
-            mandate_details: item.mandate_details.clone(),
-            merchant_details: item.merchant_details.clone(),
             domain_data: item.domain_data.clone(),
             state: Some(ConnectorState {
                 access_token,

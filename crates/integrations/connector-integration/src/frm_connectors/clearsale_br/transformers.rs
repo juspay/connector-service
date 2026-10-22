@@ -270,9 +270,6 @@ impl<F> TryFrom<ResponseRouterData<ClearSaleAuthenticateResponse, Self>>
     fn try_from(
         item: ResponseRouterData<ClearSaleAuthenticateResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        // ClearSale returns an absolute `ExpirationDate`, not a TTL. Convert
-        // it here so the token cache learns when the token expires (the
-        // generic `expires_in` field is TTL seconds).
         let expires_in = expires_in_from_expiration_date(
             &item.response.expiration_date,
             common_utils::date_time::now().assume_utc(),
@@ -2083,8 +2080,8 @@ pub(crate) fn passenger_to_clear_sale(p: &Traveller) -> Option<ClearSalePassenge
 ///
 /// The booking-level `TravelData` supplies the carrier and travel date
 /// (`carrier_name` / `travel_date`); the segment supplies the leg detail
-/// (`origin`, `destination`, `travel_class`, times, `identification_number`). When
-/// `carrier_name` is absent, the identifier's leading airline-code prefix
+/// (`origin`, `destination`, `travel_class`, times, `identification_number`).
+/// When `carrier_name` is absent, the identifier's leading airline-code prefix
 /// ("G3-1234" → "G3") is used so a flight-number-only booking still projects.
 pub(crate) fn travel_segment_to_clear_sale_connection(
     leg: &TravelData,
@@ -2120,7 +2117,7 @@ pub(crate) fn travel_segment_to_clear_sale_connection(
         company,
         identification_number,
         date: Some(date),
-        seat_class: segment.travel_class.map(travel_class_to_seat_class),
+        seat_class: segment.travel_class.map(|class| class.to_string()),
         origin: segment.origin.as_deref()?.trim().to_owned(),
         destination: segment.destination.as_deref()?.trim().to_owned(),
         boarding: segment
@@ -2135,18 +2132,6 @@ pub(crate) fn travel_segment_to_clear_sale_connection(
         // already feeds `seatClass`.
         fare_class: None,
     })
-}
-
-/// Domain `TravelClass` (Economy / PremiumEconomy / Business / First) →
-/// ClearSale `seatClass` vocabulary on the wire. The wire field is a free-form
-/// string, so we send the canonical PascalCase name.
-pub(crate) fn travel_class_to_seat_class(class: common_enums::TravelClass) -> String {
-    match class {
-        common_enums::TravelClass::Economy => "Economy".to_owned(),
-        common_enums::TravelClass::PremiumEconomy => "PremiumEconomy".to_owned(),
-        common_enums::TravelClass::Business => "Business".to_owned(),
-        common_enums::TravelClass::First => "First".to_owned(),
-    }
 }
 
 pub(crate) fn carrier_code_from_identifier(identifier: &str) -> Option<String> {
@@ -2184,10 +2169,7 @@ pub(crate) fn accommodation_to_clear_sale(a: &HotelSegment) -> Option<ClearSaleH
         city: a.hotel_city.clone(),
         state: a.hotel_state.clone(),
         country: a.hotel_country.clone(),
-        reservation_date: a
-            .reservation_date_time
-            .as_deref()
-            .map(to_clearsale_datetime),
+        reservation_date: a.reservation_date_time.as_deref().map(to_clearsale_datetime),
         reserve_expiration_date: a
             .reservation_expires_date_time
             .as_deref()
