@@ -162,11 +162,10 @@ message FrmServicePostRiskCheckRequest {
   // Browser/device information for risk scoring (same as PreRiskCheck).
   optional BrowserInformation browser_info = 16;
 
-  // Recurring / mandate details for subscription risk scoring (same as PreRiskCheck).
-  optional MandateAmountData mandate_details = 17;
-
-  // Merchant details (id + MCC) for risk scoring (same as PreRiskCheck).
-  optional MerchantDetails merchant_details = 18;
+  // Pre-only risk-scoring inputs (still on FrmServicePreRiskCheckRequest).
+  // Post never reads them; field numbers must not be reused.
+  reserved 17, 18; // was: mandate_details (MandateAmountData), merchant_details (MerchantDetails)
+  reserved "mandate_details", "merchant_details";
 
   // Domain-specific order context (travel, hotel, airline…) as a typed object
   // (same as PreRiskCheck). Re-analysis must replay the same order body.

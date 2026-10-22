@@ -149,8 +149,10 @@ message CompositeFrmPostRiskCheckRequest {
   // Browser/device information for risk scoring (same as CompositeFrmPreRiskCheckRequest).
   optional BrowserInformation browser_info = 18;
 
-  // Merchant details (id + MCC) for risk scoring (same as CompositeFrmPreRiskCheckRequest).
-  optional MerchantDetails merchant_details = 20;
+  // Pre-only risk-scoring inputs (still on CompositeFrmPreRiskCheckRequest).
+  // Post never reads them; field numbers must not be reused.
+  reserved 19, 20; // was: mandate_details (MandateAmountData), merchant_details (MerchantDetails)
+  reserved "mandate_details", "merchant_details";
 
   // Domain-specific order context (travel, hotel, airline…) as a typed object
   // (same as CompositeFrmPreRiskCheckRequest).
