@@ -1363,6 +1363,7 @@ mod tests {
                 },
                 connector_config: adyen_config(),
                 request: PaymentsAuthorizeData {
+                    risk_assessment_data: None,
                     split_settlement: None,
                     customer_document_details: None,
                     customer_date_of_birth: None,
