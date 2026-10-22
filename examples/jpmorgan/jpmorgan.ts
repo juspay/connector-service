@@ -19,6 +19,7 @@ const _defaultConfig: types.IConnectorConfig = {
             thumbprint: { value: 'YOUR_THUMBPRINT' },
             privateKey: { value: 'YOUR_PRIVATE_KEY' },
             resourceId: { value: 'YOUR_RESOURCE_ID' },
+            merchantId: { USD: { value: 'YOUR_USD_MERCHANT_ID' } },
             baseUrl: 'YOUR_BASE_URL',
             companyName: { value: 'YOUR_COMPANY_NAME' },
             productName: { value: 'YOUR_PRODUCT_NAME' },

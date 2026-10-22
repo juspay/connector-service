@@ -47,6 +47,10 @@ fn build_client() -> ConnectorClient {
                     resource_id: Some(hyperswitch_masking::Secret::new(
                         "YOUR_RESOURCE_ID".to_string(),
                     )), // Authentication credential
+                    merchant_id: std::collections::HashMap::from([(
+                        "USD".to_string(),
+                        hyperswitch_masking::Secret::new("YOUR_USD_MERCHANT_ID".to_string()),
+                    )]),
                     base_url: Some("https://sandbox.example.com".to_string()), // Base URL for API calls
                     company_name: Some(hyperswitch_masking::Secret::new(
                         "YOUR_COMPANY_NAME".to_string(),
