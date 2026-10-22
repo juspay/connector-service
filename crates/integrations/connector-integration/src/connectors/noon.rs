@@ -294,15 +294,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .attach_printable("Failed to parse NoonWebhookObject for reference extraction")?;
 
         // Noon's order_id is the connector transaction ID and the only identifier covered by
-        // the v1 signature. A refund event additionally echoes the refund's merchant reference
-        // (merchantTxnRef), which narrows the refund within that order. Noon documents no
+        // the v1 signature. A refund event also echoes the refund's merchant reference
+        // (merchantTxnRef), but that field is NOT in the signed preimage, so it can be edited
+        // on a validly signed body and is never used to pick a refund. Noon documents no
         // chargeback / dispute event, so no dispute reference is produced.
         let connector_transaction_id = Some(webhook_object.order_id.to_string());
         match webhook_object.event_type {
             noon::NoonWebhookEventTypes::Refund => Ok(Some(WebhookResourceReference::Refund(
                 RefundWebhookReference {
                     connector_refund_id: None,
-                    merchant_refund_id: webhook_object.merchant_txn_ref,
+                    merchant_refund_id: None,
                     connector_transaction_id,
                     merchant_transaction_id: None,
                 },
@@ -381,17 +382,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(WebhookError::WebhookBodyDecodingFailed)
             .attach_printable("Failed to parse refund webhook details from Noon webhook body")?;
 
-        // Status comes only from the signed eventType + orderStatus (spec ## Webhook Events,
-        // Refund: PARTIALLY_REFUNDED, REFUNDED, PENDING). Anything else is not a refund outcome
-        // and must not move the refund to a terminal state.
+        // The signed fields (eventType, orderStatus, orderId) say that some refund on the order
+        // changed, never which one: merchantTxnRef is unsigned. The webhook is therefore a
+        // trigger only. It reports Pending with no refund identity, so no refund can be moved
+        // to a terminal state from it; the outcome is confirmed by RSync (getbyreference).
+        // Anything other than a Refund event on a refund status is not a refund outcome.
         let status = match (&webhook_object.event_type, &webhook_object.order_status) {
             (
                 noon::NoonWebhookEventTypes::Refund,
-                noon::NoonPaymentStatus::Refunded | noon::NoonPaymentStatus::PartiallyRefunded,
-            ) => RefundStatus::Success,
-            (noon::NoonWebhookEventTypes::Refund, noon::NoonPaymentStatus::Pending) => {
-                RefundStatus::Pending
-            }
+                noon::NoonPaymentStatus::Refunded
+                | noon::NoonPaymentStatus::PartiallyRefunded
+                | noon::NoonPaymentStatus::Pending,
+            ) => RefundStatus::Pending,
             (event_type, order_status) => {
                 return Err(
                     report!(WebhookError::WebhookEventTypeNotFound).attach_printable(format!(
@@ -405,7 +407,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             connector_refund_id: None,
             merchant_transaction_id: None,
             status,
-            connector_response_reference_id: webhook_object.merchant_txn_ref,
+            connector_response_reference_id: None,
             error_code: None,
             error_message: None,
             raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),

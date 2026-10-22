@@ -1861,16 +1861,32 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     },
                 })
             })?;
-        // SetupRecurring carries no description field (PaymentFlowData.description is
-        // always None on this path); the caller passes it in metadata.description.
-        let name = get_noon_order_name(&item.resource_common_data).or_else(|error| {
+        // PaymentServiceSetupRecurringRequest has no description field and
+        // PaymentFlowData.description is always None on this path, so Noon's mandatory
+        // order.name is read from the request `metadata` JSON key `description`. The error
+        // below names that key so a caller finds the contract the first time it misses it.
+        let name = get_noon_order_name(&item.resource_common_data).or_else(|_| {
             item.request
                 .metadata
                 .as_ref()
                 .and_then(|metadata| metadata.peek().get("description"))
                 .and_then(|value| value.as_str())
                 .and_then(normalize_noon_order_name)
-                .ok_or(error)
+                .ok_or_else(|| {
+                    error_stack::report!(IntegrationError::MissingRequiredField {
+                        field_name: "metadata.description",
+                        context: IntegrationErrorContext {
+                            suggested_action: Some(
+                                "Noon requires order.name on every order and SetupRecurring has \
+                                 no description field: pass it as the `description` key of the \
+                                 request `metadata` JSON object, e.g. {\"description\": \"Card on file\"}"
+                                    .to_string(),
+                            ),
+                            doc_url: Some(NOON_DOCS_URL.to_string()),
+                            additional_context: None,
+                        },
+                    })
+                })
         })?;
         let order_money = item.request.amount.as_ref().ok_or_else(|| {
             error_stack::report!(IntegrationError::MissingRequiredField {

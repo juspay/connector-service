@@ -143,8 +143,7 @@ mod tests {
     }
 
     #[test]
-    fn refund_reference_carries_order_id_and_merchant_ref() -> Result<(), Box<dyn std::error::Error>>
-    {
+    fn refund_reference_carries_order_id_only() -> Result<(), Box<dyn std::error::Error>> {
         let connector = Noon::<DefaultPCIHolder>::new();
         let reference = connector
             .get_webhook_event_reference(make_request(&webhook(
@@ -156,7 +155,8 @@ mod tests {
         match reference {
             Some(WebhookResourceReference::Refund(refund)) => {
                 ensure_eq!(refund.connector_transaction_id, Some("12345".to_string()));
-                ensure_eq!(refund.merchant_refund_id, Some("refund_1".to_string()));
+                // merchantTxnRef is unsigned, so it must not identify the refund.
+                ensure_eq!(refund.merchant_refund_id, None);
             }
             other => return Err(format!("expected a refund reference, got {other:?}").into()),
         }
@@ -164,7 +164,8 @@ mod tests {
     }
 
     #[test]
-    fn refund_webhook_status_comes_from_signed_fields() -> Result<(), Box<dyn std::error::Error>> {
+    fn refund_webhook_is_a_trigger_with_no_refund_identity(
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let connector = Noon::<DefaultPCIHolder>::new();
         let success = connector
             .process_refund_webhook(
@@ -173,7 +174,8 @@ mod tests {
                 None,
             )
             .map_err(|err| format!("{err:?}"))?;
-        ensure_eq!(success.status, common_enums::RefundStatus::Success);
+        ensure_eq!(success.status, common_enums::RefundStatus::Pending);
+        ensure_eq!(success.connector_response_reference_id, None);
         let pending = connector
             .process_refund_webhook(
                 make_request(&webhook("Refund", "PENDING", Some("r1"))),
