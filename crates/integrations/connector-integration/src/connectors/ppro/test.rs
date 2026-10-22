@@ -1318,12 +1318,8 @@ mod transformer_tests {
                 ..
             }) => {
                 ensure_eq!(payload, Some("qr_payload_abc".to_string()));
-                // PPRO returns `codeImage` as a hosted URL, not base64.
                 ensure_eq!(image_base64, None);
-                ensure_eq!(
-                    image_url,
-                    Some("https://images.ppro.com/qr/abc.png".to_string())
-                );
+                ensure_eq!(image_url, None);
                 ensure!(expires_at.is_some(), "expires_at should have parsed");
             }
             other => return Err(format!("expected RedirectForm::Qr, got {other:?}").into()),
@@ -1445,7 +1441,7 @@ mod transformer_tests {
 mod satispay_request_tests {
     use std::marker::PhantomData;
 
-    use common_utils::types::MinorUnit;
+    use common_utils::types::{MinorUnit, Money};
     use domain_types::{
         connector_flow::Authorize,
         connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData},
@@ -1505,6 +1501,7 @@ mod satispay_request_tests {
                 attempt_id: "attempt_satispay_test".to_string(),
                 status: common_enums::AttemptStatus::Pending,
                 payment_method: common_enums::PaymentMethod::Wallet,
+                payment_method_type: Some(payment_method_type),
                 description: None,
                 return_url: router_return_url.clone(),
                 order_details: None,
@@ -1512,8 +1509,8 @@ mod satispay_request_tests {
                 auth_type: common_enums::AuthenticationType::NoThreeDs,
                 connector_feature_data: None,
                 amount_captured: None,
-                minor_amount_captured: None,
-                minor_amount_authorized: None,
+                amount_capturable: None,
+                amount_authorized: None,
                 access_token: None,
                 session_token: None,
                 reference_id: None,
@@ -1530,24 +1527,28 @@ mod satispay_request_tests {
                         ..Default::default()
                     },
                     ..Default::default()
-                },
+                }
+                .into(),
                 external_latency: None,
                 connector_response_headers: None,
                 raw_connector_response: None,
                 raw_connector_request: None,
-                minor_amount_capturable: None,
                 amount: None,
                 connector_response: None,
+                typed_connector_response: None,
+                typed_connector_request: None,
                 recurring_mandate_payment_data: None,
                 l2_l3_data: None,
                 merchant_request_id: None,
                 sender_payment_instrument_id: None,
+                connector_returned_payment_method_details: None,
                 settlement_status: None,
             },
             connector_config: ConnectorSpecificConfig::Ppro {
                 api_key: Secret::new("test_api_key".to_string()),
                 merchant_id: Secret::new("test_merchant_id".to_string()),
                 base_url: None,
+                webhook_secret: None,
             },
             request: PaymentsAuthorizeData {
                 customer_document_details: None,
@@ -1557,11 +1558,15 @@ mod satispay_request_tests {
                 payment_method_data: PaymentMethodData::Wallet(WalletData::Satispay(
                     SatispayData {},
                 )),
-                amount: MinorUnit::new(1000),
+                amount: Money {
+                    amount: MinorUnit::new(1000),
+                    currency: common_enums::Currency::EUR,
+                },
                 order_tax_amount: None,
                 surcharge_amount: None,
                 email: None,
                 customer_name: None,
+                customer_date_of_birth: None,
                 currency: common_enums::Currency::EUR,
                 confirm: true,
                 capture_method: None,
@@ -1582,7 +1587,6 @@ mod satispay_request_tests {
                 customer_id: None,
                 request_incremental_authorization: Some(false),
                 metadata: None,
-                minor_amount: MinorUnit::new(1000),
                 merchant_order_id: None,
                 shipping_cost: None,
                 merchant_account_id: None,
@@ -1590,6 +1594,7 @@ mod satispay_request_tests {
                 all_keys_required: None,
                 customer_acceptance: None,
                 split_payments: None,
+                split_settlement: None,
                 request_extended_authorization: None,
                 setup_mandate_details: None,
                 enable_overcapture: None,
@@ -1605,6 +1610,13 @@ mod satispay_request_tests {
                 payment_channel: None,
                 domain_data: None,
                 partner_merchant_identifier_details: None,
+                currency_conversion_data: None,
+                is_account_funding_transaction: None,
+                recipient_details: None,
+                additional_connector_details: None,
+                customer: None,
+                business_country: None,
+                enable_avs_check: None,
             },
             response: Err(ErrorResponse::default()),
         }

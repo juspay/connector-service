@@ -504,6 +504,16 @@ static PPRO_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = LazyL
             specific_features: None,
         },
     );
+    ppro_supported_payment_methods.add(
+        common_enums::PaymentMethod::Wallet,
+        common_enums::PaymentMethodType::WeChatPayQr,
+        PaymentMethodDetails {
+            mandates: FeatureStatus::NotSupported,
+            refunds: FeatureStatus::Supported,
+            supported_capture_methods: ppro_bridge_supported_capture_methods.clone(),
+            specific_features: None,
+        },
+    );
 
     ppro_supported_payment_methods.add(
         common_enums::PaymentMethod::Wallet,
@@ -592,6 +602,14 @@ static PPRO_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = LazyL
         (
             common_enums::PaymentMethodType::BancontactCard,
             FeatureStatus::Supported,
+        ),
+        (
+            common_enums::PaymentMethodType::BancontactIntent,
+            FeatureStatus::NotSupported,
+        ),
+        (
+            common_enums::PaymentMethodType::BancontactQr,
+            FeatureStatus::NotSupported,
         ),
         (
             common_enums::PaymentMethodType::Trustly,

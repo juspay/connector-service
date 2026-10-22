@@ -4483,6 +4483,10 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 payment_method_data::BankRedirectData::BancontactCard { .. } => {
                     Self::BancontactCard
                 }
+                payment_method_data::BankRedirectData::BancontactIntent { .. } => {
+                    Self::BancontactCard
+                }
+                payment_method_data::BankRedirectData::BancontactQr { .. } => Self::BancontactCard,
                 payment_method_data::BankRedirectData::Bizum {} => Self::Bizum,
                 payment_method_data::BankRedirectData::Blik { .. } => Self::Blik,
                 payment_method_data::BankRedirectData::Eps { .. } => Self::Eps,

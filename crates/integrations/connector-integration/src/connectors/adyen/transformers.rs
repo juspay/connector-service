@@ -1818,6 +1818,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
             BankRedirectData::Trustly { .. } => Ok(Self::Trustly),
             BankRedirectData::Giropay { .. }
+            | BankRedirectData::BancontactIntent { .. }
+            | BankRedirectData::BancontactQr { .. }
             | BankRedirectData::Eft { .. }
             | BankRedirectData::Interac { .. }
             | BankRedirectData::LocalBankRedirect {}

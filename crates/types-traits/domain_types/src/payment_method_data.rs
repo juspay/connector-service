@@ -869,6 +869,8 @@ pub enum BankRedirectData {
         card_exp_year: Option<Secret<String>>,
         card_holder_name: Option<Secret<String>>,
     },
+    BancontactIntent {},
+    BancontactQr {},
     Bizum {},
     Blik {
         blik_code: Option<String>,

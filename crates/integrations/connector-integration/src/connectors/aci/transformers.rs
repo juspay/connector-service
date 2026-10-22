@@ -420,6 +420,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             BankRedirectData::Bizum { .. }
             | BankRedirectData::Blik { .. }
             | BankRedirectData::BancontactCard { .. }
+            | BankRedirectData::BancontactIntent { .. }
+            | BankRedirectData::BancontactQr { .. }
             | BankRedirectData::OnlineBankingCzechRepublic { .. }
             | BankRedirectData::OnlineBankingFinland { .. }
             | BankRedirectData::OnlineBankingFpx { .. }

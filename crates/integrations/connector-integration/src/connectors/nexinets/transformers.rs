@@ -749,6 +749,8 @@ fn get_payment_details_and_product<
             )),
             BankRedirectData::Sofort { .. } => Ok((None, NexinetsProduct::Sofort)),
             BankRedirectData::BancontactCard { .. }
+            | BankRedirectData::BancontactIntent { .. }
+            | BankRedirectData::BancontactQr { .. }
             | BankRedirectData::Blik { .. }
             | BankRedirectData::Bizum { .. }
             | BankRedirectData::Eft { .. }

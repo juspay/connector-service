@@ -1289,6 +1289,8 @@ fn get_payment_source<
             },
         })),
         BankRedirectData::BancontactCard { .. }
+        | BankRedirectData::BancontactIntent { .. }
+        | BankRedirectData::BancontactQr { .. }
         | BankRedirectData::Blik { .. }
         | BankRedirectData::Przelewy24 { .. } => Err(IntegrationError::NotImplemented(
             utils::get_unimplemented_payment_method_error_message("Paypal"),

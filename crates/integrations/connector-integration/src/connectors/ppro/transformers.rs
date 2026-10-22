@@ -133,10 +133,13 @@ where
         let router_data = item.router_data;
         let payment_method = match router_data.request.payment_method_type {
             Some(common_enums::PaymentMethodType::BancontactCard) => "BANCONTACT".to_string(),
+            Some(common_enums::PaymentMethodType::BancontactIntent) => "BANCONTACT".to_string(),
+            Some(common_enums::PaymentMethodType::BancontactQr) => "BANCONTACT".to_string(),
             Some(common_enums::PaymentMethodType::UpiIntent) => "UPI".to_string(),
             Some(common_enums::PaymentMethodType::UpiQr) => "UPI".to_string(),
             Some(common_enums::PaymentMethodType::AliPay) => "ALIPAY".to_string(),
             Some(common_enums::PaymentMethodType::WeChatPay) => "WECHATPAY".to_string(),
+            Some(common_enums::PaymentMethodType::WeChatPayQr) => "WECHATPAY".to_string(),
             Some(common_enums::PaymentMethodType::MbWay) => "MBWAY".to_string(),
             Some(common_enums::PaymentMethodType::Satispay) => "SATISPAY".to_string(),
             Some(common_enums::PaymentMethodType::SatispayIntent) => "SATISPAY".to_string(),
@@ -203,6 +206,34 @@ where
                     settings: None,
                 }])
             }
+            Some(common_enums::PaymentMethodType::BancontactIntent) => {
+                let mobile_intent_uri = router_data.request.router_return_url.clone().ok_or(
+                    IntegrationError::MissingRequiredField {
+                        field_name: "router_return_url",
+                        context: Default::default(),
+                    },
+                )?;
+                Some(vec![PproAuthenticationSettings {
+                    r#type: PproAuthenticationType::AppIntent,
+                    settings: Some(PproAuthSettingsDetails {
+                        return_url: None,
+                        scan_by: None,
+                        mobile_intent_uri: Some(mobile_intent_uri),
+                    }),
+                }])
+            }
+            Some(common_enums::PaymentMethodType::BancontactQr) => {
+                Some(vec![PproAuthenticationSettings {
+                    r#type: PproAuthenticationType::ScanCode,
+                    settings: None,
+                }])
+            }
+            Some(common_enums::PaymentMethodType::WeChatPayQr) => {
+                Some(vec![PproAuthenticationSettings {
+                    r#type: PproAuthenticationType::ScanCode,
+                    settings: None,
+                }])
+            }
             // Plain Satispay (REDIRECT flow) falls through to the generic
             // `router_return_url`-based REDIRECT handling below, same as before.
             _ => router_data
@@ -253,6 +284,39 @@ where
         } else {
             None
         };
+
+        if matches!(
+            router_data.request.payment_method_type,
+            Some(common_enums::PaymentMethodType::WeChatPayQr)
+        ) {
+            router_data.resource_common_data.get_billing_full_name()?;
+            router_data.resource_common_data.get_billing_country()?;
+        }
+
+        if matches!(
+            router_data.request.payment_method_type,
+            Some(common_enums::PaymentMethodType::BancontactIntent)
+                | Some(common_enums::PaymentMethodType::BancontactQr)
+        ) {
+            if router_data.request.currency != common_enums::Currency::EUR {
+                return Err(IntegrationError::NotSupported {
+                    message: "Bancontact requires EUR currency".to_string(),
+                    connector: "ppro",
+                    context: Default::default(),
+                }
+                .into());
+            }
+            if router_data.resource_common_data.get_billing_country()?
+                != common_enums::CountryAlpha2::BE
+            {
+                return Err(IntegrationError::NotSupported {
+                    message: "Bancontact requires consumer country BE".to_string(),
+                    connector: "ppro",
+                    context: Default::default(),
+                }
+                .into());
+            }
+        }
 
         let consumer = router_data
             .resource_common_data
@@ -1170,27 +1234,30 @@ pub(crate) fn build_auth_redirect(
         // build an identical `Uri` from `mobileIntentUri` -- only the triggering
         // `PaymentMethodType` differs between UPI and Satispay.
         Some(common_enums::PaymentMethodType::UpiIntent)
-        | Some(common_enums::PaymentMethodType::SatispayIntent) => {
+        | Some(common_enums::PaymentMethodType::SatispayIntent)
+        | Some(common_enums::PaymentMethodType::BancontactIntent) => {
             (PproAuthenticationType::AppIntent, |details| {
                 details
                     .mobile_intent_uri
                     .clone()
+                    .filter(|uri| !uri.trim().is_empty())
                     .map(|uri| RedirectForm::Uri { uri })
             })
         }
-        // UpiQr and SatispayQr both resolve to PPRO's SCAN_CODE auth type and build the
-        // same `Qr` form from `codePayload`/`codeImage`; UPI QR moves off its old
-        // `Uri`-from-`codePayload` shape onto this richer contract deliberately.
         Some(common_enums::PaymentMethodType::UpiQr)
-        | Some(common_enums::PaymentMethodType::SatispayQr) => {
+        | Some(common_enums::PaymentMethodType::SatispayQr)
+        | Some(common_enums::PaymentMethodType::WeChatPayQr)
+        | Some(common_enums::PaymentMethodType::BancontactQr) => {
             (PproAuthenticationType::ScanCode, |details| {
-                if details.code_payload.is_none() && details.code_image.is_none() {
-                    return None;
-                }
+                let payload = details
+                    .code_payload
+                    .clone()
+                    .filter(|payload| !payload.trim().is_empty());
+                let payload = payload?;
                 Some(RedirectForm::Qr {
-                    payload: details.code_payload.clone(),
+                    payload: Some(payload),
                     image_base64: None,
-                    image_url: details.code_image.clone(),
+                    image_url: None,
                     fallback_url: None,
                     expires_at: details.scan_by.as_deref().and_then(parse_scan_by_expiry),
                 })

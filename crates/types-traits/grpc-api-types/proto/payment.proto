@@ -1086,8 +1086,7 @@ enum PaymentMethodType {
   GRABPAY_WALLET = 141;
   PAYHERE_WALLET = 142;
   TAMARA_BNPL = 143;
-  SATISPAY_INTENT = 115;
-  SATISPAY_QR = 116;
+  SATISPAY_WALLET = 144;
 }
 
 // Product type enumeration
@@ -1682,7 +1681,7 @@ message RedirectForm {
 
     // QR-code data for QR-initiated payment methods, distinct from
     // intent-initiated flows (which continue to populate `uri` above).
-    QrData qr_data = 8;
+    QrData qr_data = 11;
 
     // A standalone script snippet (e.g. a device-data-collection script), when
     // the connector returns script content instead of a full HTML document.
