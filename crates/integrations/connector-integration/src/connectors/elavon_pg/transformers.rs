@@ -2558,3 +2558,193 @@ fn build_refund_router_data<F, Req>(
         ..router_data
     }
 }
+
+#[cfg(test)]
+#[allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    clippy::indexing_slicing,
+    clippy::panic
+)]
+mod tests {
+    use std::str::FromStr;
+
+    use domain_types::payment_method_data::DefaultPCIHolder;
+    use domain_types::payment_method_data::{
+        ApplePayCryptogramData, ApplePayDecryptedData, ApplePayWalletData, ApplepayPaymentMethod,
+        GooglePayDecryptedData, GooglePayPaymentMethodInfo, GooglePayWalletData,
+        GpayEncryptedTokenizationData, WalletData,
+    };
+
+    use super::*;
+
+    fn secret(value: &str) -> Secret<String> {
+        Secret::new(value.to_string())
+    }
+
+    fn pan() -> cards::CardNumber {
+        cards::CardNumber::from_str("4111111111111111").expect("valid test PAN")
+    }
+
+    fn apple_pay(eci: Option<&str>, decrypted: bool) -> WalletData {
+        let payment_data = if decrypted {
+            ApplePayPaymentData::Decrypted(ApplePayDecryptedData {
+                application_primary_account_number: pan(),
+                application_expiration_month: secret("12"),
+                application_expiration_year: secret("30"),
+                payment_data: ApplePayCryptogramData {
+                    online_payment_cryptogram: secret("AgAAAAAAAIR8CQrXcIhbQAAAAAA="),
+                    eci_indicator: eci.map(str::to_string),
+                },
+                device_manufacturer_identifier: None,
+                merchant_token_identifier: None,
+            })
+        } else {
+            ApplePayPaymentData::Encrypted("encrypted-blob".to_string())
+        };
+        WalletData::ApplePay(Box::new(ApplePayWalletData {
+            payment_data,
+            payment_method: ApplepayPaymentMethod {
+                display_name: "Visa 1111".to_string(),
+                network: "Visa".to_string(),
+                pm_type: "debit".to_string(),
+            },
+            transaction_identifier: "txn".to_string(),
+        }))
+    }
+
+    fn google_pay(cryptogram: Option<&str>, eci: Option<&str>, decrypted: bool) -> WalletData {
+        let tokenization_data = if decrypted {
+            GpayTokenizationData::Decrypted(GooglePayDecryptedData {
+                card_exp_month: secret("12"),
+                card_exp_year: secret("2030"),
+                application_primary_account_number: pan(),
+                cryptogram: cryptogram.map(secret),
+                eci_indicator: eci.map(str::to_string),
+            })
+        } else {
+            GpayTokenizationData::Encrypted(GpayEncryptedTokenizationData {
+                token_type: "PAYMENT_GATEWAY".to_string(),
+                token: "encrypted-blob".to_string(),
+            })
+        };
+        WalletData::GooglePay(Box::new(GooglePayWalletData {
+            pm_type: "CARD".to_string(),
+            description: "Visa 1111".to_string(),
+            info: GooglePayPaymentMethodInfo {
+                card_network: "VISA".to_string(),
+                card_details: "1111".to_string(),
+                assurance_details: None,
+            },
+            tokenization_data,
+        }))
+    }
+
+    fn build(
+        wallet: &WalletData,
+    ) -> Result<
+        (
+            ElavonPgSaleCard<DefaultPCIHolder>,
+            ElavonPgCryptogramSecurity,
+            ElavonPgPaymentMethodOrigin,
+        ),
+        error_stack::Report<IntegrationError>,
+    > {
+        build_wallet_payment::<DefaultPCIHolder>(wallet, None)
+    }
+
+    #[test]
+    fn eci_is_translated_to_epg_scale() {
+        // Visa scale passes through (with or without the leading zero).
+        for (input, expected) in [
+            ("05", "5"),
+            ("5", "5"),
+            ("06", "6"),
+            ("07", "7"),
+            ("7", "7"),
+            // Mastercard scale.
+            ("02", "5"),
+            ("01", "6"),
+            ("00", "7"),
+        ] {
+            assert_eq!(wallet_eci(Some(input)).unwrap(), expected, "eci {input}");
+        }
+    }
+
+    #[test]
+    fn missing_or_unknown_eci_is_an_error_not_a_guess() {
+        assert!(wallet_eci(None).is_err());
+        assert!(wallet_eci(Some("03")).is_err());
+        assert!(wallet_eci(Some("garbage")).is_err());
+    }
+
+    #[test]
+    fn expiry_accepts_two_and_four_digit_years_and_rejects_bad_months() {
+        assert_eq!(
+            parse_expiry(&secret("12"), &secret("30")).unwrap(),
+            (12, 2030)
+        );
+        assert_eq!(
+            parse_expiry(&secret("1"), &secret("2031")).unwrap(),
+            (1, 2031)
+        );
+        assert!(parse_expiry(&secret("0"), &secret("2030")).is_err());
+        assert!(parse_expiry(&secret("13"), &secret("2030")).is_err());
+        assert!(parse_expiry(&secret("ab"), &secret("2030")).is_err());
+        assert!(parse_expiry(&secret("12"), &secret("1999")).is_err());
+    }
+
+    #[test]
+    fn decrypted_apple_pay_builds_dpan_cryptogram_and_origin() {
+        let (card, cryptogram, origin) = build(&apple_pay(Some("07"), true)).unwrap();
+        assert_eq!(origin, ElavonPgPaymentMethodOrigin::ApplePay);
+        assert_eq!(cryptogram.electronic_commerce_indicator, "7");
+        assert_eq!(cryptogram.cryptogram.peek(), "AgAAAAAAAIR8CQrXcIhbQAAAAAA=");
+        let ElavonPgSaleCard::Wallet(card) = card else {
+            panic!("wallet payments must use the wallet card shape");
+        };
+        assert_eq!((card.expiration_month, card.expiration_year), (12, 2030));
+    }
+
+    #[test]
+    fn decrypted_google_pay_builds_dpan_cryptogram_and_origin() {
+        let (_, cryptogram, origin) = build(&google_pay(
+            Some("AgAAAAAAAIR8CQrXcIhbQAAAAAA="),
+            Some("05"),
+            true,
+        ))
+        .unwrap();
+        assert_eq!(origin, ElavonPgPaymentMethodOrigin::GooglePay);
+        assert_eq!(cryptogram.electronic_commerce_indicator, "5");
+    }
+
+    #[test]
+    fn google_pay_without_cryptogram_is_refused() {
+        // A PAN_ONLY token has no cryptogram; EPG's route cannot take it.
+        assert!(build(&google_pay(None, Some("05"), true)).is_err());
+    }
+
+    #[test]
+    fn wallet_without_eci_is_refused() {
+        assert!(build(&apple_pay(None, true)).is_err());
+        assert!(build(&google_pay(
+            Some("AgAAAAAAAIR8CQrXcIhbQAAAAAA="),
+            None,
+            true
+        ))
+        .is_err());
+    }
+
+    #[test]
+    fn encrypted_wallet_tokens_are_refused() {
+        assert!(build(&apple_pay(Some("07"), false)).is_err());
+        assert!(build(&google_pay(None, None, false)).is_err());
+    }
+
+    #[test]
+    fn other_wallets_are_refused() {
+        let alipay =
+            WalletData::AliPayRedirect(domain_types::payment_method_data::AliPayRedirection {});
+        assert!(build(&alipay).is_err());
+    }
+}
