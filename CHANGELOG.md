@@ -19,6 +19,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.10.22.0
+
+### Features
+
+- **connector:** [Stripe] implement dispute evidence submission and accept ([#2559](https://github.com/juspay/connector-service/pull/2559)) ([`c8624d7`](https://github.com/juspay/connector-service/commit/c8624d711bab7dad858232a44f7f999ad49bc14f))
+- **risk:** Add RiskAssessmentData,DomainData for other services ([#2517](https://github.com/juspay/connector-service/pull/2517)) ([`f1b0c22`](https://github.com/juspay/connector-service/commit/f1b0c22bf7d3cc23f399dca03615c931f5ba457b))
+
+### Bug Fixes
+
+- **framework:** Guard rules for command hygiene, permission settings and the private-scenario bucket (grace/ only) ([#2565](https://github.com/juspay/connector-service/pull/2565)) ([`78ea881`](https://github.com/juspay/connector-service/commit/78ea88184a1bf8b4f83db6d2130fcb89f249dd18))
+
+**Full Changelog:** [`2026.10.21.1...2026.10.22.0`](https://github.com/juspay/connector-service/compare/2026.10.21.1...2026.10.22.0)
+
+- - -
+
 ## 2026.10.21.1
 
 ### Features
