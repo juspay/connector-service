@@ -31,7 +31,6 @@ type ResponseError = error_stack::Report<errors::ConnectorError>;
 
 // ──────────────────────────────────────────────────────────────────────────
 // ClearSale FRM request metadata (euler `UcsFrmMetadata`)
-// ──────────────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -234,6 +233,30 @@ pub struct ClearSaleAuthenticateResponse {
     pub expiration_date: String,
 }
 
+/// Parse ClearSale's absolute `ExpirationDate` into an offset instant.
+pub(crate) fn parse_clearsale_expiration_date(raw: &str) -> Option<time::OffsetDateTime> {
+    let raw = raw.trim();
+    if raw.is_empty() {
+        return None;
+    }
+    if let Ok(instant) =
+        time::OffsetDateTime::parse(raw, &time::format_description::well_known::Rfc3339)
+    {
+        return Some(instant);
+    }
+    let normalized = format!("{}Z", to_clearsale_datetime(raw));
+    time::OffsetDateTime::parse(&normalized, &time::format_description::well_known::Rfc3339).ok()
+}
+
+pub(crate) fn expires_in_from_expiration_date(
+    expiration_date: &str,
+    now: time::OffsetDateTime,
+) -> Option<i64> {
+    let expiry = parse_clearsale_expiration_date(expiration_date)?;
+    let secs = (expiry - now).whole_seconds();
+    (secs > 0).then_some(secs)
+}
+
 impl<F> TryFrom<ResponseRouterData<ClearSaleAuthenticateResponse, Self>>
     for RouterDataV2<
         F,
@@ -247,15 +270,18 @@ impl<F> TryFrom<ResponseRouterData<ClearSaleAuthenticateResponse, Self>>
     fn try_from(
         item: ResponseRouterData<ClearSaleAuthenticateResponse, Self>,
     ) -> Result<Self, Self::Error> {
+        // ClearSale returns an absolute `ExpirationDate`, not a TTL. Convert
+        // it here so the token cache learns when the token expires (the
+        // generic `expires_in` field is TTL seconds).
+        let expires_in = expires_in_from_expiration_date(
+            &item.response.expiration_date,
+            common_utils::date_time::now().assume_utc(),
+        );
         Ok(Self {
             response: Ok(ServerAuthenticationTokenResponseData {
                 access_token: item.response.token,
                 token_type: Some("Bearer".to_string()),
-                // ClearSale returns an absolute ExpirationDate, not a TTL. The
-                // generic `expires_in` field is TTL seconds and cannot carry
-                // that value, so it stays unset; the composite token cache
-                // reads the raw response when it needs the absolute expiry.
-                expires_in: None,
+                expires_in,
             }),
             ..item.router_data
         })
