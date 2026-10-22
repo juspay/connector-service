@@ -5791,10 +5791,12 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
         let country_code = value.country_alpha2_code();
         let legacy_state = value.state;
         let (state, state_code_iso) = match value.state_details {
-            Some(grpc_api_types::payments::address::StateDetails::StateInfo(state_info)) => (
-                state_info.state_name.or(legacy_state.clone()),
-                state_info.state_code_iso,
-            ),
+            Some(grpc_api_types::payments::address::StateDetails::StateName(state_name)) => {
+                (Some(state_name), None)
+            }
+            Some(grpc_api_types::payments::address::StateDetails::StateCodeIso(state_code_iso)) => {
+                (legacy_state, Some(state_code_iso))
+            }
             None => (legacy_state, None),
         };
         let country = if matches!(

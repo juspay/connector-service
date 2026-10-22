@@ -1111,13 +1111,6 @@ enum Tokenization {
 }
 
 // Represents a physical address with contact information
-message AddressState {
-  // Full state/province name as supplied by the caller.
-  optional SecretString state_name = 1;
-  // ISO 3166-2 subdivision code, when available.
-  optional SecretString state_code_iso = 2;
-}
-
 message Address {
   // Personal Information
   optional SecretString first_name = 1;
@@ -1140,7 +1133,10 @@ message Address {
   // Preferred representation for new clients. The deprecated `state` field
   // remains available for backward compatibility.
   oneof state_details {
-    AddressState state_info = 13;
+    // Full state/province name as supplied by the caller.
+    SecretString state_name = 13;
+    // ISO 3166-2 subdivision code, when available.
+    SecretString state_code_iso = 14;
   }
 }
 
