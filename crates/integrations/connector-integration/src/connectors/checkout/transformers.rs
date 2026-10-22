@@ -7,12 +7,12 @@ use common_utils::{
 use domain_types::{
     connector_flow::{Authorize, Capture, PaymentMethodToken, RepeatPayment, SetupMandate, Void},
     connector_types::{
-        MandateReference, MandateReferenceId, PartnerMerchantIdentifierDetails, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RecipientAccount, RecipientBankAccount, RecipientDetails, RefundFlowData, RefundSyncData,
-        RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId, SenderAddress,
-        SenderDetails, SetupMandateRequestData,
+        CustomerInfo, MandateReference, MandateReferenceId, PartnerMerchantIdentifierDetails,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RecipientAccount, RecipientBankAccount, RecipientDetails, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
+        SenderAddress, SenderDetails, SetupMandateRequestData,
     },
     errors::{ConnectorError, IntegrationError, IntegrationErrorContext},
     payment_method_data::{
@@ -536,8 +536,14 @@ fn build_checkout_billing_address(
 fn build_checkout_sender(
     resource_common_data: &PaymentFlowData,
     sender_details: Option<&SenderDetails>,
-    customer_date_of_birth: Option<Secret<time::Date>>,
+    customer: Option<&CustomerInfo>,
 ) -> Result<CheckoutSender, error_stack::Report<IntegrationError>> {
+    let get_customer_date_of_birth = || {
+        customer
+            .ok_or_else(utils::missing_field_err("customer.date_of_birth"))?
+            .get_date_of_birth()
+    };
+
     let address = match sender_details
         .and_then(SenderDetails::get_address)
         .filter(|address| !address.is_empty())
@@ -546,24 +552,29 @@ fn build_checkout_sender(
         None => build_checkout_billing_address(resource_common_data)?,
     };
 
-    Ok(match sender_details {
-        Some(SenderDetails::Individual(individual)) => CheckoutSender::Individual {
+    match sender_details {
+        Some(SenderDetails::Individual(individual)) => Ok(CheckoutSender::Individual {
             first_name: individual.first_name.clone(),
             last_name: individual.last_name.clone(),
-            date_of_birth: individual.date_of_birth.clone().or(customer_date_of_birth),
+            // For backward compatibility, fall back to the customer's date of birth, which was
+            // the only source of the sender's date of birth before sender details were added.
+            date_of_birth: Some(match individual.date_of_birth.clone() {
+                Some(date_of_birth) => date_of_birth,
+                None => get_customer_date_of_birth()?,
+            }),
             address,
-        },
-        Some(SenderDetails::Corporate(corporate)) => CheckoutSender::Corporate {
+        }),
+        Some(SenderDetails::Corporate(corporate)) => Ok(CheckoutSender::Corporate {
             company_name: corporate.company_name.clone(),
             address,
-        },
-        None => CheckoutSender::Individual {
+        }),
+        None => Ok(CheckoutSender::Individual {
             first_name: resource_common_data.get_billing_first_name()?,
             last_name: resource_common_data.get_billing_last_name()?,
-            date_of_birth: customer_date_of_birth,
+            date_of_birth: Some(get_customer_date_of_birth()?),
             address,
-        },
-    })
+        }),
+    }
 }
 
 #[skip_serializing_none]
@@ -1458,13 +1469,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     "additional_connector_details.checkout.purpose_of_payment",
                 ))?;
 
-            let customer_date_of_birth = item
-                .router_data
-                .request
-                .customer
-                .as_ref()
-                .and_then(|customer| customer.date_of_birth.clone());
-
             (
                 Some(build_checkout_recipient(
                     item.router_data.request.recipient_details.as_ref(),
@@ -1472,7 +1476,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 Some(build_checkout_sender(
                     &item.router_data.resource_common_data,
                     item.router_data.request.sender_details.as_ref(),
-                    customer_date_of_birth,
+                    item.router_data.request.customer.as_ref(),
                 )?),
                 Some(CheckoutInstruction { purpose }),
             )
@@ -1923,13 +1927,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     "additional_connector_details.checkout.purpose_of_payment",
                 ))?;
 
-            let customer_date_of_birth = item
-                .router_data
-                .request
-                .customer
-                .as_ref()
-                .and_then(|customer| customer.date_of_birth.clone());
-
             (
                 Some(build_checkout_recipient(
                     item.router_data.request.recipient_details.as_ref(),
@@ -1937,7 +1934,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 Some(build_checkout_sender(
                     &item.router_data.resource_common_data,
                     item.router_data.request.sender_details.as_ref(),
-                    customer_date_of_birth,
+                    item.router_data.request.customer.as_ref(),
                 )?),
                 Some(CheckoutInstruction { purpose }),
             )
@@ -2318,13 +2315,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     "additional_connector_details.checkout.purpose_of_payment",
                 ))?;
 
-            let customer_date_of_birth = item
-                .router_data
-                .request
-                .customer
-                .as_ref()
-                .and_then(|customer| customer.date_of_birth.clone());
-
             (
                 Some(build_checkout_recipient(
                     item.router_data.request.recipient_details.as_ref(),
@@ -2332,7 +2322,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 Some(build_checkout_sender(
                     &item.router_data.resource_common_data,
                     item.router_data.request.sender_details.as_ref(),
-                    customer_date_of_birth,
+                    item.router_data.request.customer.as_ref(),
                 )?),
                 Some(CheckoutInstruction { purpose }),
             )
