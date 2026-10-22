@@ -329,6 +329,7 @@ where
 // Rust 1.99 flags async-trait's generated futures as double-must-use.
 #[allow(clippy::double_must_use)]
 #[cfg_attr(feature = "async_ext", async_trait::async_trait)]
+#[allow(clippy::double_must_use)]
 pub trait AsyncExt<A> {
     /// Output type of the map function
     type WrappedSelf<T>;
