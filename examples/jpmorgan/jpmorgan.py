@@ -10,7 +10,7 @@ import sys
 from payments import PaymentClient
 from payments import MerchantAuthenticationClient
 from payments import RefundClient
-from payments.generated import sdk_config_pb2, payment_pb2, events_pb2, payment_methods_pb2
+from payments.generated import common_types_pb2, payment_methods_pb2, payment_pb2, sdk_config_pb2
 
 SUPPORTED_FLOWS = ["authorize", "capture", "create_client_authentication_token", "create_server_authentication_token", "get", "proxy_authorize", "proxy_setup_recurring", "refund", "refund_get", "reverse", "setup_recurring", "token_authorize", "void"]
 
@@ -210,9 +210,9 @@ def _build_refund_get_request():
                 token_type="Bearer",  # Token type (e.g., "Bearer", "Basic").
             ),
         ),
-        refund_amount=payment_pb2.Money(  # Amount Information.
-            minor_amount=1000,  # Amount in minor units (e.g., 1000 = $10.00).
-            currency=payment_pb2.Currency.Value("USD"),  # ISO 4217 currency code (e.g., "USD", "EUR").
+        refund_amount=common_types_pb2.Money(  # Amount Information.
+            minor_amount=1000,
+            currency=common_types_pb2.Currency.Value("USD"),
         ),
     )
 
@@ -220,9 +220,9 @@ def _build_reverse_request(connector_transaction_id: str):
     return payment_pb2.PaymentServiceReverseRequest(
         merchant_reverse_id="probe_reverse_001",  # Identification.
         connector_transaction_id=connector_transaction_id,
-        amount=payment_pb2.Money(  # Original payment amount and currency.
-            minor_amount=1000,  # Amount in minor units (e.g., 1000 = $10.00).
-            currency=payment_pb2.Currency.Value("USD"),  # ISO 4217 currency code (e.g., "USD", "EUR").
+        amount=common_types_pb2.Money(  # Original payment amount and currency.
+            minor_amount=1000,
+            currency=common_types_pb2.Currency.Value("USD"),
         ),
     )
 
@@ -289,9 +289,9 @@ def _build_void_request(connector_transaction_id: str):
     return payment_pb2.PaymentServiceVoidRequest(
         merchant_void_id="probe_void_001",  # Identification.
         connector_transaction_id=connector_transaction_id,
-        amount=payment_pb2.Money(  # Amount Information.
-            minor_amount=1000,  # Amount in minor units (e.g., 1000 = $10.00).
-            currency=payment_pb2.Currency.Value("USD"),  # ISO 4217 currency code (e.g., "USD", "EUR").
+        amount=common_types_pb2.Money(  # Amount Information.
+            minor_amount=1000,
+            currency=common_types_pb2.Currency.Value("USD"),
         ),
         state=payment_pb2.ConnectorState(  # State Information.
             access_token=payment_pb2.AccessToken(  # Access token obtained from connector.

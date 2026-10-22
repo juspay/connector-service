@@ -217,8 +217,8 @@ function _buildRefundGetRequest(): types.IRefundServiceGetRequest {
             }
         },
         "refundAmount": {  // Amount Information.
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+            "minorAmount": 1000,
+            "currency": Currency.USD
         }
     };
 }
@@ -228,8 +228,8 @@ function _buildReverseRequest(connectorTransactionId: string): types.IPaymentSer
         "merchantReverseId": "probe_reverse_001",  // Identification.
         "connectorTransactionId": connectorTransactionId,
         "amount": {  // Original payment amount and currency.
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+            "minorAmount": 1000,
+            "currency": Currency.USD
         }
     };
 }
@@ -302,8 +302,8 @@ function _buildVoidRequest(connectorTransactionId: string): types.IPaymentServic
         "merchantVoidId": "probe_void_001",  // Identification.
         "connectorTransactionId": connectorTransactionId,
         "amount": {  // Amount Information.
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+            "minorAmount": 1000,
+            "currency": Currency.USD
         },
         "state": {  // State Information.
             "accessToken": {  // Access token obtained from connector.
