@@ -9959,6 +9959,12 @@ pub struct AdyenThreeDs2ActionResponse {
 pub struct AdyenThreeDsState {
     payment_data: Option<String>,
     authorisation_token: Option<Secret<String>>,
+    /// The browser step the shopper has just been handed, so the caller knows which leg resumes
+    /// the ladder. The token cannot say: Adyen returns an `authorisationToken` on the fingerprint
+    /// action as well as on the challenge, so a caller keying on the token alone would run the
+    /// PostAuthenticate leg before any challenge had happened and be refused with
+    /// `RReq not received from DS`.
+    stage: Option<AdyenThreeDs2Subtype>,
 }
 
 /// `connector_feature_data` carrier. Unknown top-level keys are tolerated on purpose: the same
@@ -10125,6 +10131,7 @@ fn get_adyen_native_action(
         AdyenThreeDsState {
             payment_data: action.payment_data.clone(),
             authorisation_token: action.authorisation_token.clone(),
+            stage: Some(action.subtype),
         },
     ))
 }
