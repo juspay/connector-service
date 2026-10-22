@@ -3696,6 +3696,20 @@ impl PaymentMethodDataAction {
     }
 }
 
+/// Reuses the non-vault conversion path for cards, network tokens, and wallets.
+impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod>
+    for payment_method_data::PaymentMethodData<payment_method_data::DefaultPCIHolder>
+{
+    type Error = IntegrationError;
+
+    fn foreign_try_from(
+        payment_method: grpc_api_types::payments::PaymentMethod,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        PaymentMethodDataAction::get_payment_method_data_action(payment_method.clone())?
+            .into_default_pci_payment_method_data(Some(payment_method))
+    }
+}
+
 /// Build request data by extracting required `PaymentMethodData<DefaultPCIHolder>` from the
 /// payload's `payment_method` field, then calling `ForeignTryFrom::foreign_try_from((ftf_input, pmd))`.
 ///
@@ -11183,6 +11197,10 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
             .flatten();
         let currency = amount.as_ref().map(|amount| amount.currency);
         Ok(Self {
+            payment_method_data: value
+                .payment_method
+                .map(PaymentMethodData::<DefaultPCIHolder>::foreign_try_from)
+                .transpose()?,
             browser_info: value
                 .browser_info
                 .map(BrowserInformation::foreign_try_from)
@@ -11571,6 +11589,10 @@ impl ForeignTryFrom<PaymentServiceIncrementalAuthorizationRequest>
             .transpose()?;
 
         Ok(Self {
+            payment_method_data: value
+                .payment_method
+                .map(PaymentMethodData::<DefaultPCIHolder>::foreign_try_from)
+                .transpose()?,
             currency: amount.currency,
             amount,
             additional_amount,
@@ -12490,12 +12512,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
                 .map(connector_types::SplitRefundsDetails::foreign_try_from)
                 .transpose()?,
             connector_order_id: value.connector_order_id,
-            payment_method_data: value.payment_method.and_then(|pm| {
-                payment_method_data::PaymentMethodData::<
-                    payment_method_data::DefaultPCIHolder,
-                >::convert_to_domain_model_for_non_card_payment_methods(pm)
-                .ok()
-            }),
+            payment_method_data: value
+                .payment_method
+                .map(PaymentMethodData::<DefaultPCIHolder>::foreign_try_from)
+                .transpose()?,
         })
     }
 }
@@ -12946,6 +12966,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
         }?;
 
         Ok(Self {
+            payment_method_data: value
+                .payment_method
+                .map(PaymentMethodData::<DefaultPCIHolder>::foreign_try_from)
+                .transpose()?,
             split_settlement: value
                 .split_settlement
                 .clone()
