@@ -1,4 +1,4 @@
-use common_enums::{AttemptStatus, CardNetwork, Currency, FrmDecision};
+use common_enums::{AttemptStatus, CardNetwork, CountryAlpha2, Currency, FrmDecision};
 use common_utils::{pii::Email, types::FloatMajorUnit};
 use domain_types::{
     connector_flow::{FrmPaymentOutcome, PostRiskCheck, PreRiskCheck, ServerAuthenticationToken},
@@ -19,6 +19,7 @@ use domain_types::{
     },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
+    state_codes::convert_state_to_code,
 };
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
@@ -405,11 +406,11 @@ pub struct ClearSaleItem {
     pub bar_code: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub value: Option<FloatMajorUnit>,
-    /// Line quantity / amount. ClearSale documents this as a decimal; the
-    /// UCS `OrderDetailsWithAmount::quantity` is mapped onto it as a major
-    /// unit so it never goes out as a bare `u16` against the decimal wire.
+    /// Line quantity. ClearSale's field docs type this as **Integer** — a
+    /// `1.0` float cannot bind to it and ASP.NET answers 400
+    /// `"The request is invalid."` (the line total is `value`, a Decimal).
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub amount: Option<FloatMajorUnit>,
+    pub amount: Option<i64>,
     #[serde(rename = "categoryID", skip_serializing_if = "Option::is_none")]
     pub category_id: Option<i64>,
     #[serde(rename = "categoryName", skip_serializing_if = "Option::is_none")]
@@ -485,6 +486,7 @@ pub struct ClearSaleOrderRequest {
     pub shipping: ClearSalePerson,
     pub payments: Vec<ClearSalePayment>,
     pub items: Vec<ClearSaleItem>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub list: Option<ClearSaleList>,
     #[serde(
         rename = "purchaseInformation",
@@ -976,71 +978,120 @@ impl<'a> OrderInputs<'a> {
     }
 }
 
-/// Split `line1` ("Rua Augusta, 1234" / "Rua Augusta 1234") into ClearSale's
-/// `(street, number)` pair. A trailing all-digit (or digit-plus-letter suffix
-/// such as "12B") token after whitespace or a comma is treated as the number;
-/// `line3` can also carry the number ("Rua Augusta" / "Bela Vista" / "1234").
+fn is_house_number_token(token: &str) -> bool {
+    let token = token.trim();
+    if token.is_empty() || token.chars().count() > 14 {
+        return false;
+    }
+    let lower = token.to_ascii_lowercase();
+    if matches!(lower.as_str(), "s/n" | "sn" | "s.n" | "s.n.") {
+        return true;
+    }
+    let Some(first) = token.chars().next() else {
+        return false;
+    };
+    first.is_ascii_digit()
+        && token.chars().all(|c| {
+            c.is_ascii_digit()
+                || c.is_ascii_alphabetic()
+                || matches!(c, '-' | '/' | '.' | 'º' | 'ª' | '°')
+        })
+}
+/// ClearSale `number` for a street with no house number — Brazilian
+/// *sem número*. Widely accepted by ClearSale BR; preferred over failing a
+/// complete address that simply has no number.
+pub(crate) const CLEARSALE_ADDRESS_NUMBER_SEM_NUMERO: &str = "s/n";
+
+/// Split `line1` / `line3` into ClearSale `street` + `number`.
 ///
-/// When neither yields a number the call **fails with a missing-field error** —
-/// sending the whole `line1` as `number` with an empty street is a fraudulent
-/// representation of the address and ClearSale rejects empty `street`.
+/// Recognised layouts (in order):
+/// 1. BR comma form — `"Rua Augusta, 1234 - Bela Vista"` → street `Rua Augusta`,
+///    number `1234` (the comma segment starts with the number; the rest of that
+///    segment is neighbourhood / complement and is left for `additionalInformation`).
+/// 2. Leading number — `"123 Main St"` → number `123`, street `Main St`.
+/// 3. Trailing number token — `"Rua Augusta 1234-A"`, `"Rua Augusta, s/n"`.
+/// 4. Bare number in `line3`.
+///
+/// When a street is present but no house number is found, the number becomes
+/// `s/n` (*sem número*) — the Brazilian convention — rather than failing a
+/// complete address. The whole `line1` is never sent as `number` with an empty
+/// street. `label` prefixes the missing-field names (`billing` / `shipping`)
+/// so both blocks report themselves instead of colliding on `billing.*`.
 pub(crate) fn split_street_and_number(
+    label: &str,
     line1: Option<&Secret<String>>,
     line3: Option<&Secret<String>>,
 ) -> Result<(Secret<String>, String), Error> {
-    let line1 = line1.map(|value| value.peek().trim().to_owned());
+    let (err_number, err_street) = match label {
+        "billing" => ("billing.address.number", "billing.address.street"),
+        _ => ("shipping.address.number", "shipping.address.street"),
+    };
+    let _ = err_number;
+    let line1 = line1
+        .map(|value| value.peek().trim().to_owned())
+        .filter(|value| !value.is_empty());
     let line3_number = line3
         .map(|value| value.peek().trim().to_owned())
-        .filter(|value| value.chars().all(|c| c.is_ascii_alphanumeric()) && !value.is_empty());
-    match line1 {
-        Some(line1) => {
-            // Try the tail of line1 first: the last comma/space-separated token
-            // wins when it looks like a house number.
-            let tail = line1
-                .rsplit([',', ' '])
-                .map(str::trim)
-                .find(|token| !token.is_empty());
-            match tail {
-                Some(token)
-                    if token.len() <= 14
-                        && token
-                            .chars()
-                            .all(|c| c.is_ascii_digit() || c.is_ascii_alphabetic())
-                        && token.chars().next().is_some_and(|c| c.is_ascii_digit()) =>
-                {
-                    let street = line1[..line1.len() - token.len()]
-                        .trim_end_matches([',', ' '])
-                        .to_owned();
-                    if street.is_empty() {
-                        // line1 was nothing but a number — send it as `number`
-                        // only when `line3` can supply the street name.
-                        match line3 {
-                            Some(line3) => {
-                                let street = line3.peek().trim().to_owned();
-                                if street.is_empty() {
-                                    Err(missing_field_err("billing.address.street"))
-                                } else {
-                                    Ok((Secret::new(street), token.to_owned()))
-                                }
-                            }
-                            None => Err(missing_field_err("billing.address.street")),
-                        }
-                    } else {
-                        Ok((Secret::new(street), token.to_owned()))
-                    }
-                }
-                // line3 carries a bare number token ("Rua Augusta" / "Bela Vista" / "1234").
-                _ => match line3_number {
-                    Some(number) => Ok((Secret::new(line1), number)),
-                    // No parseable house number anywhere — do not invent one.
-                    None => Err(missing_field_err("billing.address.number")),
-                },
-            }
+        .filter(|value| is_house_number_token(value));
+    // No street at all: a bare `line3` number cannot carry the address.
+    let Some(line1) = line1 else {
+        return Err(missing_field_err(err_street));
+    };
+
+    let parts: Vec<&str> = line1
+        .split(',')
+        .map(str::trim)
+        .filter(|part| !part.is_empty())
+        .collect();
+    if parts.len() >= 2 {
+        if let Some(number) = parts[1..].iter().find_map(|segment| {
+            let first = segment.split([' ', '/']).next().unwrap_or("");
+            is_house_number_token(first).then_some(first)
+        }) {
+            return Ok((Secret::new(parts[0].to_owned()), number.to_owned()));
         }
-        None => line3_number
-            .map(|number| (Secret::new(String::new()), number))
-            .ok_or_else(|| missing_field_err("billing.address.number")),
     }
+
+    if let Some((first, rest)) = line1.split_once(' ') {
+        let first = first.trim();
+        let rest = rest.trim();
+        if is_house_number_token(first) && !rest.is_empty() {
+            return Ok((Secret::new(rest.to_owned()), first.to_owned()));
+        }
+    }
+
+    let tokens: Vec<&str> = line1
+        .split([',', ' '])
+        .map(str::trim)
+        .filter(|token| !token.is_empty())
+        .collect();
+    if let Some(pos) = tokens.iter().rposition(|token| is_house_number_token(token)) {
+        let number = tokens[pos].to_owned();
+        let street = tokens[..pos].join(" ");
+        if street.is_empty() {
+            // line1 was nothing but a number — send it as `number` only when
+            // `line3` can supply the street name.
+            let street = line3
+                .map(|value| value.peek().trim().to_owned())
+                .filter(|value| !value.is_empty());
+            return match street {
+                Some(street) => Ok((Secret::new(street), number.to_owned())),
+                None => Err(missing_field_err(err_street)),
+            };
+        }
+        return Ok((Secret::new(street), number.to_owned()));
+    }
+
+    // 4. Bare number in line3.
+    if let Some(number) = line3_number {
+        return Ok((Secret::new(line1), number));
+    }
+
+    // 5. Street present, no house number anywhere — *sem número*.
+    Ok((
+        Secret::new(line1),
+        CLEARSALE_ADDRESS_NUMBER_SEM_NUMERO.to_owned(),
+    ))
 }
 
 /// Build the ClearSale `address` block from UCS `AddressDetails`. The field
@@ -1049,12 +1100,14 @@ pub(crate) fn split_street_and_number(
 /// `additionalInformation` from `line3` when it was not consumed as the
 /// number.
 pub(crate) fn build_clear_sale_address(
+    label: &str,
     address_details: Option<&domain_types::payment_address::AddressDetails>,
 ) -> Result<ClearSaleAddress, Error> {
     let raw_line3 = address_details
         .and_then(|details| details.line3.as_ref())
         .map(|line| line.peek().trim().to_owned());
     let (street, number) = split_street_and_number(
+        label,
         address_details.and_then(|details| details.line1.as_ref()),
         address_details.and_then(|details| details.line3.as_ref()),
     )?;
@@ -1067,11 +1120,25 @@ pub(crate) fn build_clear_sale_address(
     // ClearSale marks county/city/state/zipcode required (spec §5.1). Emitting
     // empty strings silently misrepresents the address — fail instead, listing
     // every absent field in one error rather than one round-trip per field.
+    let (n_county, n_city, n_state, n_zipcode) = match label {
+        "billing" => (
+            "billing.address.county",
+            "billing.address.city",
+            "billing.address.state",
+            "billing.address.zipcode",
+        ),
+        _ => (
+            "shipping.address.county",
+            "shipping.address.city",
+            "shipping.address.state",
+            "shipping.address.zipcode",
+        ),
+    };
     let required = [
-        ("billing.address.county", address_details.and_then(|d| d.line2.as_ref())),
-        ("billing.address.city", address_details.and_then(|d| d.city.as_ref())),
-        ("billing.address.state", address_details.and_then(|d| d.state.as_ref())),
-        ("billing.address.zipcode", address_details.and_then(|d| d.zip.as_ref())),
+        (n_county, address_details.and_then(|d| d.line2.as_ref())),
+        (n_city, address_details.and_then(|d| d.city.as_ref())),
+        (n_state, address_details.and_then(|d| d.state.as_ref())),
+        (n_zipcode, address_details.and_then(|d| d.zip.as_ref())),
     ];
     let mut missing: Vec<&'static str> = Vec::new();
     let mut present: Vec<Secret<String>> = Vec::new();
@@ -1098,7 +1165,9 @@ pub(crate) fn build_clear_sale_address(
             }
         ));
     }
-    let [county, city, state, zipcode] = present.try_into().unwrap_or_else(|_| unreachable!());
+    let [county, city, state_raw, zipcode] = present.try_into().unwrap_or_else(|_| unreachable!());
+    // Spec §5.1: `state` is the 2-char UF. `"Acre"` must go on the wire as `AC`.
+    let state = clearsale_state_uf(label, state_raw.peek())?;
     Ok(ClearSaleAddress {
         street,
         number,
@@ -1106,7 +1175,8 @@ pub(crate) fn build_clear_sale_address(
         city,
         state,
         zipcode,
-        country: address_details.and_then(|details| details.country.map(|c| c.to_string())),
+        country: address_details
+            .and_then(|details| details.country.map(clearsale_country_name)),
         additional_information,
         reference: None,
     })
@@ -1246,7 +1316,7 @@ pub(crate) fn build_person(
     document_kind: Option<&DocumentKind>,
     feature_data: &ClearSaleFeatureData,
     missing: &mut Vec<&'static str>,
-) -> Option<ClearSalePerson> {
+) -> Result<Option<ClearSalePerson>, Error> {
     let address_details = address.and_then(|addr| addr.address.as_ref());
     let primary_document = match primary_document(document) {
         Some(doc) => doc,
@@ -1255,7 +1325,7 @@ pub(crate) fn build_person(
                 "billing" => "billing.primaryDocument",
                 _ => "shipping.primaryDocument",
             });
-            return None;
+            return Ok(None);
         }
     };
     // person_type maps from the typed DocumentKind: CPF → 1 (Pessoa Física),
@@ -1269,7 +1339,7 @@ pub(crate) fn build_person(
                 "billing" => "billing.document_type",
                 _ => "shipping.document_type",
             });
-            return None;
+            return Ok(None);
         }
     };
     let name = match person_name(address_details, customer_info) {
@@ -1279,7 +1349,7 @@ pub(crate) fn build_person(
                 "billing" => "billing.name",
                 _ => "shipping.name",
             });
-            return None;
+            return Ok(None);
         }
     };
     let phone_type = match label {
@@ -1297,38 +1367,39 @@ pub(crate) fn build_person(
                 "billing" => "billing.phones[0]",
                 _ => "shipping.phones[0]",
             });
-            return None;
+            return Ok(None);
         }
         Err(err) => {
             return match err.current_context() {
                 errors::IntegrationError::MissingRequiredField { field_name, .. } => {
                     missing.push(field_name);
-                    None
+                    Ok(None)
                 }
-                _ => None,
+                _ => Err(err),
             };
         }
     };
-    let address = match build_clear_sale_address(address_details) {
+    let address = match build_clear_sale_address(label, address_details) {
         Ok(address) => address,
         Err(err) => {
             // `split_street_and_number` / required address field rejected;
             // surface that on the caller as a missing-field error rather
-            // than swallowing it into the per-block `missing` list.
+            // than swallowing it into the per-block `missing` list. A format
+            // rejection (bad UF) is a hard error — propagate it.
             return match err.current_context() {
                 errors::IntegrationError::MissingRequiredField { field_name, .. } => {
                     missing.push(field_name);
-                    None
+                    Ok(None)
                 }
                 errors::IntegrationError::MissingRequiredFields { field_names, .. } => {
                     missing.extend(field_names.iter().copied());
-                    None
+                    Ok(None)
                 }
-                _ => None,
+                _ => Err(err),
             };
         }
     };
-    Some(ClearSalePerson {
+    Ok(Some(ClearSalePerson {
         person_type,
         primary_document,
         // UCS carries no secondary document; merchants who track one can pass
@@ -1345,7 +1416,7 @@ pub(crate) fn build_person(
             customer
                 .date_of_birth
                 .as_ref()
-                .map(|date| date.peek().to_string())
+                .map(|date| to_clearsale_datetime(&date.peek().to_string()))
         }),
         email: customer_info.and_then(|customer| customer.customer_email.clone()),
         gender: None,
@@ -1355,7 +1426,7 @@ pub(crate) fn build_person(
         delivery_time: None,
         price: None,
         pick_up_store_document: None,
-    })
+    }))
 }
 
 /// ClearSale bandeira int for a card network (spec §5.1). Networks with no
@@ -1379,6 +1450,81 @@ pub(crate) fn card_validity_date(card: &Card<DefaultPCIHolder>) -> String {
 /// `CardWithNoCvc`, which cannot share a match-arm binding).
 fn validity_date_from(month: &Secret<String>, year4: &Secret<String>) -> String {
     format!("{}/{}", month.peek(), year4.peek())
+}
+
+pub(crate) fn to_clearsale_datetime(raw: &str) -> String {
+    let raw = raw.trim();
+    // Date-only → midnight (matches the `birthDate` example in the field docs).
+    if raw.len() == 10
+        && raw.as_bytes().get(4) == Some(&b'-')
+        && raw.as_bytes().get(7) == Some(&b'-')
+        && !raw.contains('T')
+    {
+        return format!("{raw}T00:00:00.000");
+    }
+    let body = match raw.rfind(['Z', 'z']) {
+        Some(i) if i >= 19 => &raw[..i],
+        _ => {
+            let after = &raw[raw.len().min(19)..];
+            match after.find(['+', '-']) {
+                Some(rel) => &raw[..19 + rel],
+                None => raw,
+            }
+        }
+    };
+    match body.find('.') {
+        Some(dot) => {
+            let (head, frac) = body.split_at(dot);
+            let frac_digits: String = frac[1..]
+                .chars()
+                .filter(|c| c.is_ascii_digit())
+                .take(7)
+                .collect();
+            if frac_digits.is_empty() {
+                head.to_owned()
+            } else {
+                format!("{head}.{frac_digits}")
+            }
+        }
+        None => body.to_owned(),
+    }
+}
+
+/// ClearSale `country` / `address.country` use the documented **name**
+/// vocabulary (`"Brasil"`), not ISO alpha-2 (`"BR"`). Unknown codes fall
+/// back to the alpha-2 so a non-BR merchant is still represented.
+pub(crate) fn clearsale_country_name(country: CountryAlpha2) -> String {
+    match country {
+        CountryAlpha2::BR => "Brasil".to_owned(),
+        other => other.to_string(),
+    }
+}
+
+pub(crate) fn clearsale_state_uf(label: &str, state: &str) -> Result<Secret<String>, Error> {
+    let trimmed = state.trim();
+    if trimmed.len() == 2 && trimmed.chars().all(|c| c.is_ascii_alphabetic()) {
+        return Ok(Secret::new(trimmed.to_uppercase()));
+    }
+    convert_state_to_code(CountryAlpha2::BR, trimmed)
+        .map(|code| Secret::new(code.to_owned()))
+        .ok_or_else(|| {
+            let field_name = match label {
+                "billing" => "billing.address.state",
+                _ => "shipping.address.state",
+            };
+            error_stack::report!(errors::IntegrationError::InvalidDataFormat {
+                field_name,
+                context: errors::IntegrationErrorContext {
+                    additional_context: Some(format!(
+                        "ClearSale address.state must be a 2-char UF (e.g. SP); got {trimmed:?}"
+                    )),
+                    suggested_action: Some(
+                        "Send a UF code (SP, RJ, AC, …) or a Brazilian state name".to_owned(),
+                    ),
+                    doc_url: Some(CLEARSALE_DOC_URL.to_owned()),
+                },
+            })
+        })
 }
 
 /// Same for `CardWithNoCvc` (which has no CVC but the same PAN/expiry fields).
@@ -1513,29 +1659,33 @@ pub(crate) fn build_clear_sale_payment(
             return Err(missing_field_err("payment_method"));
         }
     };
-    let card = match payment_method {
-        Some(PaymentMethodData::Card(card)) => Some(build_clear_sale_card(
-            card.card_number.peek(),
-            card.card_holder_name.clone(),
-            card.card_network.as_ref(),
-            card_validity_date(card),
-            card_document,
-        )),
-        Some(PaymentMethodData::CardWithNoCvc(card)) => Some(build_clear_sale_card(
-            card.card_number.peek(),
-            card.card_holder_name.clone(),
-            card.card_network.as_ref(),
-            card_with_no_cvc_validity_date(card),
-            card_document,
-        )),
-        _ => None,
+    // Card PAN data is documented as **credit-only** ("obrigatórios e devem
+    // ser enviados somente quando a forma de pagamento do pedido for cartão
+    // de crédito"). Debit (type 19) and non-card instruments omit the block
+    // even when a PAN is on hand — sending it trips ASP.NET model binding.
+    let card = if payment_type == CLEARSALE_PAYMENT_TYPE_CREDIT_CARD {
+        match payment_method {
+            Some(PaymentMethodData::Card(card)) => Some(build_clear_sale_card(
+                card.card_number.peek(),
+                card.card_holder_name.clone(),
+                card.card_network.as_ref(),
+                card_validity_date(card),
+                card_document,
+            )),
+            Some(PaymentMethodData::CardWithNoCvc(card)) => Some(build_clear_sale_card(
+                card.card_number.peek(),
+                card.card_holder_name.clone(),
+                card.card_network.as_ref(),
+                card_with_no_cvc_validity_date(card),
+                card_document,
+            )),
+            _ => None,
+        }
+    } else {
+        None
     };
     // Credit-card instruments require the card block (spec §5.1).
-    if matches!(
-        payment_type,
-        CLEARSALE_PAYMENT_TYPE_CREDIT_CARD | CLEARSALE_PAYMENT_TYPE_DEBIT_CARD
-    ) && card.is_none()
-    {
+    if payment_type == CLEARSALE_PAYMENT_TYPE_CREDIT_CARD && card.is_none() {
         return Err(missing_field_err("payment.card"));
     }
     Ok(ClearSalePayment {
@@ -1575,8 +1725,8 @@ pub(crate) fn build_clear_sale_items(
                     detail.amount,
                     currency,
                 )?),
-                // ClearSale `items[].amount` is a decimal on the wire.
-                amount: Some(FloatMajorUnit(f64::from(detail.quantity))),
+                // Integer on the wire (docs) — the line quantity, not the total.
+                amount: Some(i64::from(detail.quantity)),
                 category_id: None,
                 category_name: detail.category.clone(),
                 is_gift: order_is_gift,
@@ -1637,12 +1787,14 @@ pub(crate) fn build_order_request(
         order: ClearSaleOrderRequest {
             code,
             session_id,
-            // ClearSale expects an ISO-8601 datetime; RFC 3339 is ISO-8601.
+            // ClearSale `Datetime` is .NET DateTime — no timezone, ≤7 frac digits.
             // `date_time::now` is the one sanctioned clock read.
-            date: common_utils::date_time::now()
-                .assume_utc()
-                .format(&time::format_description::well_known::Rfc3339)
-                .unwrap_or_default(),
+            date: to_clearsale_datetime(
+                &common_utils::date_time::now()
+                    .assume_utc()
+                    .format(&time::format_description::well_known::Rfc3339)
+                    .unwrap_or_default(),
+            ),
             email,
             // Customer type is gateway/merchant-specific: it lives on the
             // RiskManagementAccount account details (b2b_b2c config field),
@@ -1662,7 +1814,10 @@ pub(crate) fn build_order_request(
             status: feature_data.status,
             origin,
             channel_id,
-            reservation_date: feature_data.reservation_date.clone(),
+            reservation_date: feature_data
+                .reservation_date
+                .as_deref()
+                .map(to_clearsale_datetime),
             // ClearSale expects country/nationality as *names* in its
             // documented vocabulary, not ISO codes. `country` falls back to
             // Brasil only when the billing address carries no country.
@@ -1693,22 +1848,26 @@ pub(crate) fn build_order_request(
                     authentication_token: social.authentication_token.clone().map(Secret::new),
                 }
             }),
-            passengers: travel_data
-                .passengers
-                .as_ref()
-                .map(|list| list.iter().filter_map(passenger_to_clear_sale).collect()),
-            connections: travel_data.travel_segments.as_ref().map(|segments| {
-                segments
+            // Empty collections stay off the wire (`skip_serializing_if` only
+            // covers `None`; a bare `[]` can still trip model binding).
+            passengers: travel_data.passengers.as_ref().and_then(|list| {
+                let mapped: Vec<ClearSalePassenger> =
+                    list.iter().filter_map(passenger_to_clear_sale).collect();
+                (!mapped.is_empty()).then_some(mapped)
+            }),
+            connections: travel_data.travel_segments.as_ref().and_then(|segments| {
+                let mapped: Vec<ClearSaleConnection> = segments
                     .iter()
                     .filter_map(|(leg, segment)| {
                         travel_segment_to_clear_sale_connection(leg, segment)
                     })
-                    .collect()
+                    .collect();
+                (!mapped.is_empty()).then_some(mapped)
             }),
-            hotels: travel_data.accommodations.as_ref().map(|list| {
-                list.iter()
-                    .filter_map(accommodation_to_clear_sale)
-                    .collect()
+            hotels: travel_data.accommodations.as_ref().and_then(|list| {
+                let mapped: Vec<ClearSaleHotel> =
+                    list.iter().filter_map(accommodation_to_clear_sale).collect();
+                (!mapped.is_empty()).then_some(mapped)
             }),
         },
     }
@@ -1883,7 +2042,10 @@ pub(crate) fn passenger_to_clear_sale(p: &Traveller) -> Option<ClearSalePassenge
             (!number.is_empty()).then(|| Secret::new(number.to_owned()))
         }),
         gender: p.gender.clone(),
-        birthdate: p.date_of_birth.as_ref().map(|dob| dob.peek().clone()),
+        birthdate: p
+            .date_of_birth
+            .as_ref()
+            .map(|dob| to_clearsale_datetime(dob.peek())),
         // CPF rides in the identificationNumber; no separate cpf carrier
         // exists in the typed domain data.
         cpf: None,
@@ -1915,22 +2077,15 @@ pub(crate) fn travel_segment_to_clear_sale_connection(
         .departure
         .clone()
         .or_else(|| segment.boarding.clone())
-        .or_else(|| leg.travel_date.clone())?;
+        .or_else(|| leg.travel_date.clone())
+        .map(|date| to_clearsale_datetime(&date))?;
     let company = leg
         .carrier_name
         .as_deref()
         .map(str::trim)
         .filter(|name| !name.is_empty())
         .map(str::to_owned)
-        .or_else(|| {
-            // "G3-1234" / "G3 1234" / "G31234" → "G3"; a bare "101" has no prefix.
-            let prefix: String = identifier
-                .chars()
-                .take_while(|c| c.is_ascii_alphabetic())
-                .collect();
-            let prefix = prefix.trim().to_uppercase();
-            (!prefix.is_empty()).then_some(prefix)
-        })?;
+        .or_else(|| carrier_code_from_identifier(identifier))?;
     Some(ClearSaleConnection {
         company,
         identification_number,
@@ -1938,12 +2093,42 @@ pub(crate) fn travel_segment_to_clear_sale_connection(
         seat_class: segment.travel_class.clone(),
         origin: segment.origin.as_deref()?.trim().to_owned(),
         destination: segment.destination.as_deref()?.trim().to_owned(),
-        boarding: segment.boarding.clone(),
-        arriving: segment.arrival.clone(),
+        boarding: segment
+            .boarding
+            .as_deref()
+            .map(to_clearsale_datetime),
+        arriving: segment.arrival.as_deref().map(to_clearsale_datetime),
         // No separate fare-basis carrier on `TravelSegment` — `travel_class`
         // already feeds `seatClass`.
         fare_class: None,
     })
+}
+
+pub(crate) fn carrier_code_from_identifier(identifier: &str) -> Option<String> {
+    let token = identifier.trim();
+    if token.is_empty() {
+        return None;
+    }
+    let candidate: &str = match token.split_once(['-', ' ', '/']) {
+        Some((head, _)) if !head.trim().is_empty() => head.trim(),
+        _ => {
+            if token.chars().all(|c| c.is_ascii_alphabetic()) {
+                token
+            } else if token.len() >= 2
+                && token.as_bytes()[0].is_ascii_alphabetic()
+                && token.as_bytes()[1].is_ascii_alphanumeric()
+            {
+                &token[..2]
+            } else {
+                return None;
+            }
+        }
+    };
+    let company = candidate.trim().to_uppercase();
+    (!company.is_empty()
+        && company.chars().all(|c| c.is_ascii_alphanumeric())
+        && company.chars().any(|c| c.is_ascii_alphabetic()))
+    .then_some(company)
 }
 
 /// ClearSale `hotels[]` source; `name` is mandatory. One entry per
@@ -1954,10 +2139,10 @@ pub(crate) fn accommodation_to_clear_sale(a: &HotelSegment) -> Option<ClearSaleH
         city: a.hotel_city.clone(),
         state: a.hotel_state.clone(),
         country: a.hotel_country.clone(),
-        reservation_date: a.reservation_at.clone(),
-        reserve_expiration_date: a.reservation_expires_at.clone(),
-        check_in_date: a.check_in.clone(),
-        check_out_date: a.check_out.clone(),
+        reservation_date: a.reservation_at.as_deref().map(to_clearsale_datetime),
+        reserve_expiration_date: a.reservation_expires_at.as_deref().map(to_clearsale_datetime),
+        check_in_date: a.check_in.as_deref().map(to_clearsale_datetime),
+        check_out_date: a.check_out.as_deref().map(to_clearsale_datetime),
     })
 }
 
@@ -2076,7 +2261,7 @@ pub(crate) fn order_from_common(inputs: OrderInputs<'_>) -> Result<ClearSaleOrde
         billing_document_kind.as_ref(),
         feature_data,
         &mut missing,
-    );
+    )?;
     // A bus-ticket-style digital order has no separate shipping recipient;
     // when the shipping address is absent the billing block is mirrored so
     // the required `shipping` object is still populated. Reusing the already
@@ -2096,16 +2281,18 @@ pub(crate) fn order_from_common(inputs: OrderInputs<'_>) -> Result<ClearSaleOrde
             shipping_document_kind.as_ref().or(billing_document_kind.as_ref()),
             feature_data,
             &mut missing,
-        ),
+        )?,
     };
 
     // Format the order date once so the payment entries share the
     // transaction instant (spec §5.1 `payments[].date`). `date_time::now`
-    // is the one sanctioned clock read.
-    let now = common_utils::date_time::now()
-        .assume_utc()
-        .format(&time::format_description::well_known::Rfc3339)
-        .unwrap_or_default();
+    // is the one sanctioned clock read; ClearSale Datetime has no timezone.
+    let now = to_clearsale_datetime(
+        &common_utils::date_time::now()
+            .assume_utc()
+            .format(&time::format_description::well_known::Rfc3339)
+            .unwrap_or_default(),
+    );
     let payments = vec![build_clear_sale_payment(
         payment_method,
         total_value,
@@ -2165,7 +2352,7 @@ pub(crate) fn order_from_common(inputs: OrderInputs<'_>) -> Result<ClearSaleOrde
     let billing_country = address
         .and_then(|addr| addr.get_payment_billing())
         .and_then(|addr| addr.address.as_ref())
-        .and_then(|details| details.country.map(|c| c.to_string()));
+        .and_then(|details| details.country.map(clearsale_country_name));
 
     Ok(build_order_request(
         OrderRequestParts {
