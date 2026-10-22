@@ -845,9 +845,7 @@ impl
 
         Self {
             integrity_specifications: item.integrity_specifications,
-            // Composite capture doesn't take an overcapture flag; amount tolerance there comes
-            // only from integrity_specifications.allow_amount_mismatch.
-            is_overcapture_enabled: None,
+            is_overcapture_enabled: item.is_overcapture_enabled,
             split_settlement: item.split_settlement.clone(),
             merchant_capture_id: item.merchant_capture_id.clone(),
             payment_method: item.payment_method.clone(),

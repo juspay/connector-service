@@ -2780,9 +2780,9 @@ impl PaymentMethod {
             setup_mandate_details: None,
             mandate_id: None,
             integrity_object: None,
-            allow_amount_mismatch: request
+            integrity_specifications: request
                 .integrity_specifications
-                .and_then(|spec| spec.allow_amount_mismatch),
+                .map(domain_types::connector_types::IntegritySpecifications::from),
             split_payments: None,
         };
 

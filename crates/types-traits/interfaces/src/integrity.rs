@@ -9,14 +9,15 @@ use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 // Domain type imports
 use domain_types::connector_types::{
     AcceptDisputeData, ClientAuthenticationTokenRequestData, ConnectorCustomerData,
-    CreatePaymentMethodData, DisputeDefendData, GetPaymentMethodData, MandateRevokeRequestData,
-    PaymentCreateOrderData, PaymentMethodEligibilityData, PaymentMethodTokenizationData,
-    PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
-    PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
-    PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsSyncData,
-    RechargeRequestData, RefreshPaymentMethodData, RefundSyncData, RefundVoidPostRefundData,
-    RefundsData, RepeatPaymentData, ServerAuthenticationTokenRequestData,
-    ServerSessionAuthenticationTokenRequestData, SetupMandateRequestData, SubmitEvidenceData,
+    CreatePaymentMethodData, DisputeDefendData, GetPaymentMethodData, IntegritySpecifications,
+    MandateRevokeRequestData, PaymentCreateOrderData, PaymentMethodEligibilityData,
+    PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+    PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+    PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+    PaymentsPreAuthenticateData, PaymentsSyncData, RechargeRequestData, RefreshPaymentMethodData,
+    RefundSyncData, RefundVoidPostRefundData, RefundsData, RepeatPaymentData,
+    ServerAuthenticationTokenRequestData, ServerSessionAuthenticationTokenRequestData,
+    SetupMandateRequestData, SubmitEvidenceData,
 };
 use domain_types::frm::frm_types::{
     FrmChargebackReceivedRequest, FrmPaymentOutcomeRequest, FrmRefundProcessedRequest,
@@ -82,14 +83,16 @@ impl AmountTolerance {
         }
     }
 
-    /// `allow_amount_mismatch = Some(true)` accepts any amount. Otherwise a higher amount is
+    /// `integrity_specifications.allow_amount_mismatch = Some(true)` accepts any amount. Otherwise a higher amount is
     /// accepted only when `allow_higher_amount` is `Some(true)` and a lower amount only when
     /// `allow_lower_amount` is `Some(true)`; a flag the flow doesn't collect is passed as `None`.
     pub fn new(
-        allow_amount_mismatch: Option<bool>,
+        integrity_specifications: Option<IntegritySpecifications>,
         allow_higher_amount: Option<bool>,
         allow_lower_amount: Option<bool>,
     ) -> Self {
+        let allow_amount_mismatch =
+            integrity_specifications.and_then(|spec| spec.allow_amount_mismatch);
         if allow_amount_mismatch == Some(true) {
             return Self {
                 allow_higher_amount: true,
@@ -318,7 +321,7 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<AuthoriseIntegrityObject>
     fn amount_tolerance(&self) -> AmountTolerance {
         // Overcapture is a capture-time concept, so it is not considered at authorization.
         AmountTolerance::new(
-            self.allow_amount_mismatch,
+            self.integrity_specifications,
             None,
             self.enable_partial_authorization,
         )
@@ -367,7 +370,7 @@ impl GetIntegrityObject<PaymentSynIntegrityObject> for PaymentsSyncData {
 
     fn amount_tolerance(&self) -> AmountTolerance {
         AmountTolerance::new(
-            self.allow_amount_mismatch,
+            self.integrity_specifications,
             self.is_overcapture_enabled,
             self.enable_partial_authorization,
         )
@@ -426,7 +429,7 @@ impl GetIntegrityObject<CaptureIntegrityObject> for PaymentsCaptureData {
     fn amount_tolerance(&self) -> AmountTolerance {
         // Partial authorization is accepted only at authorization time.
         AmountTolerance::new(
-            self.allow_amount_mismatch,
+            self.integrity_specifications,
             self.is_overcapture_enabled,
             None,
         )
@@ -527,7 +530,7 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<RepeatPaymentIntegrityObject>
     fn amount_tolerance(&self) -> AmountTolerance {
         // A recurring charge is an authorization: overcapture is not considered here.
         AmountTolerance::new(
-            self.allow_amount_mismatch,
+            self.integrity_specifications,
             None,
             self.enable_partial_authorization,
         )
@@ -648,7 +651,7 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<PaymentMethodTokenIntegrityOb
 
     fn amount_tolerance(&self) -> AmountTolerance {
         // Tokenization neither authorizes nor captures, so only the explicit flag applies.
-        AmountTolerance::new(self.allow_amount_mismatch, None, None)
+        AmountTolerance::new(self.integrity_specifications, None, None)
     }
 }
 

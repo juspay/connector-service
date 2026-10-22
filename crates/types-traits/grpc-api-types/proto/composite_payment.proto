@@ -159,7 +159,7 @@ message CompositeAuthorizeRequest {
   optional RiskAssessmentData risk_assessment_data = 65;
 
   // Controls how the connector response is checked against the request.
-  optional IntegritySpecifications integrity_specifications = 65;
+  optional IntegritySpecifications integrity_specifications = 66;
 }
 
 // Status of the composite authorize flow — indicates whether the flow is complete or needs a redirect.
@@ -543,6 +543,10 @@ message CompositeCaptureRequest {
 
   // Controls how the connector response is checked against the request.
   optional IntegritySpecifications integrity_specifications = 18;
+
+  // Whether overcapture is enabled for this payment. When true, a connector-reported
+  // amount higher than the requested amount is not treated as an integrity failure.
+  optional bool is_overcapture_enabled = 19;
 
 }
 

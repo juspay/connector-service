@@ -747,6 +747,14 @@ impl MandateIds {
     }
 }
 
+/// Integrity-check settings applied when comparing the connector response with the request.
+#[derive(Debug, Clone, Copy)]
+pub struct IntegritySpecifications {
+    /// When true, an amount mismatch between request and connector response is not treated
+    /// as an integrity failure, in either direction. A currency mismatch still is.
+    pub allow_amount_mismatch: Option<bool>,
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct PaymentsSyncData {
     pub connector_transaction_id: ResponseId,
@@ -763,7 +771,7 @@ pub struct PaymentsSyncData {
     pub integrity_object: Option<PaymentSynIntegrityObject>,
     /// When true, an amount mismatch between request and connector response is not an
     /// integrity failure, in either direction.
-    pub allow_amount_mismatch: Option<bool>,
+    pub integrity_specifications: Option<IntegritySpecifications>,
     /// Whether overcapture is enabled. When true, a connector-reported amount higher than
     /// the requested amount is not an integrity failure.
     pub is_overcapture_enabled: Option<bool>,
@@ -1816,7 +1824,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub integrity_object: Option<AuthoriseIntegrityObject>,
     /// When true, an amount mismatch between request and connector response is not an
     /// integrity failure, in either direction.
-    pub allow_amount_mismatch: Option<bool>,
+    pub integrity_specifications: Option<IntegritySpecifications>,
     pub merchant_config_currency: Option<Currency>,
     pub all_keys_required: Option<bool>,
     pub request_extended_authorization: Option<bool>,
@@ -2295,7 +2303,7 @@ pub struct PaymentMethodTokenizationData<T: PaymentMethodDataTypes> {
     pub integrity_object: Option<PaymentMethodTokenIntegrityObject>,
     /// When true, an amount mismatch between request and connector response is not an
     /// integrity failure, in either direction.
-    pub allow_amount_mismatch: Option<bool>,
+    pub integrity_specifications: Option<IntegritySpecifications>,
     pub split_payments: Option<SplitPaymentsDetails>,
     pub connector_feature_data: Option<common_utils::pii::SecretSerdeValue>,
     pub metadata: Option<Secret<String>>,
@@ -3827,7 +3835,7 @@ pub struct PaymentsCaptureData {
     pub integrity_object: Option<CaptureIntegrityObject>,
     /// When true, an amount mismatch between request and connector response is not an
     /// integrity failure, in either direction.
-    pub allow_amount_mismatch: Option<bool>,
+    pub integrity_specifications: Option<IntegritySpecifications>,
     /// Whether overcapture is enabled. When true, a connector-reported amount higher than
     /// the requested amount is not an integrity failure.
     pub is_overcapture_enabled: Option<bool>,
@@ -3998,7 +4006,7 @@ pub struct RepeatPaymentData<T: PaymentMethodDataTypes> {
     pub integrity_object: Option<RepeatPaymentIntegrityObject>,
     /// When true, an amount mismatch between request and connector response is not an
     /// integrity failure, in either direction.
-    pub allow_amount_mismatch: Option<bool>,
+    pub integrity_specifications: Option<IntegritySpecifications>,
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub browser_info: Option<BrowserInformation>,
     pub email: Option<Email>,

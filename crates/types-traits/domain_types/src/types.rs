@@ -12,9 +12,10 @@ use crate::{
     connector_types::{
         self, AuthenticatorConnectorEnum, CaptureSyncResponse, ConnectorEnum,
         CreatePaymentMethodData, CreatePaymentMethodResponseData, EligibilityErrorInfo,
-        FrmConnectorEnum, GetPaymentMethodData, GetPaymentMethodResponseData, PMEligibility,
-        PaymentMethodEligibilityData, PaymentMethodEligibilityResponse, PayoutConnectorEnum,
-        RechargeRequestData, RechargeResponseData, SurchargeConnectorEnum,
+        FrmConnectorEnum, GetPaymentMethodData, GetPaymentMethodResponseData,
+        IntegritySpecifications, PMEligibility, PaymentMethodEligibilityData,
+        PaymentMethodEligibilityResponse, PayoutConnectorEnum, RechargeRequestData,
+        RechargeResponseData, SurchargeConnectorEnum,
     },
     payment_method_data::SamsungPayWalletCredentials,
     router_request_types::AuthoriseIntegrityObject,
@@ -3826,7 +3827,7 @@ pub struct AuthorizationRequest {
     pub request_incremental_authorization: Option<bool>,
     pub request_extended_authorization: Option<bool>,
     pub enable_partial_authorization: Option<bool>,
-    pub allow_amount_mismatch: Option<bool>,
+    pub integrity_specifications: Option<grpc_payment_types::IntegritySpecifications>,
     // Contextual Information
     pub customer_acceptance: Option<grpc_payment_types::CustomerAcceptance>,
     pub browser_info: Option<grpc_payment_types::BrowserInformation>,
@@ -3979,9 +3980,7 @@ impl From<grpc_payment_types::PaymentServiceAuthorizeRequest> for AuthorizationR
             request_incremental_authorization: req.request_incremental_authorization,
             request_extended_authorization: req.request_extended_authorization,
             enable_partial_authorization: req.enable_partial_authorization,
-            allow_amount_mismatch: req
-                .integrity_specifications
-                .and_then(|spec| spec.allow_amount_mismatch),
+            integrity_specifications: req.integrity_specifications,
             customer_acceptance: req.customer_acceptance.clone(),
             browser_info: req.browser_info.clone(),
             billing_descriptor: req.billing_descriptor.clone(),
@@ -4066,9 +4065,7 @@ impl From<grpc_payment_types::PaymentServiceProxyAuthorizeRequest> for Authoriza
             request_incremental_authorization: None,
             request_extended_authorization: None,
             enable_partial_authorization: req.enable_partial_authorization,
-            allow_amount_mismatch: req
-                .integrity_specifications
-                .and_then(|spec| spec.allow_amount_mismatch),
+            integrity_specifications: req.integrity_specifications,
             customer_acceptance: req.customer_acceptance.clone(),
             browser_info: req.browser_info,
             billing_descriptor: req.billing_descriptor,
@@ -5744,7 +5741,9 @@ impl<
             shipping_cost,
             merchant_account_id,
             integrity_object: None,
-            allow_amount_mismatch: value.allow_amount_mismatch,
+            integrity_specifications: value
+                .integrity_specifications
+                .map(IntegritySpecifications::from),
             merchant_config_currency: Some(merchant_config_currency),
             all_keys_required: None, // Field not available in new proto structure
             split_payments: value
@@ -8946,9 +8945,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             payment_experience,
             amount,
             integrity_object: None,
-            allow_amount_mismatch: value
+            integrity_specifications: value
                 .integrity_specifications
-                .and_then(|spec| spec.allow_amount_mismatch),
+                .map(IntegritySpecifications::from),
             is_overcapture_enabled: value.is_overcapture_enabled,
             enable_partial_authorization: value.enable_partial_authorization,
             all_keys_required: None, // Field not available in new proto structure
@@ -13103,9 +13102,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             integrity_object: None,
-            allow_amount_mismatch: value
+            integrity_specifications: value
                 .integrity_specifications
-                .and_then(|spec| spec.allow_amount_mismatch),
+                .map(IntegritySpecifications::from),
             is_overcapture_enabled: value.is_overcapture_enabled,
             capture_method,
             connector_feature_data: value
@@ -15953,7 +15952,7 @@ impl<T: PaymentMethodDataTypes> From<&PaymentsAuthorizeData<T>>
             setup_mandate_details: data.setup_mandate_details.clone(),
             mandate_id: data.mandate_id.clone(),
             integrity_object: None,
-            allow_amount_mismatch: data.allow_amount_mismatch,
+            integrity_specifications: data.integrity_specifications,
             connector_feature_data: data.connector_feature_data.clone(),
             metadata: None,
         }
@@ -16154,9 +16153,9 @@ impl<
             mandate_id: None,
             setup_mandate_details,
             integrity_object: None,
-            allow_amount_mismatch: value
+            integrity_specifications: value
                 .integrity_specifications
-                .and_then(|spec| spec.allow_amount_mismatch),
+                .map(IntegritySpecifications::from),
             split_payments: value
                 .split_payments
                 .map(connector_types::SplitPaymentsDetails::foreign_try_from)
@@ -17292,9 +17291,9 @@ impl<
             router_return_url: value.return_url,
             complete_authorize_url: value.complete_authorize_url,
             integrity_object: None,
-            allow_amount_mismatch: value
+            integrity_specifications: value
                 .integrity_specifications
-                .and_then(|spec| spec.allow_amount_mismatch),
+                .map(IntegritySpecifications::from),
             capture_method: Some(CaptureMethod::foreign_try_from(capture_method)?),
             email,
             customer_document_details,
@@ -23010,6 +23009,14 @@ impl From<connector_types::WebhookResourceReference> for grpc_api_types::payment
                     merchant_payout_id,
                 })),
             },
+        }
+    }
+}
+
+impl From<grpc_payment_types::IntegritySpecifications> for IntegritySpecifications {
+    fn from(value: grpc_payment_types::IntegritySpecifications) -> Self {
+        Self {
+            allow_amount_mismatch: value.allow_amount_mismatch,
         }
     }
 }
