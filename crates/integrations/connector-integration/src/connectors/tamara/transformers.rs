@@ -353,16 +353,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     .iter()
                     .enumerate()
                     .map(|(i, data)| {
-                        let fallback_ref = data
-                            .get_product_id()
-                            .ok()
-                            .or_else(|| data.get_sku().ok())
-                            .unwrap_or_else(|| format!("item_{i}"));
                         Ok(TamaraLineItem {
                             name: data.get_product_name(),
                             quantity: data.get_quantity(),
-                            reference_id: fallback_ref.clone(),
-                            sku: fallback_ref,
+                            reference_id: data.get_product_id().unwrap_or_else(|_| format!("item_{i}")),
+                            sku: data.get_sku().unwrap_or_else(|_| format!("item_{i}")),
                             total_amount: to_tamara_amount(
                                 data.get_total_amount(),
                                 "Failed to convert line item total amount from minor to major units",
