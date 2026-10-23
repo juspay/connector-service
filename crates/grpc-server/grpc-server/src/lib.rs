@@ -1,6 +1,7 @@
 #![allow(clippy::result_large_err)]
 
 pub mod app;
+pub mod composite_latency;
 pub mod config_overrides;
 #[cfg(feature = "deja")]
 pub mod deja;

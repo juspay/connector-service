@@ -1,3 +1,4 @@
+pub mod composite_latency;
 pub mod config_middleware;
 pub mod error;
 pub mod handlers;
