@@ -77,9 +77,9 @@ jobs:
           java-version: '17'
 
       - name: Install protobuf compiler (protoc)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y protobuf-compiler
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2.7.8
@@ -99,9 +99,7 @@ jobs:
           path: |
             target/*/*/libconnector_service_ffi.so
             target/*/*/libconnector_service_ffi.dylib
-          key: ffi-lib-${{ runner.os }}-${{ hashFiles('crates/ffi/**/*.rs', 'crates/ffi/**/Cargo.toml', 'Cargo.lock') }}
-          restore-keys: |
-            ffi-lib-${{ runner.os }}-
+          key: ffi-lib-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'crates/**/Cargo.toml', 'crates/**/*.rs', 'crates/**/*.proto') }}
 
       - name: Build FFI library (UniFFI scaffolding)
         run: make -C sdk/python build-ffi-lib PROFILE=release-fast
