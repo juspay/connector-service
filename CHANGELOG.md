@@ -19,6 +19,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.10.23.0
+
+### Features
+
+- **connector:** Add Worldpay raft wallet payment method ([#2513](https://github.com/juspay/connector-service/pull/2513)) ([`e2a2a14`](https://github.com/juspay/connector-service/commit/e2a2a14a56fdde7e92af9d38bb89e13d6e2e83f7))
+- **framework:** Support payment methods in follow-up payment flows ([#2536](https://github.com/juspay/connector-service/pull/2536)) ([`b5ba39e`](https://github.com/juspay/connector-service/commit/b5ba39e9760da1c0fa1868c7b8b33fd34ec8af20))
+
+### Bug Fixes
+
+- **framework:** Distil resolutions not first asks, and make a repeat comment blocking (grace/ only) ([#2576](https://github.com/juspay/connector-service/pull/2576)) ([`862c672`](https://github.com/juspay/connector-service/commit/862c672c817d7139e5e8c67dc8ac56b08010a874))
+
+**Full Changelog:** [`2026.10.22.1...2026.10.23.0`](https://github.com/juspay/connector-service/compare/2026.10.22.1...2026.10.23.0)
+
+- - -
+
 ## 2026.10.22.1
 
 ### Features
