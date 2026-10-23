@@ -380,7 +380,12 @@ pub struct WorldpayxmlAccountReference {
 #[serde(rename_all = "camelCase")]
 pub struct WorldpayxmlFullName {
     pub first: Secret<String>,
-    pub last: Secret<String>,
+    // Declared between `first` and `last`: the Worldpay DTD enforces element order.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub middle: Option<Secret<String>>,
+    // Optional in the Worldpay DTD; only a one-word company name leaves it out.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last: Option<Secret<String>>,
 }
 
 #[derive(Debug, Serialize)]

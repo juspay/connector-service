@@ -147,6 +147,9 @@ message CompositeAuthorizeRequest {
   // Details about the recipient of funds for account-funded transactions.
   optional RecipientDetails recipient_details = 61;
 
+  // Details about the sender of funds for account-funded transactions.
+  optional SenderDetails sender_details = 66;
+
   // Additional connector-specific details (e.g. purpose of payment for Checkout.com).
   optional AdditionalConnectorDetails additional_connector_details = 62;
   optional string business_country = 63;
@@ -848,6 +851,9 @@ message CompositeVerifyRedirectResponseRequest {
 
   // Details about the recipient of funds for account-funded transactions.
   optional RecipientDetails recipient_details = 57;
+
+  // Details about the sender of funds for account-funded transactions.
+  optional SenderDetails sender_details = 62;
 
   // Additional connector-specific details (e.g. purpose of payment for Checkout.com).
   optional AdditionalConnectorDetails additional_connector_details = 58;
