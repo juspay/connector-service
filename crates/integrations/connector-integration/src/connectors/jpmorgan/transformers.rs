@@ -489,6 +489,66 @@ fn extract_account_holder_names<
     Ok((first_name, last_name))
 }
 
+impl
+    TryFrom<(
+        &domain_types::router_request_types::AuthenticationData,
+        &common_enums::CardNetwork,
+    )> for requests::JpmorganAuthentication
+{
+    type Error = Error;
+
+    fn try_from(
+        (data, card_network): (
+            &domain_types::router_request_types::AuthenticationData,
+            &common_enums::CardNetwork,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let transaction_id = match card_network {
+            common_enums::CardNetwork::Visa => data
+                .transaction_id
+                .as_ref()
+                .or(data.ds_trans_id.as_ref())
+                .cloned(),
+            common_enums::CardNetwork::Mastercard => data.ds_trans_id.clone(),
+            common_enums::CardNetwork::AmericanExpress | common_enums::CardNetwork::Discover => {
+                None
+            }
+            _ => {
+                return Err(IntegrationError::NotSupported {
+                    message: "3DS for this card network".to_owned(),
+                    connector: "jpmorgan",
+                    context: Default::default(),
+                }
+                .into())
+            }
+        };
+        let protocol = data.message_version.as_ref().map(ToString::to_string);
+        let protocol = if *card_network == common_enums::CardNetwork::Mastercard {
+            Some(protocol.ok_or_else(utils::missing_field_err(
+                "authentication_data.message_version",
+            ))?)
+        } else {
+            protocol
+        };
+        Ok(Self {
+            token_authentication_value: None,
+            electronic_commerce_indicator: Some(
+                data.eci
+                    .clone()
+                    .ok_or_else(utils::missing_field_err("authentication_data.eci"))?,
+            ),
+            three_ds: Some(requests::JpmorganThreeDs {
+                authentication_value: data
+                    .cavv
+                    .clone()
+                    .ok_or_else(utils::missing_field_err("authentication_data.cavv"))?,
+                authentication_transaction_id: transaction_id,
+                three_ds_program_protocol: protocol,
+            }),
+        })
+    }
+}
+
 impl<T: PaymentMethodDataTypes> requests::JpmorganCard<T> {
     fn wallet_field_context(field_name: &'static str) -> IntegrationErrorContext {
         IntegrationErrorContext {
@@ -544,7 +604,7 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganCard<T> {
         Self::wallet_authentication(cryptogram, &Some(eci))
     }
 
-    fn passthrough_authentication(
+    fn card_authentication(
         authentication_data: Option<&domain_types::router_request_types::AuthenticationData>,
         auth_type: common_enums::AuthenticationType,
         card_network: Option<&common_enums::CardNetwork>,
@@ -560,77 +620,8 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganCard<T> {
                 Ok(None)
             };
         };
-        let missing = |field_name| IntegrationError::MissingRequiredField {
-            field_name,
-            context: Default::default(),
-        };
-        let invalid = |field_name| IntegrationError::InvalidDataFormat {
-            field_name,
-            context: Default::default(),
-        };
-        let network = card_network.ok_or_else(|| missing("card.card_network"))?;
-        let (eci_values, transaction_id, transaction_id_field) = match network {
-            common_enums::CardNetwork::Visa => (
-                ["05", "06", "07"],
-                data.transaction_id.as_ref(),
-                Some("authentication_data.transaction_id"),
-            ),
-            common_enums::CardNetwork::Mastercard => (
-                ["00", "01", "02"],
-                data.ds_trans_id.as_ref(),
-                Some("authentication_data.ds_trans_id"),
-            ),
-            common_enums::CardNetwork::AmericanExpress | common_enums::CardNetwork::Discover => {
-                (["05", "06", "07"], None, None)
-            }
-            _ => {
-                return Err(IntegrationError::NotSupported {
-                    message: "Pass-through 3DS for this card network".to_owned(),
-                    connector: "jpmorgan",
-                    context: Default::default(),
-                }
-                .into())
-            }
-        };
-        let eci = data
-            .eci
-            .as_ref()
-            .ok_or_else(|| missing("authentication_data.eci"))?;
-        if !eci_values.contains(&eci.as_str()) {
-            return Err(invalid("authentication_data.eci").into());
-        }
-        let cavv = data
-            .cavv
-            .as_ref()
-            .ok_or_else(|| missing("authentication_data.cavv"))?;
-        if cavv.peek().is_empty() || cavv.peek().len() > 56 {
-            return Err(invalid("authentication_data.cavv").into());
-        }
-        common_utils::consts::BASE64_ENGINE
-            .decode(cavv.peek())
-            .change_context(invalid("authentication_data.cavv"))?;
-        if let Some(field_name) = transaction_id_field {
-            let value = transaction_id.ok_or_else(|| missing(field_name))?;
-            if value.trim().is_empty() {
-                return Err(invalid(field_name).into());
-            }
-        }
-        let protocol = data.message_version.as_ref().map(ToString::to_string);
-        if *network == common_enums::CardNetwork::Mastercard && protocol.is_none() {
-            return Err(missing("authentication_data.message_version").into());
-        }
-        if protocol.as_ref().is_some_and(|value| value.len() > 20) {
-            return Err(invalid("authentication_data.message_version").into());
-        }
-        Ok(Some(requests::JpmorganAuthentication {
-            token_authentication_value: None,
-            electronic_commerce_indicator: Some(eci.clone()),
-            three_ds: Some(requests::JpmorganThreeDs {
-                authentication_value: cavv.clone(),
-                authentication_transaction_id: transaction_id.cloned(),
-                three_ds_program_protocol: protocol,
-            }),
-        }))
+        let network = card_network.ok_or_else(utils::missing_field_err("card.card_network"))?;
+        requests::JpmorganAuthentication::try_from((data, network)).map(Some)
     }
 
     fn validate_apple_pay_storage(payment_method: &PaymentMethodData<T>) -> Result<(), Error> {
@@ -872,7 +863,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         }
         match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
-                let authentication = requests::JpmorganCard::<T>::passthrough_authentication(
+                let authentication = requests::JpmorganCard::<T>::card_authentication(
                     router_data.request.authentication_data.as_ref(),
                     router_data.resource_common_data.auth_type,
                     card_data.card_network.as_ref(),
@@ -1971,19 +1962,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .into());
         }
         requests::JpmorganCard::validate_apple_pay_storage(&request.payment_method_data)?;
-        if request.authentication_data.is_some()
-            && !matches!(
-                request.payment_method_data,
-                PaymentMethodData::Card(_) | PaymentMethodData::CardWithNoCvc(_)
-            )
-        {
-            return Err(IntegrationError::NotSupported {
-                message: "Pass-through 3DS verification for this payment method".to_owned(),
-                connector: "jpmorgan",
-                context: Default::default(),
-            }
-            .into());
-        }
         let recurring_sequence = match request.mit_category {
             Some(
                 common_enums::MitCategory::Recurring | common_enums::MitCategory::Subscription,
@@ -2010,7 +1988,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     )?,
                     account_number_type: Some(requests::JpmorganAccountNumberType::Pan),
                     wallet_provider: None,
-                    authentication: requests::JpmorganCard::<T>::passthrough_authentication(
+                    authentication: requests::JpmorganCard::<T>::card_authentication(
                         request.authentication_data.as_ref(),
                         router_data.resource_common_data.auth_type,
                         card.card_network.as_ref(),
@@ -2029,7 +2007,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     )?,
                     account_number_type: Some(requests::JpmorganAccountNumberType::Pan),
                     wallet_provider: None,
-                    authentication: requests::JpmorganCard::<T>::passthrough_authentication(
+                    authentication: requests::JpmorganCard::<T>::card_authentication(
                         request.authentication_data.as_ref(),
                         router_data.resource_common_data.auth_type,
                         card.card_network.as_ref(),
@@ -2037,6 +2015,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 },
                 cvv: None,
             },
+            PaymentMethodData::Wallet(WalletData::ApplePay(_))
+            | PaymentMethodData::Wallet(WalletData::GooglePay(_))
+                if request.authentication_data.is_some() =>
+            {
+                return Err(IntegrationError::NotSupported {
+                    message: "Separate card 3DS proof for wallet verification".to_owned(),
+                    connector: "jpmorgan",
+                    context: Default::default(),
+                }
+                .into());
+            }
             PaymentMethodData::Wallet(WalletData::ApplePay(wallet)) => match &wallet.payment_data {
                 ApplePayPaymentData::Decrypted(data) => requests::JpmorganSetupMandateCard {
                     card: requests::JpmorganCard::from_apple_pay(data)?,
