@@ -961,7 +961,7 @@
           "headers": {
             "authorization": "Bearer probe_access_token",
             "content-type": "application/json",
-            "merchant-id": "DefaultMerchantId",
+            "merchant-id": "probe_merchant",
             "request-id": "",
             "via": "HyperSwitch"
           },

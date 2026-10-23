@@ -756,18 +756,6 @@ pub async fn process_recurring_charge(
     Ok(format!("status: {:?}", response.status()))
 }
 
-// Flow: RefundService.Get
-#[allow(dead_code)]
-pub async fn process_refund_get(
-    client: &ConnectorClient,
-    _merchant_transaction_id: &str,
-) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client
-        .refund_get(build_refund_get_request(), &HashMap::new(), None)
-        .await?;
-    Ok(format!("status: {:?}", response.status()))
-}
-
 // Flow: PaymentService.SetupRecurring
 #[allow(dead_code)]
 pub async fn process_setup_recurring(
@@ -842,12 +830,11 @@ async fn main() {
         "process_proxy_authorize" => process_proxy_authorize(&client, "txn_001").await,
         "process_proxy_setup_recurring" => process_proxy_setup_recurring(&client, "txn_001").await,
         "process_recurring_charge" => process_recurring_charge(&client, "txn_001").await,
-        "process_refund_get" => process_refund_get(&client, "txn_001").await,
         "process_setup_recurring" => process_setup_recurring(&client, "txn_001").await,
         "process_token_authorize" => process_token_authorize(&client, "txn_001").await,
         "process_void" => process_void(&client, "txn_001").await,
         _ => {
-            eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, process_get_payment, process_authorize, process_capture, process_create_client_authentication_token, process_create_server_authentication_token, process_get, process_proxy_authorize, process_proxy_setup_recurring, process_recurring_charge, process_refund_get, process_setup_recurring, process_token_authorize, process_void", flow);
+            eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, process_get_payment, process_authorize, process_capture, process_create_client_authentication_token, process_create_server_authentication_token, process_get, process_proxy_authorize, process_proxy_setup_recurring, process_recurring_charge, process_setup_recurring, process_token_authorize, process_void", flow);
             return;
         }
     };

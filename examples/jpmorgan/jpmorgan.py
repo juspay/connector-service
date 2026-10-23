@@ -10,10 +10,9 @@ import sys
 from payments import PaymentClient
 from payments import MerchantAuthenticationClient
 from payments import RecurringPaymentClient
-from payments import RefundClient
 from payments.generated import common_types_pb2, payment_methods_pb2, payment_pb2, sdk_config_pb2
 
-SUPPORTED_FLOWS = ["authorize", "capture", "create_client_authentication_token", "create_server_authentication_token", "get", "proxy_authorize", "proxy_setup_recurring", "recurring_charge", "refund", "refund_get", "setup_recurring", "token_authorize", "void"]
+SUPPORTED_FLOWS = ["authorize", "capture", "create_client_authentication_token", "create_server_authentication_token", "get", "proxy_authorize", "proxy_setup_recurring", "recurring_charge", "refund", "setup_recurring", "token_authorize", "void"]
 
 _default_config = sdk_config_pb2.ConnectorConfig(
     options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
@@ -491,15 +490,6 @@ async def process_recurring_charge(merchant_transaction_id: str, config: sdk_con
     recurring_response = await recurringpayment_client.charge(_build_recurring_charge_request())
 
     return {"status": recurring_response.status}
-
-
-async def process_refund_get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: RefundService.Get"""
-    refund_client = RefundClient(config)
-
-    refund_response = await refund_client.refund_get(_build_refund_get_request())
-
-    return {"status": refund_response.status}
 
 
 async def process_setup_recurring(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
