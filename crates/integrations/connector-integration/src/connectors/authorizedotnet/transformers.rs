@@ -3284,6 +3284,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     cryptogram: None,
                 })
             }
+            // A saved profile is charged later, but the cryptogram of a decrypted token is
+            // single-use, so only the encrypted Apple Pay token is stored
+            PaymentMethodData::Wallet(WalletData::ApplePay(applepay_token))
+                if matches!(
+                    applepay_token.payment_data,
+                    ApplePayPaymentData::Decrypted(_)
+                ) =>
+            {
+                return Err(error_stack::report!(IntegrationError::NotSupported {
+                    message: "Decrypted Apple Pay token for saving a payment profile".to_string(),
+                    connector: "authorizedotnet",
+                    context: Default::default()
+                }))
+            }
             PaymentMethodData::Wallet(wallet_data) => PaymentDetails::try_from(wallet_data)?,
             pm => {
                 return Err(error_stack::report!(IntegrationError::NotImplemented(
