@@ -62,6 +62,30 @@ use crate::{
 use domain_types::errors::ConnectorError;
 use domain_types::errors::{IntegrationError, IntegrationErrorContext, WebhookError};
 
+const ADYEN_CONNECTOR_NAME: &str = "Adyen";
+const CHECKOUT_V72_BILLING_POSTAL_CODE_FIELD: &str = "billingAddress.postalCode";
+const CHECKOUT_V72_DELIVERY_POSTAL_CODE_FIELD: &str = "deliveryAddress.postalCode";
+const CHECKOUT_V72_POSTAL_CODE_MAX_LENGTH: usize = 10;
+const CHECKOUT_V72_REFERENCE_FIELD: &str = "reference";
+const CHECKOUT_V72_REFERENCE_MAX_LENGTH: usize = 80;
+const CHECKOUT_V72_RETURN_URL_FIELD: &str = "returnUrl";
+const CHECKOUT_V72_RETURN_URL_MAX_LENGTH: usize = 1024;
+const CHECKOUT_V72_SHOPPER_IP_FIELD: &str = "shopperIP";
+const CHECKOUT_V72_SHOPPER_IP_MAX_LENGTH: usize = 256;
+const CHECKOUT_V72_SHOPPER_FIRST_NAME_FIELD: &str = "shopperName.firstName";
+const CHECKOUT_V72_SHOPPER_LAST_NAME_FIELD: &str = "shopperName.lastName";
+const CHECKOUT_V72_SHOPPER_NAME_MAX_LENGTH: usize = 100;
+const CHECKOUT_V72_TELEPHONE_NUMBER_FIELD: &str = "telephoneNumber";
+const CHECKOUT_V72_TELEPHONE_NUMBER_MAX_LENGTH: usize = 64;
+const CHECKOUT_V72_SOCIAL_SECURITY_NUMBER_FIELD: &str = "socialSecurityNumber";
+const CHECKOUT_V72_SOCIAL_SECURITY_NUMBER_MAX_LENGTH: usize = 50;
+const CHECKOUT_V72_METADATA_KEY_FIELD: &str = "metadata key";
+const CHECKOUT_V72_METADATA_KEY_MAX_LENGTH: usize = 20;
+const CHECKOUT_V72_METADATA_VALUE_FIELD: &str = "metadata value";
+const CHECKOUT_V72_METADATA_VALUE_MAX_LENGTH: usize = 80;
+const CHECKOUT_V72_SHOPPER_EMAIL_FIELD: &str = "shopperEmail";
+const CHECKOUT_V72_SHOPPER_EMAIL_MAX_LENGTH: usize = 256;
+
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub enum Currency {
     #[default]
@@ -1313,7 +1337,7 @@ fn validate_checkout_v72_field_length(
     let received_length = value.chars().count();
     if received_length > max_length {
         return Err(IntegrationError::MaxFieldLengthViolated {
-            connector: "Adyen".to_string(),
+            connector: ADYEN_CONNECTOR_NAME.to_string(),
             field_name: field_name.to_string(),
             max_length,
             received_length,
@@ -1380,8 +1404,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             )?;
             validate_checkout_v72_field_length(
                 billing.postal_code.peek(),
-                "billingAddress.postalCode",
-                10,
+                CHECKOUT_V72_BILLING_POSTAL_CODE_FIELD,
+                CHECKOUT_V72_POSTAL_CODE_MAX_LENGTH,
             )?;
         }
 
@@ -1394,15 +1418,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             )?;
             validate_checkout_v72_field_length(
                 delivery.postal_code.peek(),
-                "deliveryAddress.postalCode",
-                10,
+                CHECKOUT_V72_DELIVERY_POSTAL_CODE_FIELD,
+                CHECKOUT_V72_POSTAL_CODE_MAX_LENGTH,
             )?;
         }
         Ok(())
     }
 
     fn validate_checkout_v72_fields(&self) -> Result<(), Error> {
-        validate_checkout_v72_field_length(&self.reference, "reference", 80)?;
+        validate_checkout_v72_field_length(
+            &self.reference,
+            CHECKOUT_V72_REFERENCE_FIELD,
+            CHECKOUT_V72_REFERENCE_MAX_LENGTH,
+        )?;
         validate_checkout_v72_return_url(&self.return_url)?;
 
         if let Some(metadata) = self.metadata.as_ref() {
@@ -1412,25 +1440,41 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             validate_checkout_v72_email(email.peek())?;
         }
         if let Some(ip) = self.shopper_ip.as_ref() {
-            validate_checkout_v72_field_length(ip.peek(), "shopperIP", 256)?;
+            validate_checkout_v72_field_length(
+                ip.peek(),
+                CHECKOUT_V72_SHOPPER_IP_FIELD,
+                CHECKOUT_V72_SHOPPER_IP_MAX_LENGTH,
+            )?;
         }
         if let Some(name) = self.shopper_name.as_ref() {
             if let Some(first_name) = name.first_name.as_ref() {
                 validate_checkout_v72_field_length(
                     first_name.peek(),
-                    "shopperName.firstName",
-                    100,
+                    CHECKOUT_V72_SHOPPER_FIRST_NAME_FIELD,
+                    CHECKOUT_V72_SHOPPER_NAME_MAX_LENGTH,
                 )?;
             }
             if let Some(last_name) = name.last_name.as_ref() {
-                validate_checkout_v72_field_length(last_name.peek(), "shopperName.lastName", 100)?;
+                validate_checkout_v72_field_length(
+                    last_name.peek(),
+                    CHECKOUT_V72_SHOPPER_LAST_NAME_FIELD,
+                    CHECKOUT_V72_SHOPPER_NAME_MAX_LENGTH,
+                )?;
             }
         }
         if let Some(phone) = self.telephone_number.as_ref() {
-            validate_checkout_v72_field_length(phone.peek(), "telephoneNumber", 64)?;
+            validate_checkout_v72_field_length(
+                phone.peek(),
+                CHECKOUT_V72_TELEPHONE_NUMBER_FIELD,
+                CHECKOUT_V72_TELEPHONE_NUMBER_MAX_LENGTH,
+            )?;
         }
         if let Some(ssn) = self.social_security_number.as_ref() {
-            validate_checkout_v72_field_length(ssn.peek(), "socialSecurityNumber", 50)?;
+            validate_checkout_v72_field_length(
+                ssn.peek(),
+                CHECKOUT_V72_SOCIAL_SECURITY_NUMBER_FIELD,
+                CHECKOUT_V72_SOCIAL_SECURITY_NUMBER_MAX_LENGTH,
+            )?;
         }
         if self
             .additional_data
@@ -1470,25 +1514,37 @@ fn validate_checkout_v72_metadata(metadata: &serde_json::Value) -> Result<(), Er
         .into());
     }
     for (key, value) in entries {
-        validate_checkout_v72_field_length(key, "metadata key", 20)?;
+        validate_checkout_v72_field_length(
+            key,
+            CHECKOUT_V72_METADATA_KEY_FIELD,
+            CHECKOUT_V72_METADATA_KEY_MAX_LENGTH,
+        )?;
         let value = value.as_str().ok_or(IntegrationError::InvalidDataFormat {
-            field_name: "metadata value",
+            field_name: CHECKOUT_V72_METADATA_VALUE_FIELD,
             context: Default::default(),
         })?;
-        validate_checkout_v72_field_length(value, "metadata value", 80)?;
+        validate_checkout_v72_field_length(
+            value,
+            CHECKOUT_V72_METADATA_VALUE_FIELD,
+            CHECKOUT_V72_METADATA_VALUE_MAX_LENGTH,
+        )?;
     }
     Ok(())
 }
 
 fn validate_checkout_v72_return_url(return_url: &str) -> Result<(), Error> {
-    validate_checkout_v72_field_length(return_url, "returnUrl", 1024)?;
+    validate_checkout_v72_field_length(
+        return_url,
+        CHECKOUT_V72_RETURN_URL_FIELD,
+        CHECKOUT_V72_RETURN_URL_MAX_LENGTH,
+    )?;
     if return_url
         .chars()
         .any(|character| !character.is_ascii() || character.is_whitespace())
         || Url::parse(return_url).is_err()
     {
         return Err(IntegrationError::InvalidDataFormat {
-            field_name: "returnUrl",
+            field_name: CHECKOUT_V72_RETURN_URL_FIELD,
             context: Default::default(),
         }
         .into());
@@ -1497,7 +1553,11 @@ fn validate_checkout_v72_return_url(return_url: &str) -> Result<(), Error> {
 }
 
 fn validate_checkout_v72_email(email: &str) -> Result<(), Error> {
-    validate_checkout_v72_field_length(email, "shopperEmail", 256)?;
+    validate_checkout_v72_field_length(
+        email,
+        CHECKOUT_V72_SHOPPER_EMAIL_FIELD,
+        CHECKOUT_V72_SHOPPER_EMAIL_MAX_LENGTH,
+    )?;
     let valid_parts = email.split_once('@').is_some_and(|(name, domain)| {
         !name.is_empty()
             && !domain.is_empty()
@@ -1507,7 +1567,7 @@ fn validate_checkout_v72_email(email: &str) -> Result<(), Error> {
     });
     if email.chars().any(char::is_whitespace) || !valid_parts {
         return Err(IntegrationError::InvalidDataFormat {
-            field_name: "shopperEmail",
+            field_name: CHECKOUT_V72_SHOPPER_EMAIL_FIELD,
             context: Default::default(),
         }
         .into());
@@ -4278,7 +4338,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .resource_common_data
             .connector_request_reference_id
             .clone();
-        validate_checkout_v72_field_length(&reference, "reference", 80)?;
+        validate_checkout_v72_field_length(
+            &reference,
+            CHECKOUT_V72_REFERENCE_FIELD,
+            CHECKOUT_V72_REFERENCE_MAX_LENGTH,
+        )?;
         Ok(Self {
             merchant_account: auth_type.merchant_account,
             reference,
@@ -4916,7 +4980,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .resource_common_data
             .connector_request_reference_id
             .clone();
-        validate_checkout_v72_field_length(&reference, "reference", 80)?;
+        validate_checkout_v72_field_length(
+            &reference,
+            CHECKOUT_V72_REFERENCE_FIELD,
+            CHECKOUT_V72_REFERENCE_MAX_LENGTH,
+        )?;
         Ok(Self {
             merchant_account: auth_type.merchant_account,
             reference: Some(reference),
@@ -6622,7 +6690,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ),
         };
 
-        validate_checkout_v72_field_length(&item.router_data.request.refund_id, "reference", 80)?;
+        validate_checkout_v72_field_length(
+            &item.router_data.request.refund_id,
+            CHECKOUT_V72_REFERENCE_FIELD,
+            CHECKOUT_V72_REFERENCE_MAX_LENGTH,
+        )?;
 
         Ok(Self {
             merchant_account: auth_type.merchant_account,
@@ -6703,7 +6775,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .connector_request_reference_id
                 .clone(),
         };
-        validate_checkout_v72_field_length(&reference, "reference", 80)?;
+        validate_checkout_v72_field_length(
+            &reference,
+            CHECKOUT_V72_REFERENCE_FIELD,
+            CHECKOUT_V72_REFERENCE_MAX_LENGTH,
+        )?;
         Ok(Self {
             merchant_account: auth_type.merchant_account,
             reference,
@@ -8649,7 +8725,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .resource_common_data
             .connector_request_reference_id
             .clone();
-        validate_checkout_v72_field_length(&reference, "reference", 80)?;
+        validate_checkout_v72_field_length(
+            &reference,
+            CHECKOUT_V72_REFERENCE_FIELD,
+            CHECKOUT_V72_REFERENCE_MAX_LENGTH,
+        )?;
 
         let return_url = router_data
             .resource_common_data
@@ -8775,7 +8855,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .resource_common_data
             .connector_request_reference_id
             .clone();
-        validate_checkout_v72_field_length(&reference, "reference", 80)?;
+        validate_checkout_v72_field_length(
+            &reference,
+            CHECKOUT_V72_REFERENCE_FIELD,
+            CHECKOUT_V72_REFERENCE_MAX_LENGTH,
+        )?;
 
         let country_code = router_data
             .resource_common_data
@@ -8900,7 +8984,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .resource_common_data
             .connector_request_reference_id
             .clone();
-        validate_checkout_v72_field_length(&reference, "reference", 80)?;
+        validate_checkout_v72_field_length(
+            &reference,
+            CHECKOUT_V72_REFERENCE_FIELD,
+            CHECKOUT_V72_REFERENCE_MAX_LENGTH,
+        )?;
         Ok(Self {
             merchant_account: auth_type.merchant_account,
             amount: Amount {
