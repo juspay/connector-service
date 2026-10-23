@@ -5018,6 +5018,15 @@ fn get_adyen_connector_response(
                     card_network: None,
                     domestic_network: None,
                     auth_code,
+                    // Adyen does not return card-metadata on this response; the fields exist
+                    // for connectors that do.
+                    processor_card_network: None,
+                    card_subtype: None,
+                    card_segment_type: None,
+                    funding_source: None,
+                    card_type: None,
+                    issuer_name: None,
+                    issuer_country: None,
                 },
             ))
         }
