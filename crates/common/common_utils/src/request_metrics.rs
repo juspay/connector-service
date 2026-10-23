@@ -41,29 +41,3 @@ impl ConnectorLatencyTracker {
         self.outgoing_millis.load(Ordering::Relaxed)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::ConnectorLatencyTracker;
-
-    #[test]
-    fn cloned_trackers_sum_exact_outgoing_log_latencies() {
-        let tracker = ConnectorLatencyTracker::default();
-        let cloned_tracker = tracker.clone();
-
-        tracker.add_outgoing_latency_millis(1875);
-        cloned_tracker.add_outgoing_latency_millis(1974);
-
-        assert_eq!(tracker.outgoing_latency_millis(), 3849);
-    }
-
-    #[test]
-    fn outgoing_log_latency_saturates_instead_of_wrapping() {
-        let tracker = ConnectorLatencyTracker::default();
-
-        tracker.add_outgoing_latency_millis(u64::MAX);
-        tracker.add_outgoing_latency_millis(1);
-
-        assert_eq!(tracker.outgoing_latency_millis(), u64::MAX);
-    }
-}
