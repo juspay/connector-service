@@ -22,6 +22,7 @@ use common_enums::{
 use common_utils::{
     consts::{BASE64_ENGINE, NO_ERROR_CODE, NO_ERROR_MESSAGE},
     crypto::{HmacSha512, SignMessage, VerifySignature},
+    id_type::CustomerId,
     pii::{Email, IpAddress, SecretSerdeValue},
     request::Method,
     types::MinorUnit,
@@ -215,6 +216,21 @@ fn normalise_phone(common: &PaymentFlowData) -> Option<Secret<String>> {
         );
         None
     }
+}
+
+/// `customer.id`: required on every Gate payment, 1-255 characters, never truncated. `missing`
+/// says why this call needs it.
+fn required_customer_id(
+    customer_id: Option<&CustomerId>,
+    missing: &str,
+) -> Result<String, error_stack::Report<IntegrationError>> {
+    let customer_id = non_empty(customer_id.map(|id| id.get_string_repr().to_string()))
+        .ok_or_else(|| missing_field("customer_id", missing))?;
+    let length = customer_id.chars().count();
+    if length > MAX_ID_LENGTH {
+        return Err(too_long("customer.id", MAX_ID_LENGTH, length));
+    }
+    Ok(customer_id)
 }
 
 /// `customer.language` is ISO 639-1; a browser language tag such as `en-US` is reduced to its
@@ -911,23 +927,10 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
 
         // G-ThreeDS-03 / -04, G-Authorize__Wallet-03 / -04 (customer id and IP are required on
         // every Gate payment, card or wallet).
-        let customer_id = non_empty(
-            common
-                .customer_id
-                .as_ref()
-                .or(request.customer_id.as_ref())
-                .map(|id| id.get_string_repr().to_string()),
-        )
-        .ok_or_else(|| {
-            missing_field(
-                "customer_id",
-                "Ecommpay requires customer.id on every payment (CustomerInfoCard)",
-            )
-        })?;
-        let customer_id_length = customer_id.chars().count();
-        if customer_id_length > MAX_ID_LENGTH {
-            return Err(too_long("customer.id", MAX_ID_LENGTH, customer_id_length));
-        }
+        let customer_id = required_customer_id(
+            common.customer_id.as_ref().or(request.customer_id.as_ref()),
+            "Ecommpay requires customer.id on every payment (CustomerInfoCard)",
+        )?;
         let browser_info = request.browser_info.as_ref();
         let ip_address = browser_info
             .and_then(|info| info.ip_address)
@@ -1082,25 +1085,11 @@ fn description(common: &PaymentFlowData) -> Option<String> {
 fn build_card<T: PaymentMethodDataTypes>(
     card: &Card<T>,
 ) -> Result<EcommpayCard<T>, error_stack::Report<IntegrationError>> {
-    let year = card
-        .get_expiry_year_4_digit()
-        .peek()
-        .trim()
-        .parse::<u16>()
-        .map_err(|_| {
-            invalid_format(
-                "card_exp_year",
-                "card.year must be a four-digit year".to_string(),
-            )
-        })?;
-    let month = card
-        .card_exp_month
-        .peek()
-        .trim()
-        .parse::<u8>()
-        .ok()
-        .filter(|month| (1..=12).contains(month))
-        .ok_or_else(|| invalid_format("card_exp_month", "card.month must be 1-12".to_string()))?;
+    let year = utils::parse_expiry_year_four_digit(
+        card.get_expiry_year_4_digit().peek(),
+        "card_exp_year",
+    )?;
+    let month = utils::parse_expiry_month(card.card_exp_month.peek(), "card_exp_month")?;
     let card_holder = within_limit(
         non_empty_secret(card.card_holder_name.clone()),
         "card.card_holder",
@@ -1426,26 +1415,8 @@ fn decrypted_wallet_card(
             "Ecommpay requires card.year (the decrypted wallet token expiry)",
         ));
     }
-    let year = year
-        .parse::<u16>()
-        .ok()
-        .filter(|_| year.len() == 4)
-        .ok_or_else(|| {
-            invalid_format(
-                "application_expiration_year",
-                "card.year must be a four-digit year".to_string(),
-            )
-        })?;
-    let month = month
-        .parse::<u8>()
-        .ok()
-        .filter(|month| (1..=12).contains(month))
-        .ok_or_else(|| {
-            invalid_format(
-                "application_expiration_month",
-                "card.month must be 1-12".to_string(),
-            )
-        })?;
+    let year = utils::parse_expiry_year_four_digit(year, "application_expiration_year")?;
+    let month = utils::parse_expiry_month(month, "application_expiration_month")?;
     let card_holder = within_limit(
         non_empty_secret(common.get_optional_billing_full_name()),
         "card.card_holder",
@@ -1576,11 +1547,7 @@ fn build_customer(
     id: String,
     ip_address: Secret<String, IpAddress>,
 ) -> Result<EcommpayCustomer, error_stack::Report<IntegrationError>> {
-    let screen_res = browser_info.and_then(|info| {
-        info.screen_width
-            .zip(info.screen_height)
-            .map(|(width, height)| format!("{width}x{height}"))
-    });
+    let screen_res = browser_info.and_then(BrowserInformation::get_optional_screen_resolution);
     let browser = browser_info
         .and_then(|info| non_empty(info.user_agent.clone()))
         .filter(|agent| {
@@ -2038,24 +2005,11 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
         };
 
         // G-SetupMandate-01: customer.id is required, and every later COF debit must reuse it.
-        let customer_id = non_empty(
-            common
-                .customer_id
-                .as_ref()
-                .or(request.customer_id.as_ref())
-                .map(|id| id.get_string_repr().to_string()),
-        )
-        .ok_or_else(|| {
-            missing_field(
-                "customer_id",
-                "Ecommpay requires customer.id on account verification; the same id must be \
+        let customer_id = required_customer_id(
+            common.customer_id.as_ref().or(request.customer_id.as_ref()),
+            "Ecommpay requires customer.id on account verification; the same id must be \
                  sent on every later COF purchase",
-            )
-        })?;
-        let customer_id_length = customer_id.chars().count();
-        if customer_id_length > MAX_ID_LENGTH {
-            return Err(too_long("customer.id", MAX_ID_LENGTH, customer_id_length));
-        }
+        )?;
 
         // G-SetupMandate-02: customer.ip_address is required.
         let ip_address = request
@@ -2427,19 +2381,8 @@ fn stored_card<T: PaymentMethodDataTypes>(
         }
     }
 
-    let year = exp_year.peek().trim().parse::<u16>().map_err(|_| {
-        invalid_format(
-            "card_exp_year",
-            "card.year must be a four-digit year".to_string(),
-        )
-    })?;
-    let month = exp_month
-        .peek()
-        .trim()
-        .parse::<u8>()
-        .ok()
-        .filter(|month| (1..=12).contains(month))
-        .ok_or_else(|| invalid_format("card_exp_month", "card.month must be 1-12".to_string()))?;
+    let year = utils::parse_expiry_year_four_digit(exp_year.peek(), "card_exp_year")?;
+    let month = utils::parse_expiry_month(exp_month.peek(), "card_exp_month")?;
     let card_holder = within_limit(
         non_empty_secret(card_holder),
         "card.card_holder",
@@ -2517,27 +2460,14 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
         }
 
         // G-RepeatPayment-02: customer.id must be the id the card was registered under.
-        let customer_id = non_empty(
-            common
-                .customer_id
+        let customer_id = required_customer_id(
+            common.customer_id.as_ref().or(request
+                .customer
                 .as_ref()
-                .or(request
-                    .customer
-                    .as_ref()
-                    .and_then(|customer| customer.customer_id.as_ref()))
-                .map(|id| id.get_string_repr().to_string()),
-        )
-        .ok_or_else(|| {
-            missing_field(
-                "customer_id",
-                "Ecommpay requires customer.id on a COF debit, equal to the customer id of the \
+                .and_then(|customer| customer.customer_id.as_ref())),
+            "Ecommpay requires customer.id on a COF debit, equal to the customer id of the \
                  COF registration",
-            )
-        })?;
-        let customer_id_length = customer_id.chars().count();
-        if customer_id_length > MAX_ID_LENGTH {
-            return Err(too_long("customer.id", MAX_ID_LENGTH, customer_id_length));
-        }
+        )?;
 
         // G-RepeatPayment-03: customer.ip_address is required.
         let ip_address = request
@@ -3416,7 +3346,7 @@ pub struct EcommpayOperation {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EcommpayAccount {
-    pub number: Option<String>,
+    pub number: Option<Secret<String>>,
     pub token: Option<Secret<String>>,
     #[serde(rename = "type")]
     pub account_type: Option<String>,
@@ -4319,6 +4249,11 @@ pub fn parse_webhook_body(
 }
 
 /// The outcome class of an operation status.
+///
+/// `ActionRequired` is Ecommpay's "waiting for the customer": `awaiting 3ds result`,
+/// `awaiting redirect result`, `awaiting customer action` and `awaiting merchant auth` (the
+/// customer must authenticate, or finish a step at the payment system). `Processing` is
+/// everything still in flight where nothing is asked of the customer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum OperationOutcome {
     Succeeded,
@@ -4336,10 +4271,10 @@ fn operation_outcome(status: EcommpayOperationStatus) -> OperationOutcome {
         }
         EcommpayOperationStatus::Awaiting3dsResult
         | EcommpayOperationStatus::AwaitingRedirectResult
-        | EcommpayOperationStatus::AwaitingCustomerAction => OperationOutcome::ActionRequired,
+        | EcommpayOperationStatus::AwaitingCustomerAction
+        | EcommpayOperationStatus::AwaitingMerchantAuth => OperationOutcome::ActionRequired,
         EcommpayOperationStatus::Processing
         | EcommpayOperationStatus::AwaitingClarification
-        | EcommpayOperationStatus::AwaitingMerchantAuth
         | EcommpayOperationStatus::AwaitingCustomer
         | EcommpayOperationStatus::AwaitingCapture => OperationOutcome::Processing,
         // Undocumented: classified as in progress, never as a terminal state (review rule 7).
