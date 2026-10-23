@@ -68,7 +68,9 @@
     "multisafepay": {},
     "netcetera": {},
     "nexinets": {},
-    "nexixpay": {},
+    "nexixpay": {
+      "reason": "No Nexi XPay sandbox API key is configured in CI, so certification cannot run. CI also cannot cover what the server-to-server API itself rules out: card payments are 3DS-only (3-step init, browser ACS, validation, payment), so the no-3DS global suites cannot chain; Nexi sends notifications only for Hosted Payment Page, Pay-by-Link and Build orders, so webhooks are checked against fixtures, not live delivery; and Nexi has no dispute API. Adding a sandbox key to CI, together with a 3DS-aware Authorize scenario that depends on PreAuthenticate, would close the card flows; the webhook and dispute gaps are properties of the Nexi API."
+    },
     "nmi": {},
     "noon": {},
     "novalnet": {},
