@@ -320,16 +320,6 @@ impl Sum for MinorUnit {
 /// This is distinct from domain [`MinorUnit`]. Use
 /// [`ConnectorMinorUnitForConnector`] to cross the conversion boundary. Its wire
 /// representation remains a signed 64-bit integer.
-///
-/// Connector amounts cannot be used directly as domain amounts:
-///
-/// ```compile_fail
-/// use ucs_common_utils::{ConnectorMinorUnit, MinorUnit};
-///
-/// fn domain_amount(amount: ConnectorMinorUnit) -> MinorUnit {
-///     amount
-/// }
-/// ```
 #[derive(
     Default,
     Debug,
