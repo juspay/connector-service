@@ -2892,6 +2892,18 @@ message PaymentServiceReverseRequest {
   // endpoint construction on this (e.g. Adyen's merchant-prefixed live URL) need
   // the real value; defaulting to None/test mode breaks live-URL substitution.
   optional bool test_mode = 9;
+
+  // Captured amount to reverse, including its currency. Required by connectors
+  // such as Worldpay RAFT that include the amount in the reversal request.
+  optional Money amount = 10;
+
+  // Original payment method for connectors that require PAN and expiry again.
+  optional PaymentMethod payment_method = 11;
+
+  // Original payment's capture method, not the reversal's disposition.
+  // Worldpay RAFT reverses MANUAL completions and AUTOMATIC purchases at
+  // different endpoints.
+  optional CaptureMethod capture_method = 12;
 }
 
 // Response message for reversing a captured payment if not yet settled (similar

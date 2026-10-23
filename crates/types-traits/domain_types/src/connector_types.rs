@@ -1734,6 +1734,10 @@ pub struct PaymentsCancelPostCaptureData {
     pub integrity_object: Option<PaymentVoidPostCaptureIntegrityObject>,
     pub raw_connector_response: Option<String>,
     pub browser_info: Option<BrowserInformation>,
+    pub amount: Option<Money>,
+    pub payment_method_data: Option<PaymentMethodData<DefaultPCIHolder>>,
+    /// Capture method of the original payment being reversed.
+    pub capture_method: Option<common_enums::CaptureMethod>,
 }
 
 impl PaymentsCancelPostCaptureData {
