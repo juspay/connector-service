@@ -3667,8 +3667,12 @@ impl ForeignTryFrom<grpc_api_types::payments::WebhookSecrets> for ConnectorWebho
         value: grpc_api_types::payments::WebhookSecrets,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
-            secret: value.secret.into(),
-            additional_secret: value.additional_secret.map(Secret::new),
+            secret: value
+                .secret
+                .map(|secret| secret.expose())
+                .unwrap_or_default()
+                .into(),
+            additional_secret: value.additional_secret,
         })
     }
 }
@@ -3714,8 +3718,12 @@ impl ForeignTryFrom<grpc_api_types::payments::RedirectResponseSecrets>
         value: grpc_api_types::payments::RedirectResponseSecrets,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
-            secret: value.secret.into(),
-            additional_secret: value.additional_secret.map(Secret::new),
+            secret: value
+                .secret
+                .map(|secret| secret.expose())
+                .unwrap_or_default()
+                .into(),
+            additional_secret: value.additional_secret,
         })
     }
 }

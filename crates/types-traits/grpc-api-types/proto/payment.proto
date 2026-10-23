@@ -1454,19 +1454,19 @@ message RequestDetails {
 // Secrets used for verifying connector webhooks.
 message WebhookSecrets {
   // Primary secret for webhook verification.
-  string secret = 1;
+  SecretString secret = 1;
 
   // Additional secret, if required by the connector.
-  optional string additional_secret = 2;
+  optional SecretString additional_secret = 2;
 }
 
 // Secrets used for source verification.
 message RedirectResponseSecrets {
   // Primary secret for source verification.
-  string secret = 1;
+  SecretString secret = 1;
 
   // Additional secret, if required by the connector.
-  optional string additional_secret = 2;
+  optional SecretString additional_secret = 2;
 }
 
 
