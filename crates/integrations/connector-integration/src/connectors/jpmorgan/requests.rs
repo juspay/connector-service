@@ -25,7 +25,7 @@ pub struct JpmorganPaymentsRequest<T: PaymentMethodDataTypes> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub account_holder: Option<JpmorganAccountHolder>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub statement_descriptor: Option<Secret<String>>,
+    pub statement_descriptor: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub merchant_order_number: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -36,6 +36,15 @@ pub struct JpmorganPaymentsRequest<T: PaymentMethodDataTypes> {
     pub is_amount_final: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub recurring: Option<JpmorganRecurring>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub partial_authorization_support: Option<JpmorganPartialAuthorizationSupport>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum JpmorganPartialAuthorizationSupport {
+    Supported,
+    NotSupported,
 }
 
 #[derive(Debug, Serialize)]
@@ -63,6 +72,15 @@ pub struct JpmorganCard<T: PaymentMethodDataTypes> {
     pub wallet_provider: Option<JpmorganWalletProvider>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub authentication: Option<JpmorganWalletAuthentication>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub merchant_sales_channel_name: Option<JpmorganMerchantSalesChannelName>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum JpmorganMerchantSalesChannelName {
+    MailOrder,
+    TelephoneOrder,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -246,6 +264,8 @@ pub struct JpmorganMitCardByNti<T: PaymentMethodDataTypes> {
     pub original_network_transaction_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub original_transaction_link_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub merchant_sales_channel_name: Option<JpmorganMerchantSalesChannelName>,
 }
 
 /// SetupMandate's payment method type — always carries `card`.
@@ -275,6 +295,8 @@ pub struct JpmorganSetupMandateRequest<T: PaymentMethodDataTypes> {
     pub merchant_order_number: Option<String>,
     pub initiator_type: JpmorganInitiatorType,
     pub account_on_file: JpmorganAccountOnFile,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub statement_descriptor: Option<String>,
 }
 
 /// RepeatPayment request (subsequent MIT).
@@ -293,6 +315,10 @@ pub struct JpmorganRepeatPaymentRequest<T: PaymentMethodDataTypes> {
     pub initiator_type: JpmorganInitiatorType,
     pub account_on_file: JpmorganAccountOnFile,
     pub is_amount_final: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub statement_descriptor: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub partial_authorization_support: Option<JpmorganPartialAuthorizationSupport>,
 }
 
 // ---- Google Pay (encrypted) request structs ----
