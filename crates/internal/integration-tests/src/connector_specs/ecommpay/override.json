@@ -277,6 +277,379 @@
         },
         "mandate_reference.connector_mandate_id.connector_mandate_id": null
       }
+    },
+    "ecommpay_manual_multiple_capture_refused": {
+      "extends": "no3ds_auto_capture_credit_card",
+      "grpc_req": {
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4000000000000077"
+            },
+            "card_exp_month": {
+              "value": "08"
+            },
+            "card_exp_year": {
+              "value": "30"
+            },
+            "card_cvc": {
+              "value": "999"
+            }
+          }
+        },
+        "capture_method": "MANUAL_MULTIPLE",
+        "address": {
+          "billing_address": {
+            "phone_number": {
+              "value": "auto_generate"
+            }
+          }
+        }
+      },
+      "assert": {
+        "status": null,
+        "error": null,
+        "error.error_code": {
+          "equals": "CAPTURE_METHOD_NOT_SUPPORTED"
+        },
+        "connector_transaction_id": {
+          "must_not_exist": true
+        }
+      }
+    },
+    "ecommpay_zero_amount_refused": {
+      "extends": "no3ds_auto_capture_credit_card",
+      "grpc_req": {
+        "amount": {
+          "minor_amount": 0
+        },
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4000000000000077"
+            },
+            "card_exp_month": {
+              "value": "08"
+            },
+            "card_exp_year": {
+              "value": "30"
+            },
+            "card_cvc": {
+              "value": "999"
+            }
+          }
+        },
+        "address": {
+          "billing_address": {
+            "phone_number": {
+              "value": "auto_generate"
+            }
+          }
+        }
+      },
+      "assert": {
+        "status": null,
+        "error": null,
+        "error.error_code": {
+          "equals": "INVALID_DATA_FORMAT"
+        },
+        "connector_transaction_id": {
+          "must_not_exist": true
+        }
+      }
+    },
+    "ecommpay_missing_return_url_refused": {
+      "extends": "no3ds_auto_capture_credit_card",
+      "grpc_req": {
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4000000000000077"
+            },
+            "card_exp_month": {
+              "value": "08"
+            },
+            "card_exp_year": {
+              "value": "30"
+            },
+            "card_cvc": {
+              "value": "999"
+            }
+          }
+        },
+        "address": {
+          "billing_address": {
+            "phone_number": {
+              "value": "auto_generate"
+            }
+          }
+        },
+        "return_url": "  "
+      },
+      "assert": {
+        "status": null,
+        "error": null,
+        "error.error_code": {
+          "equals": "MISSING_REQUIRED_FIELD"
+        },
+        "connector_transaction_id": {
+          "must_not_exist": true
+        }
+      }
+    },
+    "ecommpay_3ds_completion_empty_payload_refused": {
+      "extends": "no3ds_auto_capture_credit_card",
+      "grpc_req": {
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4000000000000077"
+            },
+            "card_exp_month": {
+              "value": "08"
+            },
+            "card_exp_year": {
+              "value": "30"
+            },
+            "card_cvc": {
+              "value": "999"
+            }
+          }
+        },
+        "address": {
+          "billing_address": {
+            "phone_number": {
+              "value": "auto_generate"
+            }
+          }
+        },
+        "redirection_response": {
+          "payload": {}
+        }
+      },
+      "assert": {
+        "status": null,
+        "error": null,
+        "error.error_code": {
+          "equals": "MISSING_REQUIRED_FIELD"
+        },
+        "connector_transaction_id": {
+          "must_not_exist": true
+        }
+      }
+    },
+    "ecommpay_google_pay_direct_token_refused": {
+      "extends": "no3ds_auto_capture_google_pay_encrypted",
+      "grpc_req": {
+        "payment_method": {
+          "google_pay_sdk": {
+            "tokenization_data": {
+              "encrypted_data": {
+                "token_type": "DIRECT"
+              }
+            }
+          }
+        }
+      },
+      "assert": {
+        "status": null,
+        "error": null,
+        "error.error_code": {
+          "equals": "NOT_SUPPORTED"
+        },
+        "connector_transaction_id": {
+          "must_not_exist": true
+        }
+      }
+    },
+    "ecommpay_3ds_completion_zero_amount_not_refused": {
+      "extends": "no3ds_auto_capture_credit_card",
+      "grpc_req": {
+        "amount": {
+          "minor_amount": 0
+        },
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4000000000000077"
+            },
+            "card_exp_month": {
+              "value": "08"
+            },
+            "card_exp_year": {
+              "value": "30"
+            },
+            "card_cvc": {
+              "value": "999"
+            }
+          }
+        },
+        "address": {
+          "billing_address": {
+            "phone_number": {
+              "value": "auto_generate"
+            }
+          }
+        },
+        "redirection_response": {
+          "payload": {
+            "PaRes": "eJzLSM3JyVcozy/KSQEAGgQEXQ==",
+            "MD": "grace-test-md"
+          }
+        }
+      },
+      "assert": {
+        "status": null,
+        "connector_transaction_id": null,
+        "error": null,
+        "raw_connector_request.value": {
+          "contains": "/v2/payment/card/3ds_result"
+        }
+      }
+    },
+    "ecommpay_3ds_return_url_success_is_complete_authorize_url": {
+      "extends": "no3ds_auto_capture_credit_card",
+      "grpc_req": {
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4000000000000077"
+            },
+            "card_exp_month": {
+              "value": "08"
+            },
+            "card_exp_year": {
+              "value": "30"
+            },
+            "card_cvc": {
+              "value": "999"
+            }
+          }
+        },
+        "address": {
+          "shipping_address": null,
+          "billing_address": {
+            "phone_number": {
+              "value": "auto_generate"
+            }
+          }
+        }
+      },
+      "assert": {
+        "status": null,
+        "connector_transaction_id": null,
+        "error": null,
+        "raw_connector_request.value": {
+          "contains": "\"return_url\":{\"success\":\"https://example.com/payment/complete\",\"decline\":\"https://example.com/payment/return\"}"
+        }
+      }
+    },
+    "ecommpay_3ds_return_url_success_falls_back_to_return_url": {
+      "extends": "no3ds_auto_capture_credit_card",
+      "grpc_req": {
+        "complete_authorize_url": null,
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4000000000000077"
+            },
+            "card_exp_month": {
+              "value": "08"
+            },
+            "card_exp_year": {
+              "value": "30"
+            },
+            "card_cvc": {
+              "value": "999"
+            }
+          }
+        },
+        "address": {
+          "shipping_address": null,
+          "billing_address": {
+            "phone_number": {
+              "value": "auto_generate"
+            }
+          }
+        }
+      },
+      "assert": {
+        "status": null,
+        "connector_transaction_id": null,
+        "error": null,
+        "raw_connector_request.value": {
+          "contains": "\"return_url\":{\"success\":\"https://example.com/payment/return\",\"decline\":\"https://example.com/payment/return\"}"
+        }
+      }
+    },
+    "ecommpay_acceptance_metadata_carries_payment_handle_token": {
+      "extends": "no3ds_auto_capture_credit_card",
+      "grpc_req": {
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4000000000000077"
+            },
+            "card_exp_month": {
+              "value": "08"
+            },
+            "card_exp_year": {
+              "value": "30"
+            },
+            "card_cvc": {
+              "value": "999"
+            }
+          }
+        },
+        "address": {
+          "shipping_address": null,
+          "billing_address": {
+            "phone_number": {
+              "value": "auto_generate"
+            }
+          }
+        }
+      },
+      "assert": {
+        "status": null,
+        "error": null,
+        "connector_feature_data.value": {
+          "contains": "\"payment_handle_token\""
+        }
+      }
+    },
+    "ecommpay_3ds_completion_with_token_payment_method": {
+      "extends": "no3ds_auto_capture_credit_card",
+      "grpc_req": {
+        "payment_method": {
+          "card": null,
+          "token": {
+            "token": {
+              "value": "ecommpay_handle_token_placeholder"
+            }
+          }
+        },
+        "address": {
+          "billing_address": {
+            "phone_number": {
+              "value": "auto_generate"
+            }
+          }
+        },
+        "redirection_response": {
+          "payload": {}
+        }
+      },
+      "assert": {
+        "status": null,
+        "error": null,
+        "error.error_code": {
+          "equals": "MISSING_REQUIRED_FIELD"
+        },
+        "connector_transaction_id": {
+          "must_not_exist": true
+        }
+      }
     }
   },
   "PaymentService/Get": {
@@ -414,6 +787,29 @@
           "must_exist": true
         }
       }
+    },
+    "ecommpay_setup_return_url_success_is_complete_authorize_url": {
+      "extends": "setup_recurring",
+      "grpc_req": {
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4000000000000077"
+            }
+          }
+        },
+        "customer": {
+          "connector_customer_id": null
+        }
+      },
+      "assert": {
+        "error": null,
+        "status": null,
+        "connector_recurring_payment_id": null,
+        "raw_connector_request.value": {
+          "contains": "\"return_url\":{\"success\":\"https://example.com/payment/complete\",\"decline\":\"https://example.com/payment/return\"}"
+        }
+      }
     }
   },
   "PaymentService/Refund": {
@@ -451,6 +847,20 @@
       "grpc_req": {},
       "assert": {
         "event_status": null
+      }
+    },
+    "ecommpay_decline_callback_maps_failure": {
+      "extends": "payment_failed",
+      "assert": {
+        "event_content.payments_response.status": {
+          "one_of": [
+            "FAILURE",
+            "AUTHORIZATION_FAILED"
+          ]
+        },
+        "event_content.payments_response.error.connector_details.code": {
+          "must_exist": true
+        }
       }
     }
   },
