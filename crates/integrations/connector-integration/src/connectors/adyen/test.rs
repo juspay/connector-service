@@ -1259,6 +1259,49 @@ mod tests {
             );
         }
 
+        /// Adyen answers the same standalone-authentication call with a `redirect` action when
+        /// native 3DS2 was not requested, or the account cannot do it. That body carries no
+        /// `subtype` and no `token`: while the field was typed as `threeDS2` alone the whole
+        /// response failed to deserialize, so the leg reported "response body did not match the
+        /// expected format" instead of the reason, and the `RedirectShopper` arm above could
+        /// never be reached. It must parse, and the leg must say what happened.
+        #[test]
+        fn a_redirect_action_parses_rather_than_failing_to_deserialize() {
+            let redirect_action = r#""action":{"type":"redirect","url":"https://test.adyen.com/hpp/3d/validate.shtml","method":"POST","paymentMethodType":"scheme","data":{"PaReq":"pa","MD":"md","TermUrl":"term"}}"#;
+
+            // The realistic shape: adyen picked the redirect variant and says so.
+            let body = format!(
+                r#"{{"resultCode":"RedirectShopper","pspReference":"psp-1",{redirect_action}}}"#
+            );
+            assert!(
+                serde_json::from_str::<AdyenPreAuthenticationResponse>(&body).is_ok(),
+                "a redirect action must still deserialize"
+            );
+            let out = pre_authenticate(&body, None);
+            assert_eq!(
+                outcome(out.resource_common_data.status, &out.response),
+                (AttemptStatus::AuthenticationFailed, false, false)
+            );
+
+            // A shopper-action resultCode carrying a non-native action: the leg names the
+            // action type rather than trying to decode a token that is not there.
+            let mismatched = format!(
+                r#"{{"resultCode":"IdentifyShopper","pspReference":"psp-1",{redirect_action}}}"#
+            );
+            let out = pre_authenticate(&mismatched, None);
+            assert_eq!(
+                outcome(out.resource_common_data.status, &out.response),
+                (AttemptStatus::AuthenticationFailed, false, false)
+            );
+            let reason = refusal(&out.response).and_then(|(_, _, reason)| reason);
+            assert!(
+                reason
+                    .as_deref()
+                    .is_some_and(|reason| reason.contains("Redirect")),
+                "the reason should name the action adyen sent, got {reason:?}"
+            );
+        }
+
         /// Money moved on an `authenticationOnly` call: reported as an error, but with the
         /// honest money status so the composite loop does not authorise the payment twice.
         #[test]

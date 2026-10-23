@@ -9924,11 +9924,32 @@ pub struct AdyenAuthenticationResponse {
     result_code: AdyenAuthenticationStatus,
     psp_reference: Option<String>,
     merchant_reference: Option<String>,
-    action: Option<AdyenThreeDs2Action>,
+    action: Option<AdyenAuthenticationAction>,
     #[serde(rename = "threeDS2Result")]
     three_ds2_result: Option<AdyenThreeDS2Result>,
     refusal_reason: Option<String>,
     refusal_reason_code: Option<String>,
+}
+
+/// `action` on a standalone-authentication response. Only the native `threeDS2` shape is
+/// runnable on these legs, but Adyen answers the same call with a `redirect` action when native
+/// 3DS2 was not requested or the account cannot do it - and that body carries no `subtype` and
+/// no `token`. Typed as `threeDS2` alone, such a response failed to deserialize outright, so the
+/// leg reported "response body did not match the expected format" instead of the actual reason,
+/// and the `RedirectShopper` arm below could never be reached.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum AdyenAuthenticationAction {
+    /// Ordered first so a real `threeDS2` action cannot fall through to the catch-all.
+    ThreeDs2(AdyenThreeDs2Action),
+    Other(AdyenNonNativeAction),
+}
+
+/// Just enough of a non-native action to name it in the error.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct AdyenNonNativeAction {
+    #[serde(rename = "type")]
+    type_of_response: ActionType,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -10246,6 +10267,17 @@ fn get_adyen_native_outcome(
                 response.result_code
             )))
         })?;
+        let action = match action {
+            AdyenAuthenticationAction::ThreeDs2(action) => action,
+            // Adyen chose the redirect variant of standalone authentication. These legs drive
+            // the native one; the caller has to run the redirect flow through Authorize.
+            AdyenAuthenticationAction::Other(other) => {
+                return Err(failed(Some(format!(
+                    "adyen answered with a {:?} action; the native legs cannot run it",
+                    other.type_of_response
+                ))))
+            }
+        };
         if !allowed {
             return Err(failed(Some(format!(
                 "unexpected {:?} action on the {leg:?} leg",
