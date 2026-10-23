@@ -984,6 +984,7 @@ jobs:
 
     outputs:
       cache-key: ${{ steps.cache-key.outputs.key }}
+      build-arch: ${{ runner.arch }}
 
     steps:
       - name: Checkout code
@@ -995,7 +996,8 @@ jobs:
           toolchain: stable
 
       - name: Install SDK build target
-        run: rustup target add x86_64-unknown-linux-gnu
+        run: |
+          rustup target add "$(rustc -vV | sed -n 's/^host: //p')"
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
@@ -1009,7 +1011,7 @@ jobs:
 
       - name: Compute SDK binaries cache key
         id: cache-key
-        run: echo "key=sdk-v2-${{ runner.os }}-${{ hashFiles('crates/ffi/**/*.rs', 'sdk/grpc-ffi/**/*.rs', 'crates/internal/uniffi-bindgen/**/*.rs', 'sdk/rust/smoke-test/**/*.rs', 'crates/grpc-server/**/*.rs', 'crates/types-traits/grpc-api-types/proto/**') }}" >> "$GITHUB_OUTPUT"
+        run: echo "key=sdk-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('crates/ffi/**/*.rs', 'sdk/grpc-ffi/**/*.rs', 'crates/internal/uniffi-bindgen/**/*.rs', 'sdk/rust/smoke-test/**/*.rs', 'crates/grpc-server/**/*.rs', 'crates/types-traits/grpc-api-types/proto/**') }}" >> "$GITHUB_OUTPUT"
 
       - name: Restore SDK binaries cache
         id: sdk-cache-restore
@@ -1047,7 +1049,7 @@ jobs:
           RUSTUP_TOOLCHAIN: stable
         run: |
           cargo build -p grpc-server -p hyperswitch-grpc-ffi -p ffi -p hyperswitch-smoke-test -p uniffi-bindgen \
-            --profile release-fast --target x86_64-unknown-linux-gnu
+            --profile release-fast --target "$(rustc -vV | sed -n 's/^host: //p')"
 
       - name: Save SDK binaries cache
         if: steps.sdk-cache-restore.outputs.cache-hit != 'true'
@@ -1193,6 +1195,7 @@ jobs:
             target/*/*/grpc-smoke-test
             target/*/*/smoke-test-webhook
           key: ${{ needs.sdk-build.outputs.cache-key }}
+        if: needs.sdk-build.outputs.build-arch == runner.arch
 
       - name: Build SDK binaries when cache is unavailable
         if: steps.sdk-cache-restore.outputs.cache-hit != 'true'
@@ -1200,7 +1203,7 @@ jobs:
           RUSTUP_TOOLCHAIN: stable
         run: |
           cargo build -p grpc-server -p hyperswitch-grpc-ffi -p ffi -p hyperswitch-smoke-test -p uniffi-bindgen \
-            --profile release-fast --target x86_64-unknown-linux-gnu
+            --profile release-fast --target "$(rustc -vV | sed -n 's/^host: //p')"
 
       - name: Create connector credentials
         shell: bash
