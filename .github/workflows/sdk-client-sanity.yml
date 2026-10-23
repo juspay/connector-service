@@ -20,6 +20,7 @@ on:
       - 'sdk/tests/client_sanity/**'
       - 'sdk/tests/package.json'
       - 'Makefile'
+      - '.github/workflows/sdk-client-sanity.yml'
   push:
     branches:
       - main
@@ -35,6 +36,7 @@ on:
       - 'sdk/tests/client_sanity/**'
       - 'sdk/tests/package.json'
       - 'Makefile'
+      - '.github/workflows/sdk-client-sanity.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -51,8 +53,7 @@ jobs:
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
           'ubuntu-latest' ||
-          github.event_name == 'push' && 'hyperswitch-runners-merge' ||
-          'hyperswitch-runners' }}
+          'prism-runners' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4

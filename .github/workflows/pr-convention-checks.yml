@@ -34,7 +34,7 @@ jobs:
           github.event.pull_request.head.repo.full_name != github.repository &&
           'ubuntu-latest' ||
           github.event_name == 'merge_group' && 'ubuntu-latest' ||
-          'hyperswitch-runners' }}
+          'prism-runners' }}
 
     steps:
       - name: Install Rust
@@ -76,7 +76,7 @@ jobs:
           github.event.pull_request.head.repo.full_name != github.repository &&
           'ubuntu-latest' ||
           github.event_name == 'merge_group' && 'ubuntu-latest' ||
-          'hyperswitch-runners' }}
+          'prism-runners' }}
     timeout-minutes: 60
     concurrency:
       group: deja-art-gate-${{ github.event.pull_request.number || github.run_id }}

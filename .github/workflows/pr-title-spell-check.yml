@@ -16,7 +16,7 @@ jobs:
     name: Spell check PR title
     runs-on: >-
       ${{ github.event.pull_request.head.repo.full_name != github.repository &&
-          'ubuntu-latest' || 'hyperswitch-runners' }}
+          'ubuntu-latest' || 'prism-runners' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

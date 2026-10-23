@@ -17,7 +17,7 @@ jobs:
     name: Verify Hotfix PR
     runs-on: >-
       ${{ github.event.pull_request.head.repo.full_name != github.repository &&
-          'ubuntu-latest' || 'hyperswitch-runners' }}
+          'ubuntu-latest' || 'prism-runners' }}
     env:
       HOTFIX_PR_AUTHOR: ${{ github.event.pull_request.user.login }}
       HOTFIX_PR_TITLE: ${{ github.event.pull_request.title }}

@@ -16,7 +16,7 @@ jobs:
     runs-on: >-
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
-          'ubuntu-latest' || 'hyperswitch-runners' }}
+          'ubuntu-latest' || 'prism-runners' }}
     defaults:
       run:
         # The plugin is a self-contained npm workspace under plugins/medusa;

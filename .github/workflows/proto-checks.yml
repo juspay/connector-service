@@ -5,6 +5,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
     paths:
       - '**.proto'
+      - '.github/workflows/proto-checks.yml'
 
 concurrency:
   group: proto-checks-${{ github.ref }}
@@ -20,7 +21,7 @@ jobs:
     runs-on: >-
       ${{ github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name != github.repository &&
-          'ubuntu-latest' || 'hyperswitch-runners' }}
+          'ubuntu-latest' || 'prism-runners' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
