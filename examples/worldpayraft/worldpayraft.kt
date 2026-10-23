@@ -26,7 +26,7 @@ import payments.ConnectorSpecificConfig
 import types.Payment.WorldpayraftConfig
 import payments.SecretString
 
-val SUPPORTED_FLOWS = listOf<String>("authorize", "capture", "proxy_authorize", "proxy_setup_recurring", "recurring_charge", "refund", "setup_recurring", "void")
+val SUPPORTED_FLOWS = listOf<String>("authorize", "proxy_authorize", "proxy_setup_recurring", "recurring_charge", "setup_recurring")
 
 val _defaultConfig: ConnectorConfig = ConnectorConfig.newBuilder()
     .setOptions(SdkOptions.newBuilder().setEnvironment(Environment.SANDBOX).build())
@@ -69,41 +69,6 @@ private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAutho
     }.build()
 }
 
-private fun buildCaptureRequest(connectorTransactionIdStr: String): PaymentServiceCaptureRequest {
-    return PaymentServiceCaptureRequest.newBuilder().apply {
-        merchantCaptureId = "probe_capture_001"  // Identification.
-        connectorTransactionId = connectorTransactionIdStr
-        amountToCaptureBuilder.apply {  // Capture Details.
-            minorAmount = 1000L
-            currency = Currency.USD
-        }
-    }.build()
-}
-
-private fun buildRefundRequest(connectorTransactionIdStr: String): PaymentServiceRefundRequest {
-    return PaymentServiceRefundRequest.newBuilder().apply {
-        merchantRefundId = "probe_refund_001"  // Identification.
-        connectorTransactionId = connectorTransactionIdStr
-        paymentAmount = 1000L  // Amount Information.
-        refundAmountBuilder.apply {
-            minorAmount = 1000L
-            currency = Currency.USD
-        }
-        reason = "customer_request"  // Reason for the refund.
-    }.build()
-}
-
-private fun buildVoidRequest(connectorTransactionIdStr: String): PaymentServiceVoidRequest {
-    return PaymentServiceVoidRequest.newBuilder().apply {
-        merchantVoidId = "probe_void_001"  // Identification.
-        connectorTransactionId = connectorTransactionIdStr
-        amountBuilder.apply {  // Amount Information.
-            minorAmount = 1000L
-            currency = Currency.USD
-        }
-    }.build()
-}
-
 // Scenario: One-step Payment (Authorize + Capture)
 // Simple payment that authorizes and captures in one call. Use for immediate charges.
 fun processCheckoutAutocapture(txnId: String, config: ConnectorConfig = _defaultConfig): Map<String, Any?> {
@@ -120,69 +85,6 @@ fun processCheckoutAutocapture(txnId: String, config: ConnectorConfig = _default
     return mapOf("status" to authorizeResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId, "error" to authorizeResponse.error)
 }
 
-// Scenario: Card Payment (Authorize + Capture)
-// Two-step card payment. First authorize, then capture. Use when you need to verify funds before finalizing.
-fun processCheckoutCard(txnId: String, config: ConnectorConfig = _defaultConfig): Map<String, Any?> {
-    val paymentClient = PaymentClient(config)
-
-    // Step 1: Authorize — reserve funds on the payment method
-    val authorizeResponse = paymentClient.authorize(buildAuthorizeRequest("MANUAL"))
-
-    when (authorizeResponse.status.name) {
-        "FAILED"  -> throw RuntimeException("Payment failed: ${authorizeResponse.error.unifiedDetails.message}")
-        "PENDING" -> return mapOf("status" to "PENDING")  // await webhook before proceeding
-    }
-
-    // Step 2: Capture — settle the reserved funds
-    val captureResponse = paymentClient.capture(buildCaptureRequest(authorizeResponse.connectorTransactionId ?: ""))
-
-    if (captureResponse.status.name == "FAILED")
-        throw RuntimeException("Capture failed: ${captureResponse.error.unifiedDetails.message}")
-
-    return mapOf("status" to captureResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId, "error" to authorizeResponse.error)
-}
-
-// Scenario: Refund
-// Return funds to the customer for a completed payment.
-fun processRefund(txnId: String, config: ConnectorConfig = _defaultConfig): Map<String, Any?> {
-    val paymentClient = PaymentClient(config)
-
-    // Step 1: Authorize — reserve funds on the payment method
-    val authorizeResponse = paymentClient.authorize(buildAuthorizeRequest("AUTOMATIC"))
-
-    when (authorizeResponse.status.name) {
-        "FAILED"  -> throw RuntimeException("Payment failed: ${authorizeResponse.error.unifiedDetails.message}")
-        "PENDING" -> return mapOf("status" to "PENDING")  // await webhook before proceeding
-    }
-
-    // Step 2: Refund — return funds to the customer
-    val refundResponse = paymentClient.refund(buildRefundRequest(authorizeResponse.connectorTransactionId ?: ""))
-
-    if (refundResponse.status.name == "FAILED")
-        throw RuntimeException("Refund failed: ${refundResponse.error.unifiedDetails.message}")
-
-    return mapOf("status" to refundResponse.status.name, "error" to refundResponse.error)
-}
-
-// Scenario: Void Payment
-// Cancel an authorized but not-yet-captured payment.
-fun processVoidPayment(txnId: String, config: ConnectorConfig = _defaultConfig): Map<String, Any?> {
-    val paymentClient = PaymentClient(config)
-
-    // Step 1: Authorize — reserve funds on the payment method
-    val authorizeResponse = paymentClient.authorize(buildAuthorizeRequest("MANUAL"))
-
-    when (authorizeResponse.status.name) {
-        "FAILED"  -> throw RuntimeException("Payment failed: ${authorizeResponse.error.unifiedDetails.message}")
-        "PENDING" -> return mapOf("status" to "PENDING")  // await webhook before proceeding
-    }
-
-    // Step 2: Void — release reserved funds (cancel authorization)
-    val voidResponse = paymentClient.void(buildVoidRequest(authorizeResponse.connectorTransactionId ?: ""))
-
-    return mapOf("status" to voidResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId, "error" to voidResponse.error)
-}
-
 // Flow: PaymentService.Authorize (Card)
 fun authorize(txnId: String, config: ConnectorConfig = _defaultConfig) {
     val client = PaymentClient(config)
@@ -193,16 +95,6 @@ fun authorize(txnId: String, config: ConnectorConfig = _defaultConfig) {
         "PENDING" -> println("Pending — await webhook before proceeding")
         else      -> println("Authorized: ${response.connectorTransactionId}")
     }
-}
-
-// Flow: PaymentService.Capture
-fun capture(txnId: String, config: ConnectorConfig = _defaultConfig) {
-    val client = PaymentClient(config)
-    val request = buildCaptureRequest("C|123456|123456789012|000001")
-    val response = client.capture(request)
-    if (response.status.name == "FAILED")
-        throw RuntimeException("Capture failed: ${response.error.unifiedDetails.message}")
-    println("Done: ${response.status.name}")
 }
 
 // Flow: PaymentService.ProxyAuthorize
@@ -297,16 +189,6 @@ fun recurringCharge(txnId: String, config: ConnectorConfig = _defaultConfig) {
     println("Done: ${response.status.name}")
 }
 
-// Flow: PaymentService.Refund
-fun refund(txnId: String, config: ConnectorConfig = _defaultConfig) {
-    val client = PaymentClient(config)
-    val request = buildRefundRequest("C|123456|123456789012|000001")
-    val response = client.refund(request)
-    if (response.status.name == "FAILED")
-        throw RuntimeException("Refund failed: ${response.error.unifiedDetails.message}")
-    println("Done: ${response.status.name}")
-}
-
 // Flow: PaymentService.SetupRecurring
 fun setupRecurring(txnId: String, config: ConnectorConfig = _defaultConfig) {
     val client = PaymentClient(config)
@@ -346,33 +228,17 @@ fun setupRecurring(txnId: String, config: ConnectorConfig = _defaultConfig) {
     }
 }
 
-// Flow: PaymentService.Void
-fun void(txnId: String, config: ConnectorConfig = _defaultConfig) {
-    val client = PaymentClient(config)
-    val request = buildVoidRequest("C|123456|123456789012|000001")
-    val response = client.void(request)
-    if (response.status.name == "FAILED")
-        throw RuntimeException("Void failed: ${response.error.unifiedDetails.message}")
-    println("Done: ${response.status.name}")
-}
-
 
 fun main(args: Array<String>) {
     val txnId = "order_001"
     val flow = args.firstOrNull() ?: "processCheckoutAutocapture"
     when (flow) {
         "processCheckoutAutocapture" -> processCheckoutAutocapture(txnId)
-        "processCheckoutCard" -> processCheckoutCard(txnId)
-        "processRefund" -> processRefund(txnId)
-        "processVoidPayment" -> processVoidPayment(txnId)
         "authorize" -> authorize(txnId)
-        "capture" -> capture(txnId)
         "proxyAuthorize" -> proxyAuthorize(txnId)
         "proxySetupRecurring" -> proxySetupRecurring(txnId)
         "recurringCharge" -> recurringCharge(txnId)
-        "refund" -> refund(txnId)
         "setupRecurring" -> setupRecurring(txnId)
-        "void" -> void(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, authorize, capture, proxyAuthorize, proxySetupRecurring, recurringCharge, refund, setupRecurring, void")
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, authorize, proxyAuthorize, proxySetupRecurring, recurringCharge, setupRecurring")
     }
 }

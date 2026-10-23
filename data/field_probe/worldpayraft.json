@@ -176,7 +176,7 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"creditpurchase\":{\"MiscAmountsBalances\":{\"TransactionAmount\":\"10.00\"},\"CardInfo\":{\"PAN\":\"4111111111111111\",\"ExpirationDate\":\"3003\"},\"CardVerificationData\":{\"Cvv2Cvc2CIDIndicator\":\"1\",\"Cvv2Cvc2CIDValue\":\"737\"},\"TerminalData\":{\"EntryMode\":\"KEYED\",\"POSConditionCode\":\"59\",\"TerminalEntryCap\":\"0\"},\"E-commerceData\":{\"E-commerceIndicator\":\"07\"},\"WorldPayMerchantID\":\"probe_key\",\"APITransactionID\":\"probe_txn_001\",\"LocalDateTime\":\"2020-01-01T00:00:00+00:00\"}}"
+          "body": "{\"creditpurchase\":{\"MiscAmountsBalances\":{\"TransactionAmount\":\"10.00\"},\"AccountCodesAndData\":{\"FromAccountSelected\":\"CC\"},\"CardInfo\":{\"PAN\":\"4111111111111111\",\"ExpirationDate\":\"3003\"},\"CardVerificationData\":{\"Cvv2Cvc2CIDIndicator\":\"1\",\"Cvv2Cvc2CIDValue\":\"737\"},\"TerminalData\":{\"EntryMode\":\"KEYED\",\"POSConditionCode\":\"59\",\"TerminalEntryCap\":\"0\"},\"E-commerceData\":{\"E-commerceIndicator\":\"07\"},\"WorldPayMerchantID\":\"probe_key\",\"APITransactionID\":\"probe_txn_001\",\"LocalDateTime\":\"2020-01-01T00:00:00+00:00\"}}"
         }
       },
       "CashappQr": {
@@ -578,25 +578,8 @@
     },
     "capture": {
       "default": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_capture_id": "probe_capture_001",
-          "connector_transaction_id": "C|123456|123456789012|000001",
-          "amount_to_capture": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          }
-        },
-        "sample": {
-          "url": "https://ws-cert.vantiv.com/merchant/servicing/apitransactions/NativeRaftApi/v1/credit/completion",
-          "method": "Post",
-          "headers": {
-            "authorization": "VANTIV license=\"probe_key\"",
-            "content-type": "application/json",
-            "via": "HyperSwitch"
-          },
-          "body": "{\"creditcompletion\":{\"MiscAmountsBalances\":{\"TransactionAmount\":\"10.00\"},\"ReferenceTraceNumbers\":{\"AuthorizationNumber\":\"123456\",\"RetrievalREFNumber\":\"123456789012\",\"SystemTraceNumber\":\"000001\"},\"WorldPayMerchantID\":\"probe_key\",\"APITransactionID\":\"probe_capture_00\",\"LocalDateTime\":\"2020-01-01T00:00:00+00:00\"}}"
-        }
+        "status": "error",
+        "error": "Stuck on field: connector_feature_data.api_transaction_id — Missing required field: connector_feature_data.api_transaction_id"
       }
     },
     "create_client_authentication_token": {
@@ -677,8 +660,8 @@
     },
     "incremental_authorization": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Worldpay RAFT incremental authorization requires the shared follow-up card contract. The incremental authorization request cannot supply the original card yet"
+        "status": "error",
+        "error": "Stuck on field: payment_method — Missing required field: payment_method"
       }
     },
     "parse_event": {
@@ -735,7 +718,7 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"creditpurchase\":{\"MiscAmountsBalances\":{\"TransactionAmount\":\"10.00\"},\"CardInfo\":{\"PAN\":\"{{$card_number}}\",\"ExpirationDate\":\"3003\"},\"CardVerificationData\":{\"Cvv2Cvc2CIDIndicator\":\"1\",\"Cvv2Cvc2CIDValue\":\"{{$card_cvc}}\"},\"TerminalData\":{\"EntryMode\":\"KEYED\",\"POSConditionCode\":\"59\",\"TerminalEntryCap\":\"0\"},\"E-commerceData\":{\"E-commerceIndicator\":\"07\"},\"WorldPayMerchantID\":\"probe_key\",\"APITransactionID\":\"probe_proxy_txn_\",\"LocalDateTime\":\"2020-01-01T00:00:00+00:00\"}}"
+          "body": "{\"creditpurchase\":{\"MiscAmountsBalances\":{\"TransactionAmount\":\"10.00\"},\"AccountCodesAndData\":{\"FromAccountSelected\":\"CC\"},\"CardInfo\":{\"PAN\":\"{{$card_number}}\",\"ExpirationDate\":\"3003\"},\"CardVerificationData\":{\"Cvv2Cvc2CIDIndicator\":\"1\",\"Cvv2Cvc2CIDValue\":\"{{$card_cvc}}\"},\"TerminalData\":{\"EntryMode\":\"KEYED\",\"POSConditionCode\":\"59\",\"TerminalEntryCap\":\"0\"},\"E-commerceData\":{\"E-commerceIndicator\":\"07\"},\"WorldPayMerchantID\":\"probe_key\",\"APITransactionID\":\"probe_proxy_txn_\",\"LocalDateTime\":\"2020-01-01T00:00:00+00:00\"}}"
         }
       }
     },
@@ -811,7 +794,7 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"creditpurchase\":{\"MiscAmountsBalances\":{\"TransactionAmount\":\"10.00\"},\"CardInfo\":{},\"EncryptionTokenData\":{\"TokenizedPAN\":\"probe-mandate-123\"},\"TerminalData\":{\"EntryMode\":\"CREDONFL\",\"POSConditionCode\":\"08\",\"TerminalEntryCap\":\"0\",\"POSEnvironment\":\"C\"},\"E-commerceData\":{\"E-commerceIndicator\":\"01\"},\"ProcFlagsIndicators\":{\"MerchantInitiatedTransaction\":\"Y\"},\"WorldPayMerchantID\":\"probe_key\",\"APITransactionID\":\"\",\"LocalDateTime\":\"2020-01-01T00:00:00+00:00\"}}"
+          "body": "{\"creditpurchase\":{\"MiscAmountsBalances\":{\"TransactionAmount\":\"10.00\"},\"AccountCodesAndData\":{\"FromAccountSelected\":\"CC\"},\"CardInfo\":{},\"EncryptionTokenData\":{\"TokenizedPAN\":\"probe-mandate-123\"},\"TerminalData\":{\"EntryMode\":\"CREDONFL\",\"POSConditionCode\":\"08\",\"TerminalEntryCap\":\"0\",\"POSEnvironment\":\"C\"},\"E-commerceData\":{\"E-commerceIndicator\":\"01\"},\"ProcFlagsIndicators\":{\"MerchantInitiatedTransaction\":\"Y\"},\"WorldPayMerchantID\":\"probe_key\",\"APITransactionID\":\"\",\"LocalDateTime\":\"2020-01-01T00:00:00+00:00\"}}"
         }
       }
     },
@@ -828,27 +811,8 @@
     },
     "refund": {
       "default": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_refund_id": "probe_refund_001",
-          "connector_transaction_id": "C|123456|123456789012|000001",
-          "payment_amount": 1000,
-          "refund_amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          },
-          "reason": "customer_request"
-        },
-        "sample": {
-          "url": "https://ws-cert.vantiv.com/merchant/servicing/apitransactions/NativeRaftApi/v1/credit/refund",
-          "method": "Post",
-          "headers": {
-            "authorization": "VANTIV license=\"probe_key\"",
-            "content-type": "application/json",
-            "via": "HyperSwitch"
-          },
-          "body": "{\"creditrefund\":{\"MiscAmountsBalances\":{\"TransactionAmount\":\"10.00\"},\"ReferenceTraceNumbers\":{\"AuthorizationNumber\":\"123456\",\"RetrievalREFNumber\":\"123456789012\",\"SystemTraceNumber\":\"000001\"},\"WorldPayMerchantID\":\"probe_key\",\"APITransactionID\":\"probe_refund_001\",\"LocalDateTime\":\"2020-01-01T00:00:00+00:00\"}}"
-        }
+        "status": "error",
+        "error": "Stuck on field: payment_method — Missing required field: payment_method"
       }
     },
     "refund_get": {
@@ -925,25 +889,8 @@
     },
     "void": {
       "default": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_void_id": "probe_void_001",
-          "connector_transaction_id": "C|123456|123456789012|000001",
-          "amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          }
-        },
-        "sample": {
-          "url": "https://ws-cert.vantiv.com/merchant/servicing/apitransactions/NativeRaftApi/v1/credit/authorization",
-          "method": "Post",
-          "headers": {
-            "authorization": "VANTIV license=\"probe_key\"",
-            "content-type": "application/json",
-            "via": "HyperSwitch"
-          },
-          "body": "{\"creditauth\":{\"MiscAmountsBalances\":{\"TransactionAmount\":\"10.00\"},\"AuthorizationType\":\"RV\",\"ReversalAdviceReasonCd\":\"000\",\"ReferenceTraceNumbers\":{\"AuthorizationNumber\":\"123456\",\"RetrievalREFNumber\":\"123456789012\",\"SystemTraceNumber\":\"000001\"},\"WorldPayMerchantID\":\"probe_key\",\"APITransactionID\":\"probe_void_001\",\"LocalDateTime\":\"2020-01-01T00:00:00+00:00\"}}"
-        }
+        "status": "error",
+        "error": "Stuck on field: connector_feature_data.api_transaction_id — Missing required field: connector_feature_data.api_transaction_id"
       }
     }
   }
