@@ -665,10 +665,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let amount = BarclaycardAmountConvertor::convert(
-            router_data.request.amount.amount,
-            router_data.request.currency,
-        )?;
+        let amount = BarclaycardAmountConvertor::convert(&router_data.request.amount)?;
 
         // Build the payment_information block and, for wallet payments, the
         // processingInformation.paymentSolution code. Card payments leave payment_solution
@@ -958,10 +955,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &value.router_data;
-        let amount = BarclaycardAmountConvertor::convert(
-            router_data.request.amount_to_capture.amount,
-            router_data.request.currency,
-        )?;
+        let amount = BarclaycardAmountConvertor::convert(&router_data.request.amount_to_capture)?;
 
         let merchant_defined_information =
             router_data.request.metadata.clone().map(|metadata| {
@@ -1013,8 +1007,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     field_name: "currency",
                     context: Default::default(),
                 })?;
-        let amount = BarclaycardAmountConvertor::convert(
-            router_data
+        let amount = BarclaycardAmountConvertor::convert(&common_utils::types::Money {
+            amount: router_data
                 .request
                 .amount
                 .as_ref()
@@ -1024,7 +1018,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     context: Default::default(),
                 })?,
             currency,
-        )?;
+        })?;
 
         let merchant_defined_information =
             router_data.request.metadata.clone().map(|metadata| {
@@ -1074,10 +1068,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let amount = BarclaycardAmountConvertor::convert(
-            router_data.request.refund_amount.amount,
-            router_data.request.currency,
-        )?;
+        let amount = BarclaycardAmountConvertor::convert(&router_data.request.refund_amount)?;
 
         Ok(Self {
             order_information: requests::OrderInformation {
@@ -1614,10 +1605,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let amount = BarclaycardAmountConvertor::convert(
-            router_data.request.amount.amount,
-            router_data.request.currency,
-        )?;
+        let amount = BarclaycardAmountConvertor::convert(&router_data.request.amount)?;
 
         let (commerce_indicator, authorization_options, payment_information) = match &router_data
             .request
@@ -2284,8 +2272,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .request
             .currency
             .ok_or_else(|| missing_required_field_error(FIELD_CURRENCY, FLOW_AUTHENTICATE))?;
-        let total_amount =
-            BarclaycardAmountConvertor::convert(router_data.request.amount.amount, currency)?;
+        let total_amount = BarclaycardAmountConvertor::convert(&common_utils::types::Money {
+            amount: router_data.request.amount.amount,
+            currency,
+        })?;
 
         let email = router_data
             .resource_common_data
@@ -2517,8 +2507,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .request
             .currency
             .ok_or_else(|| missing_required_field_error(FIELD_CURRENCY, FLOW_POST_AUTHENTICATE))?;
-        let total_amount =
-            BarclaycardAmountConvertor::convert(router_data.request.amount.amount, currency)?;
+        let total_amount = BarclaycardAmountConvertor::convert(&common_utils::types::Money {
+            amount: router_data.request.amount.amount,
+            currency,
+        })?;
         let order_information = requests::OrderInformation {
             amount_details: requests::Amount {
                 total_amount,
