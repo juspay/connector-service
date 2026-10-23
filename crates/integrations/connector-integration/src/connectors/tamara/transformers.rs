@@ -348,42 +348,45 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .resource_common_data
             .order_details
             .clone()
-            .filter(|od| !od.is_empty())
-            .ok_or(error_stack::report!(
-                errors::IntegrationError::MissingRequiredField {
-                    field_name: "order_details",
-                    context: errors::IntegrationErrorContext::default(),
-                }
-            ))?
-            .iter()
-            .map(|data| {
-                Ok(TamaraLineItem {
-                    name: data.get_product_name(),
-                    quantity: data.get_quantity(),
-                    reference_id: data.get_product_id()?,
-                    sku: data.get_sku()?,
-                    total_amount: to_tamara_amount(
-                        data.get_total_amount(),
-                        "Failed to convert line item total amount from minor to major units",
-                    )?,
-                    item_type: data.get_product_type()?,
-                    item_url: data.get_optional_product_link(),
-                    image_url: data.get_optional_product_img_link(),
-                    unit_price: to_tamara_amount(
-                        data.get_unit_amount(),
-                        "Failed to convert line item unit price from minor to major units",
-                    )?,
-                    discount_amount: optional_amount(
-                        data.get_optional_unit_discount_amount(),
-                        "Failed to convert line item discount amount from minor to major units",
-                    )?,
-                    tax_amount: optional_amount(
-                        data.get_optional_total_tax_amount(),
-                        "Failed to convert line item tax amount from minor to major units",
-                    )?,
-                })
+            .map(|order_details| {
+                order_details
+                    .iter()
+                    .enumerate()
+                    .map(|(i, data)| {
+                        let fallback_ref = data
+                            .get_product_id()
+                            .ok()
+                            .or_else(|| data.get_sku().ok())
+                            .unwrap_or_else(|| format!("item_{i}"));
+                        Ok(TamaraLineItem {
+                            name: data.get_product_name(),
+                            quantity: data.get_quantity(),
+                            reference_id: fallback_ref.clone(),
+                            sku: fallback_ref,
+                            total_amount: to_tamara_amount(
+                                data.get_total_amount(),
+                                "Failed to convert line item total amount from minor to major units",
+                            )?,
+                            item_type: data.get_product_type().unwrap_or_default(),
+                            item_url: data.get_optional_product_link(),
+                            image_url: data.get_optional_product_img_link(),
+                            unit_price: to_tamara_amount(
+                                data.get_unit_amount(),
+                                "Failed to convert line item unit price from minor to major units",
+                            )?,
+                            discount_amount: optional_amount(
+                                data.get_optional_unit_discount_amount(),
+                                "Failed to convert line item discount amount from minor to major units",
+                            )?,
+                            tax_amount: optional_amount(
+                                data.get_optional_total_tax_amount(),
+                                "Failed to convert line item tax amount from minor to major units",
+                            )?,
+                        })
+                    })
+                    .collect::<Result<Vec<_>, error_stack::Report<errors::IntegrationError>>>()
             })
-            .collect::<Result<Vec<_>, error_stack::Report<errors::IntegrationError>>>()?;
+            .unwrap_or(Ok(Vec::new()))?;
 
         Ok(Self {
             total_amount: TamaraAmount { amount, currency },
