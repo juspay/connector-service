@@ -22,6 +22,7 @@ use common_enums::{
 use common_utils::{
     consts::{BASE64_ENGINE, NO_ERROR_CODE, NO_ERROR_MESSAGE},
     crypto::{HmacSha512, SignMessage, VerifySignature},
+    date_time,
     id_type::CustomerId,
     pii::{Email, IpAddress, SecretSerdeValue},
     request::Method,
@@ -39,8 +40,9 @@ use domain_types::{
     },
     errors::{self, IntegrationError, IntegrationErrorContext},
     payment_method_data::{
-        ApplePayPaymentData, ApplePayWalletData, Card, GpayEncryptedTokenizationData,
-        GpayTokenizationData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
+        ApplePayDecryptedData, ApplePayPaymentData, ApplePayWalletData, Card,
+        GooglePayDecryptedData, GpayEncryptedTokenizationData, GpayTokenizationData,
+        PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
     },
     router_data::{
         AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificConfig,
@@ -613,19 +615,6 @@ pub struct EcommpayCard<T: PaymentMethodDataTypes> {
     pub cvv: Secret<String>,
 }
 
-/// `card` of a Hyperswitch-decrypted Apple Pay / Google Pay payment: the DPAN and its expiry.
-/// There is no CVV for a device token, so none is sent (OpenAPI `CardInfo.cvv` is optional).
-#[derive(Debug, Clone, Serialize)]
-pub struct EcommpayNetworkTokenCard {
-    pub pan: cards::CardNumber,
-    /// Four-digit year, sent as an integer.
-    pub year: Secret<u16>,
-    /// 1–12 without a leading zero, sent as an integer.
-    pub month: Secret<u8>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub card_holder: Option<Secret<String>>,
-}
-
 /// `card` of a merchant-stored COF debit (NTID-based MIT, RepeatPayment): the stored card,
 /// linked to its registration by the network transaction id. No CVV is sent for an
 /// on-demand / regular COF debit.
@@ -662,12 +651,11 @@ impl Serialize for EcommpayStoredCardType {
     }
 }
 
-/// The `card` object: a raw card, a decrypted wallet's DPAN, or a merchant-stored COF card.
+/// The `card` object: a raw card or a merchant-stored COF card.
 #[derive(Debug, Clone, Serialize)]
 #[serde(untagged)]
 pub enum EcommpayPaymentCard<T: PaymentMethodDataTypes> {
     Raw(EcommpayCard<T>),
-    NetworkToken(EcommpayNetworkTokenCard),
     StoredCard(EcommpayStoredCard<T>),
 }
 
@@ -679,9 +667,9 @@ pub enum EcommpayGoogleTokenizationType {
     Direct,
 }
 
-/// `etoken`: the wallet token Ecommpay decrypts itself (PSP decryption).
+/// `etoken` of a PSP-decrypted wallet: the encrypted token Ecommpay decrypts itself.
 #[derive(Debug, Clone, Serialize)]
-pub struct EcommpayEtoken {
+pub struct EcommpayEncryptedEtoken {
     /// Apple Pay: the payment token JSON as a string (not Base64). Google Pay: the encrypted
     /// `tokenizationData.token` unchanged.
     pub token: Secret<String>,
@@ -689,22 +677,110 @@ pub struct EcommpayEtoken {
     pub google_tokenization_type: Option<EcommpayGoogleTokenizationType>,
 }
 
-/// `token_data.token_type`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub enum EcommpayTokenType {
-    #[serde(rename = "network_token")]
-    NetworkToken,
+/// `etoken` of a Hyperswitch-decrypted Google Pay token (`/v2/payment/googlepay/…`).
+#[derive(Debug, Clone, Serialize)]
+pub struct EcommpayGoogleDecryptedEtoken {
+    pub google_gateway_type: &'static str,
+    pub google_gateway_id: &'static str,
+    pub google_tokenization_type: EcommpayGoogleTokenizationType,
+    pub decrypted_token: EcommpayGoogleDecryptedToken,
 }
 
-/// `token_data` of a Hyperswitch-decrypted wallet payment.
 #[derive(Debug, Clone, Serialize)]
-pub struct EcommpayTokenData {
-    pub token_type: EcommpayTokenType,
-    /// The online payment cryptogram (TAVV). Never logged.
+pub struct EcommpayGoogleDecryptedToken {
+    /// Unix time in milliseconds; Ecommpay silently drops a sale whose token has expired.
+    #[serde(rename = "messageExpiration")]
+    pub message_expiration: i64,
+    #[serde(rename = "paymentMethodDetails")]
+    pub payment_method_details: EcommpayGooglePaymentMethodDetails,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EcommpayGooglePaymentMethodDetails {
+    pub pan: cards::CardNumber,
+    /// 1-12 as an integer; a string is silently dropped.
+    #[serde(rename = "expirationMonth")]
+    pub expiration_month: Secret<u8>,
+    /// Four-digit year as an integer; a string is silently dropped.
+    #[serde(rename = "expirationYear")]
+    pub expiration_year: Secret<u16>,
+    #[serde(rename = "eciIndicator", skip_serializing_if = "Option::is_none")]
+    pub eci_indicator: Option<String>,
+    /// The device cryptogram (TAVV). Never logged.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cryptogram: Option<Secret<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub eci: Option<String>,
+    #[serde(rename = "authMethod")]
+    pub auth_method: EcommpayGoogleAuthMethod,
+}
+
+/// `paymentMethodDetails.authMethod`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub enum EcommpayGoogleAuthMethod {
+    #[serde(rename = "CRYPTOGRAM_3DS")]
+    Cryptogram3ds,
+    #[serde(rename = "PAN_ONLY")]
+    PanOnly,
+}
+
+/// `etoken` of a Hyperswitch-decrypted Apple Pay token (`/v2/payment/applepay/…`).
+#[derive(Debug, Clone, Serialize)]
+pub struct EcommpayAppleDecryptedEtoken {
+    #[serde(rename = "type")]
+    pub token_type: &'static str,
+    pub decrypted_token: EcommpayAppleDecryptedToken,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EcommpayAppleDecryptedToken {
+    #[serde(rename = "applicationPrimaryAccountNumber")]
+    pub application_primary_account_number: cards::CardNumber,
+    /// `YYMMDD`.
+    #[serde(rename = "applicationExpirationDate")]
+    pub application_expiration_date: Secret<String>,
+    /// ISO 4217 numeric code, e.g. `978`.
+    #[serde(rename = "currencyCode")]
+    pub currency_code: String,
+    /// Minor units.
+    #[serde(rename = "transactionAmount")]
+    pub transaction_amount: i64,
+    #[serde(rename = "paymentDataType")]
+    pub payment_data_type: &'static str,
+    #[serde(rename = "deviceManufacturerIdentifier")]
+    pub device_manufacturer_identifier: Secret<String>,
+    #[serde(rename = "paymentData")]
+    pub payment_data: EcommpayApplePaymentData,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EcommpayApplePaymentData {
+    #[serde(rename = "onlinePaymentCryptogram")]
+    pub online_payment_cryptogram: Secret<String>,
+    #[serde(rename = "eciIndicator", skip_serializing_if = "Option::is_none")]
+    pub eci_indicator: Option<String>,
+}
+
+/// `etoken`: a wallet token, encrypted (Ecommpay decrypts it) or already decrypted by Hyperswitch.
+#[derive(Debug, Clone, Serialize)]
+#[serde(untagged)]
+pub enum EcommpayEtoken {
+    Encrypted(EcommpayEncryptedEtoken),
+    GoogleDecrypted(EcommpayGoogleDecryptedEtoken),
+    AppleDecrypted(EcommpayAppleDecryptedEtoken),
+}
+
+impl EcommpayEtoken {
+    /// Whether the issuer may still interpose 3-D Secure. A Google Pay token with a device
+    /// cryptogram is already authenticated; a PAN-only or still-encrypted one may not be.
+    fn may_require_three_ds(&self) -> bool {
+        match self {
+            Self::Encrypted(_) => true,
+            Self::GoogleDecrypted(token) => {
+                token.decrypted_token.payment_method_details.auth_method
+                    == EcommpayGoogleAuthMethod::PanOnly
+            }
+            Self::AppleDecrypted(_) => false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -774,15 +850,12 @@ pub struct EcommpayPaymentRequest<T: PaymentMethodDataTypes> {
     pub return_url: Option<EcommpayReturnUrl>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub acs_return_url: Option<EcommpayAcsReturnUrl>,
-    /// The card, or the decrypted wallet DPAN. Absent for a PSP-decrypted wallet (`etoken`).
+    /// The card. Absent for a wallet payment (`etoken`).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub card: Option<EcommpayPaymentCard<T>>,
-    /// PSP-decrypted Apple Pay / Google Pay token (`/v2/payment/{applepay|googlepay}/…`).
+    /// Apple Pay / Google Pay token, encrypted or decrypted (`/v2/payment/{applepay|googlepay}/…`).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub etoken: Option<EcommpayEtoken>,
-    /// Network-token data of a Hyperswitch-decrypted wallet (`card.pan` is then the DPAN).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub token_data: Option<EcommpayTokenData>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub avs_data: Option<EcommpayAvsData>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -923,7 +996,7 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
         }
 
         // P-Authorize__Wallet-07: the payment instrument, every arm matched explicitly.
-        let source = payment_source(request, common)?;
+        let source = payment_source(request)?;
 
         // G-ThreeDS-03 / -04, G-Authorize__Wallet-03 / -04 (customer id and IP are required on
         // every Gate payment, card or wallet).
@@ -951,9 +1024,8 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
         let complete_authorize_url = non_empty(request.complete_authorize_url.clone());
         let may_redirect = match &source {
             EcommpayPaymentSource::Card(_) => request.authentication_data.is_none(),
-            EcommpayPaymentSource::GooglePayToken(_) => true,
-            EcommpayPaymentSource::ApplePayToken(_)
-            | EcommpayPaymentSource::DecryptedWallet { .. } => false,
+            EcommpayPaymentSource::GooglePayToken(etoken) => etoken.may_require_three_ds(),
+            EcommpayPaymentSource::ApplePayToken(_) => false,
         };
         if may_redirect {
             if router_return_url.is_none() {
@@ -976,16 +1048,16 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
         }
 
         // G-ThreeDS-09: external 3DS result, a card-payment input only. A decrypted wallet
-        // carries its own cryptogram and ECI in token_data.
+        // carries its own cryptogram and ECI in its etoken.
         let authentication_data = match &source {
             EcommpayPaymentSource::Card(_) => request
                 .authentication_data
                 .as_ref()
                 .map(build_authentication_data)
                 .transpose()?,
-            EcommpayPaymentSource::DecryptedWallet { .. }
-            | EcommpayPaymentSource::ApplePayToken(_)
-            | EcommpayPaymentSource::GooglePayToken(_) => None,
+            EcommpayPaymentSource::ApplePayToken(_) | EcommpayPaymentSource::GooglePayToken(_) => {
+                None
+            }
         };
         // G-ThreeDS-10: dynamic descriptor.
         let merchant = build_merchant(request)?;
@@ -1020,15 +1092,10 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
             ));
         }
 
-        let (card, etoken, token_data) = match source {
-            EcommpayPaymentSource::Card(card) => (Some(EcommpayPaymentCard::Raw(card)), None, None),
-            EcommpayPaymentSource::DecryptedWallet { card, token_data } => (
-                Some(EcommpayPaymentCard::NetworkToken(card)),
-                None,
-                Some(token_data),
-            ),
+        let (card, etoken) = match source {
+            EcommpayPaymentSource::Card(card) => (Some(EcommpayPaymentCard::Raw(card)), None),
             EcommpayPaymentSource::ApplePayToken(etoken)
-            | EcommpayPaymentSource::GooglePayToken(etoken) => (None, Some(etoken), None),
+            | EcommpayPaymentSource::GooglePayToken(etoken) => (None, Some(etoken)),
         };
 
         let mut body = EcommpayPaymentRequest {
@@ -1055,7 +1122,6 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
             acs_return_url: None,
             card,
             etoken,
-            token_data,
             avs_data: build_avs_data(common),
             merchant,
             receipt_data,
@@ -1110,21 +1176,15 @@ fn build_card<T: PaymentMethodDataTypes>(
 
 const APPLE_PAY_DOC_URL: &str = "https://developers.ecommpay.com/en/pm_applepay.html";
 const GOOGLE_PAY_DOC_URL: &str = "https://developers.ecommpay.com/en/pm_googlepay.html";
-const NETWORK_TOKEN_DOC_URL: &str = "https://developers.ecommpay.com/en/en_gate_tokens.html";
 /// `GpayEncryptedTokenizationData.token_type` of a token Ecommpay can decrypt on its own.
 const GOOGLE_PAY_PAYMENT_GATEWAY: &str = "PAYMENT_GATEWAY";
 
 /// The payment instrument of an Authorize request.
 enum EcommpayPaymentSource<T: PaymentMethodDataTypes> {
     Card(EcommpayCard<T>),
-    /// Hyperswitch-decrypted Apple Pay / Google Pay: DPAN on the card path plus `token_data`.
-    DecryptedWallet {
-        card: EcommpayNetworkTokenCard,
-        token_data: EcommpayTokenData,
-    },
-    /// PSP-decrypted Apple Pay (`/v2/payment/applepay/…`).
+    /// Apple Pay (`/v2/payment/applepay/…`), PSP- or Hyperswitch-decrypted.
     ApplePayToken(EcommpayEtoken),
-    /// PSP-decrypted Google Pay (`/v2/payment/googlepay/…`).
+    /// Google Pay (`/v2/payment/googlepay/…`), PSP- or Hyperswitch-decrypted.
     GooglePayToken(EcommpayEtoken),
 }
 
@@ -1134,16 +1194,8 @@ pub fn authorize_route<T: PaymentMethodDataTypes>(
     payment_method_data: &PaymentMethodData<T>,
 ) -> EcommpayRoute {
     match payment_method_data {
-        PaymentMethodData::Wallet(WalletData::ApplePay(wallet)) => match wallet.payment_data {
-            ApplePayPaymentData::Encrypted(_) => EcommpayRoute::Applepay,
-            ApplePayPaymentData::Decrypted(_) => EcommpayRoute::Card,
-        },
-        PaymentMethodData::Wallet(WalletData::GooglePay(wallet)) => {
-            match wallet.tokenization_data {
-                GpayTokenizationData::Encrypted(_) => EcommpayRoute::Googlepay,
-                GpayTokenizationData::Decrypted(_) => EcommpayRoute::Card,
-            }
-        }
+        PaymentMethodData::Wallet(WalletData::ApplePay(_)) => EcommpayRoute::Applepay,
+        PaymentMethodData::Wallet(WalletData::GooglePay(_)) => EcommpayRoute::Googlepay,
         // Cards, and every refused payment method (never sent).
         _ => EcommpayRoute::Card,
     }
@@ -1163,11 +1215,14 @@ fn unimplemented_payment_method(
 /// any request is built.
 fn payment_source<T: PaymentMethodDataTypes>(
     request: &PaymentsAuthorizeData<T>,
-    common: &PaymentFlowData,
 ) -> Result<EcommpayPaymentSource<T>, error_stack::Report<IntegrationError>> {
     match &request.payment_method_data {
         PaymentMethodData::Card(card) => Ok(EcommpayPaymentSource::Card(build_card(card)?)),
-        PaymentMethodData::Wallet(wallet) => wallet_source(wallet, common),
+        PaymentMethodData::Wallet(wallet) => wallet_source(
+            wallet,
+            request.currency,
+            request.amount.amount.get_amount_as_i64(),
+        ),
         PaymentMethodData::CardWithNoCvc(_)
         | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
         | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
@@ -1195,55 +1250,25 @@ fn payment_source<T: PaymentMethodDataTypes>(
 
 fn wallet_source<T: PaymentMethodDataTypes>(
     wallet: &WalletData,
-    common: &PaymentFlowData,
+    currency: Currency,
+    minor_amount: i64,
 ) -> Result<EcommpayPaymentSource<T>, error_stack::Report<IntegrationError>> {
     match wallet {
         WalletData::ApplePay(apple_pay) => match &apple_pay.payment_data {
             ApplePayPaymentData::Encrypted(payment_data) => Ok(
                 EcommpayPaymentSource::ApplePayToken(apple_pay_etoken(apple_pay, payment_data)?),
             ),
-            ApplePayPaymentData::Decrypted(decrypted) => {
-                let card = decrypted_wallet_card(
-                    &decrypted.application_primary_account_number,
-                    &decrypted.application_expiration_month,
-                    &decrypted.get_four_digit_expiry_year(),
-                    common,
-                )?;
-                Ok(EcommpayPaymentSource::DecryptedWallet {
-                    card,
-                    token_data: network_token_data(
-                        Some(decrypted.payment_data.online_payment_cryptogram.clone()),
-                        decrypted.payment_data.eci_indicator.clone(),
-                    ),
-                })
-            }
+            ApplePayPaymentData::Decrypted(decrypted) => Ok(EcommpayPaymentSource::ApplePayToken(
+                apple_pay_decrypted_etoken(decrypted, currency, minor_amount)?,
+            )),
         },
         WalletData::GooglePay(google_pay) => match &google_pay.tokenization_data {
             GpayTokenizationData::Encrypted(encrypted) => Ok(
                 EcommpayPaymentSource::GooglePayToken(google_pay_etoken(encrypted)?),
             ),
-            GpayTokenizationData::Decrypted(decrypted) => {
-                let year = decrypted.get_four_digit_expiry_year().map_err(|_| {
-                    invalid_format(
-                        "card_exp_year",
-                        "Google Pay card_exp_year must be a two- or four-digit year".to_string(),
-                    )
-                })?;
-                let card = decrypted_wallet_card(
-                    &decrypted.application_primary_account_number,
-                    &decrypted.card_exp_month,
-                    &year,
-                    common,
-                )?;
-                // A PAN_ONLY token has no cryptogram but is still a network (device) token.
-                Ok(EcommpayPaymentSource::DecryptedWallet {
-                    card,
-                    token_data: network_token_data(
-                        decrypted.cryptogram.clone(),
-                        decrypted.eci_indicator.clone(),
-                    ),
-                })
-            }
+            GpayTokenizationData::Decrypted(decrypted) => Ok(
+                EcommpayPaymentSource::GooglePayToken(google_pay_decrypted_etoken(decrypted)?),
+            ),
         },
         WalletData::AliPayQr(_)
         | WalletData::AliPayRedirect(_)
@@ -1334,10 +1359,10 @@ fn apple_pay_etoken(
     });
     let token = serde_json::to_string(&token)
         .map_err(|_| invalid_token("the Apple Pay token could not be serialised"))?;
-    Ok(EcommpayEtoken {
+    Ok(EcommpayEtoken::Encrypted(EcommpayEncryptedEtoken {
         token: Secret::new(token),
         google_tokenization_type: None,
-    })
+    }))
 }
 
 /// Google Pay PSP decryption (spec "2. Google Pay — gateway (PSP) decryption").
@@ -1369,76 +1394,175 @@ fn google_pay_etoken(
             ),
         }));
     }
-    Ok(EcommpayEtoken {
+    Ok(EcommpayEtoken::Encrypted(EcommpayEncryptedEtoken {
         // Sent unchanged: Ecommpay decrypts the token as Google Pay issued it.
         token: Secret::new(encrypted.token.clone()),
         google_tokenization_type: Some(EcommpayGoogleTokenizationType::PaymentGateway),
+    }))
+}
+
+/// How long a Hyperswitch-decrypted Google Pay token is presented as valid. Hyperswitch has
+/// already decrypted it and does not carry Google's own `messageExpiration`, which Ecommpay
+/// requires to be in the future.
+const GOOGLE_PAY_TOKEN_VALIDITY_MS: i64 = 24 * 60 * 60 * 1000;
+
+fn decrypted_wallet_field(
+    field_name: &'static str,
+    detail: &str,
+) -> error_stack::Report<IntegrationError> {
+    error_stack::report!(IntegrationError::MissingRequiredField {
+        field_name,
+        context: context(
+            Some("Supply the decrypted wallet token data and retry."),
+            GOOGLE_PAY_DOC_URL,
+            detail.to_string(),
+        ),
     })
 }
 
-/// `card` of a Hyperswitch-decrypted wallet (spec "3. Apple Pay / Google Pay — Hyperswitch
-/// decryption"). G-Authorize__Wallet-09: the DPAN and its expiry are required. No CVV exists
-/// for a device token, so none is sent.
-fn decrypted_wallet_card(
-    dpan: &cards::CardNumber,
-    expiry_month: &Secret<String>,
-    expiry_year_four_digit: &Secret<String>,
-    common: &PaymentFlowData,
-) -> Result<EcommpayNetworkTokenCard, error_stack::Report<IntegrationError>> {
-    let wallet_field = |field_name: &'static str, detail: &str| {
-        error_stack::report!(IntegrationError::MissingRequiredField {
-            field_name,
-            context: context(
-                Some("Supply the decrypted wallet token data and retry."),
-                NETWORK_TOKEN_DOC_URL,
-                detail.to_string(),
-            ),
-        })
-    };
-    if dpan.peek().trim().is_empty() {
-        return Err(wallet_field(
+/// Hyperswitch-decrypted Google Pay (`etoken.decrypted_token`, spec "3. Apple Pay / Google Pay
+/// — Hyperswitch decryption"). A token with a device cryptogram is `CRYPTOGRAM_3DS`; one
+/// without is `PAN_ONLY`, which Ecommpay may route through 3-D Secure.
+fn google_pay_decrypted_etoken(
+    decrypted: &GooglePayDecryptedData,
+) -> Result<EcommpayEtoken, error_stack::Report<IntegrationError>> {
+    if decrypted
+        .application_primary_account_number
+        .peek()
+        .trim()
+        .is_empty()
+    {
+        return Err(decrypted_wallet_field(
             "application_primary_account_number",
-            "Ecommpay requires card.pan (the decrypted wallet DPAN)",
+            "Ecommpay requires paymentMethodDetails.pan (the decrypted Google Pay card number)",
         ));
     }
-    let month = expiry_month.peek().trim();
-    if month.is_empty() {
-        return Err(wallet_field(
-            "application_expiration_month",
-            "Ecommpay requires card.month (the decrypted wallet token expiry)",
-        ));
-    }
-    let year = expiry_year_four_digit.peek().trim();
-    if year.is_empty() {
-        return Err(wallet_field(
-            "application_expiration_year",
-            "Ecommpay requires card.year (the decrypted wallet token expiry)",
-        ));
-    }
-    let year = utils::parse_expiry_year_four_digit(year, "application_expiration_year")?;
-    let month = utils::parse_expiry_month(month, "application_expiration_month")?;
-    let card_holder = within_limit(
-        non_empty_secret(common.get_optional_billing_full_name()),
-        "card.card_holder",
-        MAX_ID_LENGTH,
-    )?;
-    Ok(EcommpayNetworkTokenCard {
-        pan: dpan.clone(),
-        year: Secret::new(year),
-        month: Secret::new(month),
-        card_holder,
-    })
+    let year = decrypted.get_four_digit_expiry_year().map_err(|_| {
+        invalid_format(
+            "card_exp_year",
+            "Google Pay card_exp_year must be a two- or four-digit year".to_string(),
+        )
+    })?;
+    let expiration_year = utils::parse_expiry_year_four_digit(year.peek(), "card_exp_year")?;
+    let expiration_month =
+        utils::parse_expiry_month(decrypted.card_exp_month.peek(), "card_exp_month")?;
+    let cryptogram = non_empty_secret(decrypted.cryptogram.clone());
+    let auth_method = if cryptogram.is_some() {
+        EcommpayGoogleAuthMethod::Cryptogram3ds
+    } else {
+        EcommpayGoogleAuthMethod::PanOnly
+    };
+    let message_expiration = date_time::now()
+        .assume_utc()
+        .unix_timestamp()
+        .checked_mul(1000)
+        .and_then(|now_ms| now_ms.checked_add(GOOGLE_PAY_TOKEN_VALIDITY_MS))
+        .ok_or_else(|| {
+            invalid_format(
+                "messageExpiration",
+                "the Google Pay token expiry could not be computed".to_string(),
+            )
+        })?;
+    Ok(EcommpayEtoken::GoogleDecrypted(
+        EcommpayGoogleDecryptedEtoken {
+            google_gateway_type: "gateway",
+            google_gateway_id: "ecommpay",
+            google_tokenization_type: EcommpayGoogleTokenizationType::PaymentGateway,
+            decrypted_token: EcommpayGoogleDecryptedToken {
+                message_expiration,
+                payment_method_details: EcommpayGooglePaymentMethodDetails {
+                    pan: decrypted.application_primary_account_number.clone(),
+                    expiration_month: Secret::new(expiration_month),
+                    expiration_year: Secret::new(expiration_year),
+                    eci_indicator: non_empty(decrypted.eci_indicator.clone()),
+                    cryptogram,
+                    auth_method,
+                },
+            },
+        },
+    ))
 }
 
-fn network_token_data(
-    cryptogram: Option<Secret<String>>,
-    eci: Option<String>,
-) -> EcommpayTokenData {
-    EcommpayTokenData {
-        token_type: EcommpayTokenType::NetworkToken,
-        cryptogram: non_empty_secret(cryptogram),
-        eci: non_empty(eci),
+/// The last day of a month, for Apple Pay's `YYMMDD` expiry (the token carries only the month).
+fn last_day_of_month(year: u16, month: u8) -> u8 {
+    match month {
+        2 if year.is_multiple_of(4) && (!year.is_multiple_of(100) || year.is_multiple_of(400)) => {
+            29
+        }
+        2 => 28,
+        4 | 6 | 9 | 11 => 30,
+        _ => 31,
     }
+}
+
+/// Hyperswitch-decrypted Apple Pay (`etoken.decrypted_token`, spec "3. Apple Pay / Google Pay —
+/// Hyperswitch decryption").
+fn apple_pay_decrypted_etoken(
+    decrypted: &ApplePayDecryptedData,
+    currency: Currency,
+    minor_amount: i64,
+) -> Result<EcommpayEtoken, error_stack::Report<IntegrationError>> {
+    if decrypted
+        .application_primary_account_number
+        .peek()
+        .trim()
+        .is_empty()
+    {
+        return Err(decrypted_wallet_field(
+            "application_primary_account_number",
+            "Ecommpay requires applicationPrimaryAccountNumber (the decrypted Apple Pay card number)",
+        ));
+    }
+    let year = utils::parse_expiry_year_four_digit(
+        decrypted.get_four_digit_expiry_year().peek(),
+        "application_expiration_year",
+    )?;
+    let month = utils::parse_expiry_month(
+        decrypted.application_expiration_month.peek(),
+        "application_expiration_month",
+    )?;
+    let application_expiration_date = format!(
+        "{:02}{month:02}{:02}",
+        year % 100,
+        last_day_of_month(year, month)
+    );
+    let online_payment_cryptogram = non_empty_secret(Some(
+        decrypted.payment_data.online_payment_cryptogram.clone(),
+    ))
+    .ok_or_else(|| {
+        decrypted_wallet_field(
+            "online_payment_cryptogram",
+            "Ecommpay requires paymentData.onlinePaymentCryptogram",
+        )
+    })?;
+    // Without it Ecommpay accepts the call but never registers the sale (checked on the
+    // sandbox), so a missing value is refused up front.
+    let device_manufacturer_identifier =
+        non_empty_secret(decrypted.device_manufacturer_identifier.clone()).ok_or_else(|| {
+            decrypted_wallet_field(
+                "device_manufacturer_identifier",
+                "Ecommpay requires deviceManufacturerIdentifier on a decrypted Apple Pay token",
+            )
+        })?;
+    Ok(EcommpayEtoken::AppleDecrypted(
+        EcommpayAppleDecryptedEtoken {
+            token_type: "apple",
+            decrypted_token: EcommpayAppleDecryptedToken {
+                application_primary_account_number: decrypted
+                    .application_primary_account_number
+                    .clone(),
+                application_expiration_date: Secret::new(application_expiration_date),
+                currency_code: currency.iso_4217().to_string(),
+                transaction_amount: minor_amount,
+                payment_data_type: "3DSecure",
+                device_manufacturer_identifier,
+                payment_data: EcommpayApplePaymentData {
+                    online_payment_cryptogram,
+                    eci_indicator: non_empty(decrypted.payment_data.eci_indicator.clone()),
+                },
+            },
+        },
+    ))
 }
 
 fn join_lines(
@@ -2564,7 +2688,6 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
                     acs_return_url: None,
                     card: Some(EcommpayPaymentCard::StoredCard(card)),
                     etoken: None,
-                    token_data: None,
                     avs_data: None,
                     merchant: None,
                     receipt_data: None,

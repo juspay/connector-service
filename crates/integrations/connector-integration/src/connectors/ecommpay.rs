@@ -304,8 +304,8 @@ macros::macro_connector_implementation!(
                     CARD_THREE_DS_RESULT_ENDPOINT
                 ));
             }
-            // PSP-decrypted Apple Pay / Google Pay use their own path family; a card and a
-            // Hyperswitch-decrypted wallet (DPAN + token_data) use the card path.
+            // Apple Pay and Google Pay (PSP- or Hyperswitch-decrypted) use their own path family;
+            // a card uses the card path.
             let route = ecommpay::authorize_route(&req.request.payment_method_data);
             let operation = match req.request.capture_method {
                 Some(CaptureMethod::Manual) => SALE_OR_AUTH_AUTH,
