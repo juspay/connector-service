@@ -4637,47 +4637,6 @@ pub(crate) fn map_customer_document_details(
         })
 }
 
-// ---- proto Traveller document -> domain CustomerDocumentDetails ----
-
-impl ForeignTryFrom<grpc_payment_types::CustomerDocumentDetails>
-    for crate::payment_method_data::CustomerDocumentDetails
-{
-    type Error = IntegrationError;
-
-    fn foreign_try_from(
-        doc: grpc_payment_types::CustomerDocumentDetails,
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let document_type = crate::payment_method_data::DocumentKind::try_from(doc.document_type())
-            .map_err(|()| {
-                report!(IntegrationError::InvalidDataFormat {
-                    field_name: "document.document_type",
-                    context: IntegrationErrorContext {
-                        additional_context: Some(
-                            "document type must be a concrete kind, not UNSPECIFIED".to_string(),
-                        ),
-                        ..Default::default()
-                    },
-                })
-            })?;
-        doc.document_number
-            .map(|document_number| Self {
-                document_type,
-                document_number,
-            })
-            .ok_or_else(|| {
-                report!(IntegrationError::InvalidDataFormat {
-                    field_name: "document.document_number",
-                    context: IntegrationErrorContext {
-                        additional_context: Some(
-                            "document number is required when a document type is set".to_string(),
-                        ),
-                        ..Default::default()
-                    },
-                })
-            })
-    }
-}
-
 // ---- proto DomainData / AirlineData -> domain types (all fields optional) ----
 
 // Proto enums convert to their `common_enums` counterpart via `ForeignFrom` into
@@ -5374,10 +5333,7 @@ impl ForeignTryFrom<grpc_payment_types::Traveller> for connector_types::Travelle
             last_name: traveller.last_name,
             phone_number: traveller.phone_number,
             date_of_birth: traveller.date_of_birth,
-            document: traveller
-                .document
-                .map(crate::payment_method_data::CustomerDocumentDetails::foreign_try_from)
-                .transpose()?,
+            document: traveller.document.as_ref().and_then(map_customer_document_details),
             gender: traveller.gender,
             loyalty_card: traveller.loyalty_card,
             loyalty_card_issuer: traveller.loyalty_card_issuer,

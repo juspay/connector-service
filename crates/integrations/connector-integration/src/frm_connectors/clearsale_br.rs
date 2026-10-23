@@ -270,7 +270,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     // No webhook signature is documented by ClearSale (spec §11 open question
     // 2). `verify_webhook_source` therefore keeps the trait default (`Ok(false)`)
     // — an unauthenticated webhook must not be treated as source-verified.
-    // TODO: add signature verification if the merchant pack documents one.
+    // TODO(UCS-clearsale-webhook-signature): add signature verification if the
+    // merchant pack documents one.
 
     fn get_event_type(
         &self,
@@ -286,12 +287,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(WebhookError::WebhookEventTypeNotFound)?;
         match payload.event_type.as_str() {
             "status" => Ok(EventType::Payment),
-            other => {
-                let _ = other;
-                Err(error_stack::report!(
-                    WebhookError::WebhookEventTypeNotFound
-                ))
-            }
+            _ => Err(error_stack::report!(WebhookError::WebhookEventTypeNotFound)),
         }
     }
 
@@ -323,22 +319,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<ConnectorSpecificConfig>,
         _event_context: Option<domain_types::connector_types::EventContext>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<WebhookError>> {
-        // TODO: the webhook carries no decision — the honest handling is a
-        // follow-up `GET /v1/orders/{code}/status` and mapping
-        // `ClearSaleStatusGetResponse.status` through
-        // `ClearSaleStatusEnum::to_frm_decision`. There is no public FRM-sync
-        // RPC yet (spec §11 open question 5), so for now the event is surfaced
-        // as pending with the merchant order code as the correlation id —
-        // the same carrier `get_webhook_event_reference` reports
         // (`merchant_transaction_id`).
         let payload: ClearSaleWebhookPayload = request
             .body
             .parse_struct("ClearSaleWebhookPayload")
             .change_context(WebhookError::WebhookBodyDecodingFailed)?;
         Ok(WebhookDetailsResponse {
-            // ResponseId has no merchant_transaction_id variant; the order
-            // `code` is the merchant order key, so it rides as
-            // `EncodedData` (never as a PSP `ConnectorTransactionId`).
             resource_id: Some(ResponseId::EncodedData(payload.code.clone())),
             status: common_enums::AttemptStatus::Pending,
             connector_response_reference_id: None,
@@ -363,12 +349,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 
-// =============================================================================
-// FRM SERVICE TRAIT
-// =============================================================================
-// Not generic over `T` for the same reason as nSure/Kount: FrmServiceTrait
-// requires `PaymentPreAuthenticateV2<DefaultPCIHolder>` (fixed), which
-// `ClearSaleBr<T>` only provides for the matching `T`.
 impl connector_types::FrmServiceTrait
     for ClearSaleBr<domain_types::payment_method_data::DefaultPCIHolder>
 {
@@ -404,11 +384,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ClearSale has no device-data-collection step — its device signal is the
-// `sessionID` collected by the merchant-side Behavior Analytics SDK (spec §10)
-// and passed through the request `metadata` (`sessionId`) — so
-// PreAuthenticate is stubbed alongside every non-FRM payment flow this
-// connector does not implement.
 macros::macro_connector_flow_status_impls!(
     connector: ClearSaleBr,
     generic_type: T,

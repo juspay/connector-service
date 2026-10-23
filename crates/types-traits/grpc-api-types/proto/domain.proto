@@ -258,9 +258,9 @@ message HotelSegment {
   optional AccommodationType accommodation_type = 12; // room / apartment / villa / suite
   optional HostDetails host = 13;           // Host of this property
   optional Money daily_rate = 14;           // Room rate per night, excluding tax
-  optional string hotel_state = 15;         // State / province of the property (UF for BR) — ClearSale hotels[].state
-  optional string reservation_date_time = 16;      // Reservation creation timestamp (RFC 3339) — ClearSale hotels[].reservationDate
-  optional string reservation_expires_date_time = 17; // Reservation hold expiry timestamp (RFC 3339) — ClearSale hotels[].reserveExpirationDate
+  optional string hotel_state = 15;         // State / province of the property (UF for BR) — hotels[].state
+  optional string reservation_date_time = 16;      // Reservation creation timestamp (RFC 3339) — hotels[].reservationDate
+  optional string reservation_expires_date_time = 17; // Reservation hold expiry timestamp (RFC 3339) — hotels[].reserveExpirationDate
 }
 
 // Room category booked.
