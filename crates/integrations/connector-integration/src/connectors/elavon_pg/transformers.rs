@@ -315,8 +315,8 @@ pub struct ElavonPgCard<T: PaymentMethodDataTypes> {
 #[serde(rename_all = "camelCase")]
 pub struct ElavonPgWalletCard {
     pub number: cards::CardNumber,
-    pub expiration_month: u8,
-    pub expiration_year: u16,
+    pub expiration_month: Secret<u8>,
+    pub expiration_year: Secret<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bill_to: Option<ElavonPgContact>,
 }
@@ -1179,8 +1179,8 @@ fn build_wallet_payment<T: PaymentMethodDataTypes>(
             Ok((
                 ElavonPgSaleCard::Wallet(ElavonPgWalletCard {
                     number: decrypted.application_primary_account_number.clone(),
-                    expiration_month,
-                    expiration_year,
+                    expiration_month: Secret::new(expiration_month),
+                    expiration_year: Secret::new(expiration_year),
                     bill_to,
                 }),
                 ElavonPgCryptogramSecurity {
@@ -1201,8 +1201,8 @@ fn build_wallet_payment<T: PaymentMethodDataTypes>(
             Ok((
                 ElavonPgSaleCard::Wallet(ElavonPgWalletCard {
                     number: decrypted.application_primary_account_number.clone(),
-                    expiration_month,
-                    expiration_year,
+                    expiration_month: Secret::new(expiration_month),
+                    expiration_year: Secret::new(expiration_year),
                     bill_to,
                 }),
                 ElavonPgCryptogramSecurity {
@@ -2705,7 +2705,10 @@ mod tests {
         let ElavonPgSaleCard::Wallet(card) = card else {
             panic!("wallet payments must use the wallet card shape");
         };
-        assert_eq!((card.expiration_month, card.expiration_year), (12, 2030));
+        assert_eq!(
+            (*card.expiration_month.peek(), *card.expiration_year.peek()),
+            (12, 2030)
+        );
     }
 
     #[test]
