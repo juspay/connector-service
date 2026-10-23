@@ -309,6 +309,15 @@ pub struct PacoShippingAddress {
     pub ship_addr_post_code: Option<Secret<String>>,
 }
 
+fn select_paco_billing_state(
+    state_code_iso: Option<Secret<String>>,
+    state: Option<Secret<String>>,
+) -> Option<Secret<String>> {
+    state_code_iso
+        .filter(|state| state.peek().chars().count() <= 3)
+        .or_else(|| state.filter(|state| state.peek().chars().count() <= 3))
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PacoCreditCardDetails {
@@ -927,10 +936,10 @@ where
             bill_addr_line2: common.get_optional_billing_line2(),
             bill_addr_line3: common.get_optional_billing_line3(),
             bill_addr_post_code: common.get_optional_billing_zip(),
-            bill_addr_state: common
-                .get_optional_billing_state_code_iso()
-                .or_else(|| common.get_optional_billing_state())
-                .filter(|state| state.peek().chars().count() <= 3),
+            bill_addr_state: select_paco_billing_state(
+                common.get_optional_billing_state_code_iso(),
+                common.get_optional_billing_state(),
+            ),
         });
 
     let paco_shipping_address = common
@@ -2859,5 +2868,47 @@ impl TryFrom<ResponseRouterData<TwocTwopPacoRefundResponse, Self>>
             },
             ..router_data
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::select_paco_billing_state;
+    use hyperswitch_masking::{PeekInterface, Secret};
+
+    #[test]
+    fn uses_short_legacy_state_when_iso_code_is_too_long() {
+        let state = select_paco_billing_state(
+            Some(Secret::new("US-CA".to_string())),
+            Some(Secret::new("CA".to_string())),
+        );
+
+        assert_eq!(
+            state.map(|value| value.peek().clone()),
+            Some("CA".to_string())
+        );
+    }
+
+    #[test]
+    fn drops_long_values_when_no_short_state_is_available() {
+        let state = select_paco_billing_state(
+            Some(Secret::new("TH-10".to_string())),
+            Some(Secret::new("Bangkok".to_string())),
+        );
+
+        assert!(state.is_none());
+    }
+
+    #[test]
+    fn prefers_short_iso_code_over_legacy_state() {
+        let state = select_paco_billing_state(
+            Some(Secret::new("CA".to_string())),
+            Some(Secret::new("California".to_string())),
+        );
+
+        assert_eq!(
+            state.map(|value| value.peek().clone()),
+            Some("CA".to_string())
+        );
     }
 }

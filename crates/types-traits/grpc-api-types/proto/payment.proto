@@ -1135,7 +1135,8 @@ message Address {
   oneof state_details {
     // Full state/province name as supplied by the caller.
     SecretString state_name = 13;
-    // ISO 3166-2 subdivision code, when available.
+    // ISO 3166-2 subdivision code, when available. Consumers may apply a
+    // connector-specific length or format restriction to this value.
     SecretString state_code_iso = 14;
   }
 }
