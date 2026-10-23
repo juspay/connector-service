@@ -249,26 +249,26 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .clone()
             .unwrap_or_default();
         let converter = FloatMajorUnitForConnector;
-        let amount = converter.convert(amount, currency).change_context(
-            errors::IntegrationError::RequestEncodingFailed {
+        let amount = converter
+            .convert(&common_utils::types::Money { amount, currency })
+            .change_context(errors::IntegrationError::RequestEncodingFailed {
                 context: errors::IntegrationErrorContext {
                     additional_context: Some(
                         "Failed to convert authorize amount from minor to major units".to_string(),
                     ),
                     ..Default::default()
                 },
-            },
-        )?;
+            })?;
         let shipping_amount = converter
-            .convert(
-                router_data
+            .convert(&common_utils::types::Money {
+                amount: router_data
                     .request
                     .shipping_cost
                     .as_ref()
                     .map(|money| money.amount)
                     .unwrap_or(MinorUnit(0)),
                 currency,
-            )
+            })
             .change_context(errors::IntegrationError::RequestEncodingFailed {
                 context: errors::IntegrationErrorContext {
                     additional_context: Some(
@@ -278,15 +278,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 },
             })?;
         let tax_amount = converter
-            .convert(
-                router_data
+            .convert(&common_utils::types::Money {
+                amount: router_data
                     .request
                     .order_tax_amount
                     .as_ref()
                     .map(|money| money.amount)
                     .unwrap_or(MinorUnit(0)),
                 currency,
-            )
+            })
             .change_context(errors::IntegrationError::RequestEncodingFailed {
                 context: errors::IntegrationErrorContext {
                     additional_context: Some(
@@ -333,7 +333,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     .enumerate()
                     .map(|(i, data)| {
                         let item_amount = converter
-                            .convert(data.amount, currency)
+                            .convert(&common_utils::types::Money { amount: data.amount, currency })
                             .change_context(errors::IntegrationError::RequestEncodingFailed {
                                 context: errors::IntegrationErrorContext {
                                     additional_context: Some(
@@ -570,10 +570,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             })?;
         let converter = FloatMajorUnitForConnector;
         let amount = converter
-            .convert(
-                item.router_data.request.amount_to_capture.amount,
-                item.router_data.request.currency,
-            )
+            .convert(&item.router_data.request.amount_to_capture)
             .change_context(errors::IntegrationError::RequestEncodingFailed {
                 context: errors::IntegrationErrorContext {
                     additional_context: Some(
@@ -687,16 +684,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             }
         ))?;
         let converter = FloatMajorUnitForConnector;
-        let amount = converter.convert(amount.amount, currency).change_context(
-            errors::IntegrationError::RequestEncodingFailed {
+        let amount = converter
+            .convert(&common_utils::types::Money {
+                amount: amount.amount,
+                currency,
+            })
+            .change_context(errors::IntegrationError::RequestEncodingFailed {
                 context: errors::IntegrationErrorContext {
                     additional_context: Some(
                         "Failed to convert void amount from minor to major units".to_string(),
                     ),
                     ..Default::default()
                 },
-            },
-        )?;
+            })?;
         Ok(Self {
             total_amount: TamaraAmount { amount, currency },
         })
@@ -780,10 +780,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             ))?;
         let converter = FloatMajorUnitForConnector;
         let amount = converter
-            .convert(
-                item.router_data.request.refund_amount.amount,
-                item.router_data.request.currency,
-            )
+            .convert(&item.router_data.request.refund_amount)
             .change_context(errors::IntegrationError::RequestEncodingFailed {
                 context: errors::IntegrationErrorContext {
                     additional_context: Some(
@@ -982,9 +979,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let email = customer.get_email()?;
         let phone_number = customer.get_phone_number()?;
         let converter = FloatMajorUnitForConnector;
-        let amount = converter
-            .convert(data.amount.amount, data.amount.currency)
-            .change_context(errors::IntegrationError::RequestEncodingFailed {
+        let amount = converter.convert(&data.amount).change_context(
+            errors::IntegrationError::RequestEncodingFailed {
                 context: errors::IntegrationErrorContext {
                     additional_context: Some(
                         "Failed to convert eligibility amount from minor to major units"
@@ -992,7 +988,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     ),
                     ..Default::default()
                 },
-            })?;
+            },
+        )?;
         Ok(Self {
             order: TamaraEligibilityOrder {
                 amount,
