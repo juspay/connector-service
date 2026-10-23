@@ -1609,6 +1609,7 @@ mod satispay_request_tests {
                 mit_category: None,
                 payment_channel: None,
                 domain_data: None,
+                risk_assessment_data: None,
                 partner_merchant_identifier_details: None,
                 currency_conversion_data: None,
                 is_account_funding_transaction: None,
