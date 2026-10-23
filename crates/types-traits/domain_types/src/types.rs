@@ -474,6 +474,7 @@ pub struct Connectors {
     pub elavon_pg: ConnectorParams,
     pub globalpayments_realex: ConnectorParams,
     pub payhere: ConnectorParams,
+    pub reddot: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
@@ -872,6 +873,9 @@ impl Connectors {
             }
             ConnectorEnum::Payhere => {
                 patched.payhere.apply(params_patch);
+            }
+            ConnectorEnum::Reddot => {
+                patched.reddot.apply(params_patch);
             }
             _ => {
                 // Connector not supported for URL patching - return error

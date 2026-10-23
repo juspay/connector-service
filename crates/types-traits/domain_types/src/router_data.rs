@@ -1141,6 +1141,12 @@ pub enum ConnectorSpecificConfig {
         api_key: Secret<String>,
         base_url: Option<String>,
     },
+    Reddot {
+        mid: Secret<String>,
+        secret: Secret<String>,
+        acquirer_cybersource: String,
+        base_url: Option<String>,
+    },
 }
 
 /// Config-patch key for a `ConnectorSpecificConfig` variant.
@@ -1583,6 +1589,11 @@ impl ConnectorSpecificConfig {
                 app_secret,
                 merchant_secret,
                 base_url
+            },
+            Reddot {
+                mid,
+                secret,
+                acquirer_cybersource
             },
             Imerchantsolutions { api_key },
             Interpayments { api_key },
@@ -2122,6 +2133,11 @@ impl ConnectorSpecificConfig {
                     app_secret,
                     merchant_secret,
                     base_url
+                },
+                Reddot {
+                    mid,
+                    secret,
+                    acquirer_cybersource
                 },
                 Imerchantsolutions { api_key },
                 Interpayments { api_key },
@@ -2857,6 +2873,12 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 app_secret: payhere.app_secret.ok_or_else(err)?,
                 merchant_secret: payhere.merchant_secret.ok_or_else(err)?,
                 base_url: payhere.base_url,
+            }),
+            AuthType::Reddot(reddot) => Ok(Self::Reddot {
+                mid: reddot.mid.ok_or_else(err)?,
+                secret: reddot.secret.ok_or_else(err)?,
+                acquirer_cybersource: reddot.acquirer_cybersource,
+                base_url: reddot.base_url,
             }),
             AuthType::Imerchantsolutions(imerchantsolutions) => Ok(Self::Imerchantsolutions {
                 api_key: imerchantsolutions.api_key.ok_or_else(err)?,
@@ -4274,6 +4296,19 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorVariant)>
                     }),
                     _ => Err(err().into()),
                 },
+                ConnectorEnum::Reddot => Err(errors::IntegrationError::FailedToObtainAuthType {
+                    context: crate::errors::IntegrationErrorContext {
+                        additional_context: Some(
+                            "Legacy RedDot auth cannot specify acquirer_cybersource".to_string(),
+                        ),
+                        suggested_action: Some(
+                            "Use typed RedDot config with mid, secret, and acquirer_cybersource"
+                                .to_string(),
+                        ),
+                        ..Default::default()
+                    },
+                }
+                .into()),
                 ConnectorEnum::PinelabsOnline => match auth {
                     ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::PinelabsOnline {
                         client_id: api_key.clone(),

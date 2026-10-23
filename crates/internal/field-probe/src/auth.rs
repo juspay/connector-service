@@ -894,5 +894,11 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             merchant_secret: k(),
             base_url: None,
         },
+        ConnectorEnum::Reddot => ConnectorSpecificConfig::Reddot {
+            mid: k(),
+            secret: k(),
+            acquirer_cybersource: "false".to_string(),
+            base_url: None,
+        },
     }
 }
