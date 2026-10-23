@@ -129,6 +129,11 @@ impl responses::JpmorganVerificationResponse {
     ) -> Result<Result<PaymentsResponseData, ErrorResponse>, ResponseError> {
         let status = self.status(http_code)?;
         if is_payment_failure(status) {
+            let network_diagnostics = JpmorganNetworkDiagnostics::from_response(
+                self.payment_method_type.network_response(),
+                Some(&self.host_message),
+            );
+
             return Ok(Err(ErrorResponse {
                 code: self.response_code,
                 message: self.response_message.clone(),
@@ -136,7 +141,13 @@ impl responses::JpmorganVerificationResponse {
                 status_code: http_code,
                 attempt_status: Some(FlowStatus::Payment(status)),
                 connector_transaction_id: Some(self.transaction_id),
-                ..Default::default()
+                network_decline_code: network_diagnostics.network_decline_code,
+                network_error_message: network_diagnostics.network_error_message,
+                network_advice_code: network_diagnostics.network_advice_code,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
             }));
         }
         let metadata = requests::JpmorganVerificationMetadata {
@@ -489,6 +500,34 @@ fn extract_account_holder_names<
     Ok((first_name, last_name))
 }
 
+fn map_payment_channel_to_jpmorgan_merchant_sales_channel_name(
+    payment_channel: Option<&common_enums::PaymentChannel>,
+) -> Option<requests::JpmorganMerchantSalesChannelName> {
+    match payment_channel {
+        Some(common_enums::PaymentChannel::MailOrder) => {
+            Some(requests::JpmorganMerchantSalesChannelName::MailOrder)
+        }
+        Some(common_enums::PaymentChannel::TelephoneOrder) => {
+            Some(requests::JpmorganMerchantSalesChannelName::TelephoneOrder)
+        }
+        Some(_) | None => None,
+    }
+}
+
+fn get_statement_descriptor(descriptor: Option<&domain_types::connector_types::BillingDescriptor>) -> Option<String> {
+    descriptor.and_then(|descriptor| descriptor.statement_descriptor.clone())
+}
+
+fn map_partial_authorization_support(
+    enable_partial_authorization: Option<bool>,
+) -> requests::JpmorganPartialAuthorizationSupport {
+    if enable_partial_authorization == Some(true) {
+        requests::JpmorganPartialAuthorizationSupport::Supported
+    } else {
+        requests::JpmorganPartialAuthorizationSupport::NotSupported
+    }
+}
+
 impl<T: PaymentMethodDataTypes> requests::JpmorganCard<T> {
     fn wallet_field_context(field_name: &'static str) -> IntegrationErrorContext {
         IntegrationErrorContext {
@@ -554,7 +593,10 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganCard<T> {
         Ok(())
     }
 
-    fn from_apple_pay(data: &ApplePayDecryptedData) -> Result<Self, Error> {
+    fn from_apple_pay(
+        data: &ApplePayDecryptedData,
+        payment_channel: Option<&common_enums::PaymentChannel>,
+    ) -> Result<Self, Error> {
         Ok(Self {
             account_number: RawCardNumber(T::inner_from_card_number(
                 data.application_primary_account_number.clone(),
@@ -579,10 +621,15 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganCard<T> {
                 &data.payment_data.online_payment_cryptogram,
                 &data.payment_data.eci_indicator,
             )?),
+            merchant_sales_channel_name:
+                map_payment_channel_to_jpmorgan_merchant_sales_channel_name(payment_channel),
         })
     }
 
-    fn from_google_pay(data: &GooglePayDecryptedData) -> Result<Self, Error> {
+    fn from_google_pay(
+        data: &GooglePayDecryptedData,
+        payment_channel: Option<&common_enums::PaymentChannel>,
+    ) -> Result<Self, Error> {
         // A present cryptogram classifies the payload as a 3DS cryptogram
         // (DEVICE_TOKEN); otherwise the payload is PAN-only.
         let (account_number_type, authentication) = match data.cryptogram.as_ref() {
@@ -628,6 +675,8 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganCard<T> {
             account_number_type: Some(account_number_type),
             wallet_provider: Some(requests::JpmorganWalletProvider::GooglePay),
             authentication,
+            merchant_sales_channel_name:
+                map_payment_channel_to_jpmorgan_merchant_sales_channel_name(payment_channel),
         })
     }
 }
@@ -723,12 +772,17 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganPaymentsRequest<T> {
                 token: None,
             },
             account_holder: None,
-            statement_descriptor: None,
+            statement_descriptor: get_statement_descriptor(
+                router_data.request.billing_descriptor.as_ref(),
+            ),
             merchant_order_number: router_data.request.merchant_order_id.clone(),
             initiator_type: Some(requests::JpmorganInitiatorType::Cardholder),
             account_on_file: Some(account_on_file),
             is_amount_final: Some(true),
             recurring,
+            partial_authorization_support: Some(map_partial_authorization_support(
+                router_data.request.enable_partial_authorization,
+            )),
         };
         Ok(request)
     }
@@ -833,6 +887,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     account_number_type: Some(requests::JpmorganAccountNumberType::Pan),
                     wallet_provider: None,
                     authentication: None,
+                    merchant_sales_channel_name:
+                        map_payment_channel_to_jpmorgan_merchant_sales_channel_name(
+                            router_data.request.payment_channel.as_ref(),
+                        ),
                 };
 
                 let (account_on_file, recurring) = Self::prepare_cit(&router_data.request)?;
@@ -855,12 +913,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     merchant,
                     payment_method_type,
                     account_holder: None,
-                    statement_descriptor: None,
+                    statement_descriptor: get_statement_descriptor(
+                        router_data.request.billing_descriptor.as_ref(),
+                    ),
                     merchant_order_number: router_data.request.merchant_order_id.clone(),
                     initiator_type: Some(requests::JpmorganInitiatorType::Cardholder),
                     account_on_file: Some(account_on_file),
                     is_amount_final: Some(true),
                     recurring,
+                    partial_authorization_support: Some(map_partial_authorization_support(
+                        router_data.request.enable_partial_authorization,
+                    )),
                 };
                 Ok(request)
             }
@@ -932,6 +995,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     account_number_type: Some(requests::JpmorganAccountNumberType::NetworkToken),
                     wallet_provider: None,
                     authentication,
+                    merchant_sales_channel_name:
+                        map_payment_channel_to_jpmorgan_merchant_sales_channel_name(
+                            router_data.request.payment_channel.as_ref(),
+                        ),
                 };
 
                 let (account_on_file, recurring) = Self::prepare_cit(&router_data.request)?;
@@ -954,12 +1021,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     merchant,
                     payment_method_type,
                     account_holder: None,
-                    statement_descriptor: None,
+                    statement_descriptor: get_statement_descriptor(
+                        router_data.request.billing_descriptor.as_ref(),
+                    ),
                     merchant_order_number: router_data.request.merchant_order_id.clone(),
                     initiator_type: Some(requests::JpmorganInitiatorType::Cardholder),
                     account_on_file: Some(account_on_file),
                     is_amount_final: Some(true),
                     recurring,
+                    partial_authorization_support: Some(map_partial_authorization_support(
+                        router_data.request.enable_partial_authorization,
+                    )),
                 };
                 Ok(request)
             }
@@ -1006,13 +1078,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     router_data.request.currency,
                 )?;
 
-                // Get statement_descriptor from connector config
-                let statement_descriptor = auth.statement_descriptor.clone().ok_or(
-                    IntegrationError::MissingRequiredField {
-                        field_name: "statement_descriptor",
-                        context: Default::default(),
-                    },
-                )?;
+                let statement_descriptor =
+                    get_statement_descriptor(router_data.request.billing_descriptor.as_ref());
 
                 Ok(Self {
                     capture_method,
@@ -1021,12 +1088,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     merchant,
                     payment_method_type,
                     account_holder: Some(account_holder),
-                    statement_descriptor: Some(statement_descriptor),
+                    statement_descriptor,
                     merchant_order_number: None,
                     initiator_type: None,
                     account_on_file: None,
                     is_amount_final: None,
                     recurring: None,
+                    partial_authorization_support: Some(map_partial_authorization_support(
+                        router_data.request.enable_partial_authorization,
+                    )),
                 })
             }
             PaymentMethodData::PaymentMethodToken(token_data) => {
@@ -1056,7 +1126,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     first_name: Secret::new("NA".to_string()),
                     last_name: Secret::new("NA".to_string()),
                 };
-                let statement_descriptor = Secret::new("Statement Descriptor".to_string());
+                let statement_descriptor =
+                    get_statement_descriptor(router_data.request.billing_descriptor.as_ref());
 
                 Ok(Self {
                     capture_method,
@@ -1065,12 +1136,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     merchant,
                     payment_method_type,
                     account_holder: Some(account_holder),
-                    statement_descriptor: Some(statement_descriptor),
+                    statement_descriptor,
                     merchant_order_number: None,
                     initiator_type: None,
                     account_on_file: None,
                     is_amount_final: None,
                     recurring: None,
+                    partial_authorization_support: Some(map_partial_authorization_support(
+                        router_data.request.enable_partial_authorization,
+                    )),
                 })
             }
             PaymentMethodData::BankDebit(_) => {
@@ -1084,7 +1158,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 WalletData::ApplePay(apple_pay_data) => match &apple_pay_data.payment_data {
                     ApplePayPaymentData::Decrypted(data) => Self::from_decrypted_wallet(
                         router_data,
-                        requests::JpmorganCard::from_apple_pay(data)?,
+                        requests::JpmorganCard::from_apple_pay(
+                            data,
+                            router_data.request.payment_channel.as_ref(),
+                        )?,
                     ),
                     ApplePayPaymentData::Encrypted(_) => Err(IntegrationError::NotImplemented(
                         "Encrypted Apple Pay payments".to_owned(),
@@ -1199,19 +1276,29 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 // account_holder and statement_descriptor are not required
                                 // for Google Pay encrypted flow
                                 account_holder: None,
-                                statement_descriptor: None,
+                                statement_descriptor: get_statement_descriptor(
+                                    router_data.request.billing_descriptor.as_ref(),
+                                ),
                                 merchant_order_number: None,
                                 initiator_type: None,
                                 account_on_file: None,
                                 is_amount_final: None,
                                 recurring: None,
+                                partial_authorization_support: Some(
+                                    map_partial_authorization_support(
+                                        router_data.request.enable_partial_authorization,
+                                    ),
+                                ),
                             })
                         }
                         domain_types::payment_method_data::GpayTokenizationData::Decrypted(
                             data,
                         ) => Self::from_decrypted_wallet(
                             router_data,
-                            requests::JpmorganCard::from_google_pay(data)?,
+                            requests::JpmorganCard::from_google_pay(
+                                data,
+                                router_data.request.payment_channel.as_ref(),
+                            )?,
                         ),
                     }
                 }
@@ -1343,6 +1430,7 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
         };
 
         let response = if post_capture_void_status.is_post_capture_void_failure() {
+            let network_diagnostics = item.response.network_diagnostics();
             Err(ErrorResponse {
                 attempt_status: None,
                 code: item.response.response_code.clone(),
@@ -1354,9 +1442,9 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
                 reason: item.response.response_message.clone(),
                 status_code: item.http_code,
                 connector_transaction_id: Some(item.response.transaction_id.clone()),
-                network_decline_code: None,
-                network_advice_code: None,
-                network_error_message: None,
+                network_decline_code: network_diagnostics.network_decline_code,
+                network_advice_code: network_diagnostics.network_advice_code,
+                network_error_message: network_diagnostics.network_error_message,
                 typed_connector_response: None,
                 raw_connector_response: None,
                 raw_connector_request: None,
@@ -1494,6 +1582,68 @@ impl TryFrom<&responses::JpmorganPaymentsResponse> for AttemptStatus {
     }
 }
 
+#[derive(Debug, Default)]
+struct JpmorganNetworkDiagnostics {
+    network_decline_code: Option<String>,
+    network_advice_code: Option<String>,
+    network_error_message: Option<String>,
+}
+
+impl JpmorganNetworkDiagnostics {
+    fn from_response(
+        network: Option<&responses::NetworkResponse>,
+        host_message: Option<&str>,
+    ) -> Self {
+        Self {
+            network_decline_code: network.and_then(|network| network.network_response_code.clone()),
+            network_advice_code: network
+                .and_then(|network| network.additional_data.as_ref())
+                .and_then(|additional| additional.merchant_advice_code.clone()),
+            network_error_message: host_message.map(str::to_owned),
+        }
+    }
+}
+
+impl responses::JpmorganPaymentsResponse {
+    fn network_diagnostics(&self) -> JpmorganNetworkDiagnostics {
+        JpmorganNetworkDiagnostics::from_response(
+            self.payment_method_type
+                .as_ref()
+                .and_then(responses::PaymentMethodType::network_response),
+            self.host_message.as_deref(),
+        )
+    }
+}
+
+fn get_partial_authorization_amounts(
+    response: &responses::JpmorganPaymentsResponse,
+    capture_method: Option<CaptureMethod>,
+    enable_partial_authorization: Option<bool>,
+    currency: common_enums::Currency,
+) -> (Option<common_utils::types::Money>, Option<common_utils::types::Money>, Option<common_utils::types::Money>) {
+    if response.partial_authorization != Some(true) {
+        return (None, None, None);
+    }
+
+    let (amount_captured, amount_capturable) = match capture_method {
+        Some(CaptureMethod::Manual) | Some(CaptureMethod::ManualMultiple) => {
+            (None, response.amount)
+        }
+        _ => (response.amount, Some(common_utils::types::MinorUnit::zero())),
+    };
+
+    let amount_authorized = enable_partial_authorization
+        .filter(|flag| *flag)
+        .and(response.amount);
+    let to_money = |amount| common_utils::types::Money { amount, currency };
+
+    (
+        amount_captured.map(to_money),
+        amount_capturable.map(to_money),
+        amount_authorized.map(to_money),
+    )
+}
+
 /// Build the `response` field for a JPMorgan payments flow: `Err(ErrorResponse)`
 /// when the transaction was declined/errored, otherwise `Ok(PaymentsResponseData)`.
 fn build_payments_response_result(
@@ -1502,6 +1652,7 @@ fn build_payments_response_result(
     status: AttemptStatus,
 ) -> Result<Result<PaymentsResponseData, ErrorResponse>, ResponseError> {
     if is_payment_failure(status) {
+        let diagnostics = response.network_diagnostics();
         Ok(Err(ErrorResponse {
             attempt_status: Some(FlowStatus::Payment(status)),
             code: response.response_code.clone(),
@@ -1512,9 +1663,9 @@ fn build_payments_response_result(
             reason: response.response_message.clone(),
             status_code: http_code,
             connector_transaction_id: Some(response.transaction_id.clone()),
-            network_decline_code: None,
-            network_advice_code: None,
-            network_error_message: None,
+            network_decline_code: diagnostics.network_decline_code,
+            network_advice_code: diagnostics.network_advice_code,
+            network_error_message: diagnostics.network_error_message,
             typed_connector_response: None,
             raw_connector_response: None,
             raw_connector_request: None,
@@ -1555,11 +1706,21 @@ impl<T: PaymentMethodDataTypes, F>
     ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::try_from(&item.response)?;
         let response = build_payments_response_result(&item.response, item.http_code, status)?;
+        let (amount_captured, amount_capturable, amount_authorized) =
+            get_partial_authorization_amounts(
+                &item.response,
+                item.router_data.request.capture_method,
+                item.router_data.request.enable_partial_authorization,
+                item.router_data.request.currency,
+            );
 
         Ok(Self {
             response,
             resource_common_data: PaymentFlowData {
                 status,
+                amount_captured,
+                amount_capturable,
+                amount_authorized,
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -1578,6 +1739,17 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganPSyncResponse, Self>>
             .change_context(requests::JpmorganSyncResource::response_context(
                 item.http_code,
             ))?;
+        let (amount_captured, amount_capturable, amount_authorized) = match &item.response {
+            responses::JpmorganPSyncResponse::Payment(payment) => {
+                get_partial_authorization_amounts(
+                    payment,
+                    item.router_data.request.capture_method,
+                    payment.partial_authorization,
+                    item.router_data.request.currency,
+                )
+            }
+            responses::JpmorganPSyncResponse::Verification(_) => (None, None, None),
+        };
         let (status, response) = match (resource, item.response) {
             (
                 requests::JpmorganSyncResource::Payment(_),
@@ -1612,6 +1784,9 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganPSyncResponse, Self>>
             response,
             resource_common_data: PaymentFlowData {
                 status,
+                amount_captured,
+                amount_capturable,
+                amount_authorized,
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -1912,6 +2087,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     account_number_type: Some(requests::JpmorganAccountNumberType::Pan),
                     wallet_provider: None,
                     authentication: None,
+                    merchant_sales_channel_name:
+                        map_payment_channel_to_jpmorgan_merchant_sales_channel_name(
+                            request.payment_channel.as_ref(),
+                        ),
                 },
                 cvv: Some(card.get_card_cvc_required()?),
             },
@@ -1927,12 +2106,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     account_number_type: Some(requests::JpmorganAccountNumberType::Pan),
                     wallet_provider: None,
                     authentication: None,
+                    merchant_sales_channel_name:
+                        map_payment_channel_to_jpmorgan_merchant_sales_channel_name(
+                            request.payment_channel.as_ref(),
+                        ),
                 },
                 cvv: None,
             },
             PaymentMethodData::Wallet(WalletData::ApplePay(wallet)) => match &wallet.payment_data {
                 ApplePayPaymentData::Decrypted(data) => requests::JpmorganSetupMandateCard {
-                    card: requests::JpmorganCard::from_apple_pay(data)?,
+                    card: requests::JpmorganCard::from_apple_pay(
+                        data,
+                        request.payment_channel.as_ref(),
+                    )?,
                     cvv: None,
                 },
                 ApplePayPaymentData::Encrypted(_) => {
@@ -1948,7 +2134,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 match &wallet.tokenization_data {
                     domain_types::payment_method_data::GpayTokenizationData::Decrypted(data) => {
                         requests::JpmorganSetupMandateCard {
-                            card: requests::JpmorganCard::from_google_pay(data)?,
+                            card: requests::JpmorganCard::from_google_pay(
+                                data,
+                                request.payment_channel.as_ref(),
+                            )?,
                             cvv: None,
                         }
                     }
@@ -1980,6 +2169,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             merchant_order_number: request.merchant_order_id.clone(),
             initiator_type: requests::JpmorganInitiatorType::Cardholder,
             account_on_file: requests::JpmorganAccountOnFile::ToBeStored,
+            statement_descriptor: get_statement_descriptor(
+                router_data.request.billing_descriptor.as_ref(),
+            ),
         })
     }
 }
@@ -2195,6 +2387,10 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganRepeatPaymentRequest<T> {
             wallet_provider: provider,
             original_network_transaction_id: ntid,
             original_transaction_link_id: tlid,
+            merchant_sales_channel_name:
+                map_payment_channel_to_jpmorgan_merchant_sales_channel_name(
+                    request.payment_channel.as_ref(),
+                ),
         })
     }
 }
@@ -2260,6 +2456,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             initiator_type: requests::JpmorganInitiatorType::Merchant,
             account_on_file: requests::JpmorganAccountOnFile::Stored,
             is_amount_final: true,
+            statement_descriptor: get_statement_descriptor(
+                router_data.request.billing_descriptor.as_ref(),
+            ),
+            partial_authorization_support: Some(map_partial_authorization_support(
+                router_data.request.enable_partial_authorization,
+            )),
         })
     }
 }
@@ -2275,11 +2477,21 @@ impl<T: PaymentMethodDataTypes>
     ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::try_from(&item.response)?;
         let response = build_payments_response_result(&item.response, item.http_code, status)?;
+        let (amount_captured, amount_capturable, amount_authorized) =
+            get_partial_authorization_amounts(
+                &item.response,
+                item.router_data.request.capture_method,
+                item.router_data.request.enable_partial_authorization,
+                item.router_data.request.currency,
+            );
 
         Ok(Self {
             response,
             resource_common_data: PaymentFlowData {
                 status,
+                amount_captured,
+                amount_capturable,
+                amount_authorized,
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
