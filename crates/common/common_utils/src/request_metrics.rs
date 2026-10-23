@@ -13,6 +13,7 @@ use std::{
 #[derive(Clone, Debug, Default)]
 pub struct ConnectorLatencyTracker {
     nanos: Arc<AtomicU64>,
+    outgoing_millis: Arc<AtomicU64>,
 }
 
 impl ConnectorLatencyTracker {
@@ -23,5 +24,20 @@ impl ConnectorLatencyTracker {
 
     pub fn connector_time(&self) -> Duration {
         Duration::from_nanos(self.nanos.load(Ordering::Relaxed))
+    }
+
+    /// Add the exact millisecond value emitted on an outgoing golden log line.
+    pub fn add_outgoing_latency_millis(&self, elapsed_millis: u64) {
+        // The closure always returns `Some`, so the update cannot fail.
+        let _ =
+            self.outgoing_millis
+                .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
+                    Some(current.saturating_add(elapsed_millis))
+                });
+    }
+
+    /// Sum of the `latency_ms` values emitted by outgoing calls in this request.
+    pub fn outgoing_latency_millis(&self) -> u64 {
+        self.outgoing_millis.load(Ordering::Relaxed)
     }
 }
