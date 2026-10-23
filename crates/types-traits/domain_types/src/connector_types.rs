@@ -178,6 +178,7 @@ pub enum ConnectorEnum {
     GlobalpaymentsRealex,
     GlobalpaymentsHeartland,
     Payhere,
+    Revpay,
 }
 
 // snake case for enum variants
@@ -577,6 +578,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Paydotcom => Ok(Self::Paydotcom),
             grpc_api_types::payments::Connector::ElavonPg => Ok(Self::ElavonPg),
             grpc_api_types::payments::Connector::Payhere => Ok(Self::Payhere),
+            grpc_api_types::payments::Connector::Revpay => Ok(Self::Revpay),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(IntegrationError::InvalidDataFormat {
                     field_name: "connector",
@@ -6444,6 +6446,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Paydotcom(_) => Ok(Self::Payment(ConnectorEnum::Paydotcom)),
             AuthType::ElavonPg(_) => Ok(Self::Payment(ConnectorEnum::ElavonPg)),
             AuthType::Payhere(_) => Ok(Self::Payment(ConnectorEnum::Payhere)),
+            AuthType::Revpay(_) => Ok(Self::Payment(ConnectorEnum::Revpay)),
             AuthType::Imerchantsolutions(_) => Ok(Self::Payment(ConnectorEnum::Imerchantsolutions)),
             AuthType::TsysTransit(_) => Ok(Self::Payment(ConnectorEnum::TsysTransit)),
             AuthType::GlobalpaymentsRealex(_) => {
