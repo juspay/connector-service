@@ -1164,6 +1164,11 @@ impl ForeignTryFrom<grpc_api_types::payments::CardNetwork> for CardNetwork {
             grpc_api_types::payments::CardNetwork::Prop => Ok(Self::Prop),
             grpc_api_types::payments::CardNetwork::PrivateLabel => Ok(Self::PrivateLabel),
             grpc_api_types::payments::CardNetwork::Dinacard => Ok(Self::Dinacard),
+            grpc_api_types::payments::CardNetwork::AirPlus => Ok(Self::AirPlus),
+            grpc_api_types::payments::CardNetwork::Aurore => Ok(Self::Aurore),
+            grpc_api_types::payments::CardNetwork::EftposAustralia => Ok(Self::EftposAustralia),
+            grpc_api_types::payments::CardNetwork::GeCapital => Ok(Self::GeCapital),
+            grpc_api_types::payments::CardNetwork::Uatp => Ok(Self::Uatp),
             grpc_api_types::payments::CardNetwork::Unspecified => {
                 Err(IntegrationError::InvalidDataFormat {
                     field_name: "card_network",
@@ -3697,6 +3702,20 @@ impl PaymentMethodDataAction {
                 )))
             }
         }
+    }
+}
+
+/// Reuses the non-vault conversion path for cards, network tokens, and wallets.
+impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod>
+    for payment_method_data::PaymentMethodData<payment_method_data::DefaultPCIHolder>
+{
+    type Error = IntegrationError;
+
+    fn foreign_try_from(
+        payment_method: grpc_api_types::payments::PaymentMethod,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        PaymentMethodDataAction::get_payment_method_data_action(payment_method.clone())?
+            .into_default_pci_payment_method_data(Some(payment_method))
     }
 }
 
@@ -7515,6 +7534,13 @@ impl ForeignTryFrom<ConnectorResponseData> for grpc_api_types::payments::Connect
                             card_network,
                             domestic_network,
                             auth_code,
+                            processor_card_network,
+                            card_subtype,
+                            card_segment_type,
+                            funding_source,
+                            card_type,
+                            issuer_name,
+                            issuer_country,
                         } => grpc_api_types::payments::AdditionalPaymentMethodConnectorResponse {
                             payment_method_data: Some(
                                 grpc_api_types::payments::additional_payment_method_connector_response::PaymentMethodData::Card(
@@ -7528,6 +7554,30 @@ impl ForeignTryFrom<ConnectorResponseData> for grpc_api_types::payments::Connect
                                         card_network: card_network.clone(),
                                         domestic_network: domestic_network.clone(),
                                         auth_code: auth_code.clone(),
+                                        processor_card_network: processor_card_network.clone().map(|network| {
+                                            let grpc_network: grpc_api_types::payments::CardNetwork = ForeignFrom::foreign_from(network);
+                                            i32::from(grpc_network)
+                                        }),
+                                        card_subtype: card_subtype.clone(),
+                                        card_segment_type: card_segment_type.map(|segment| {
+                                            let grpc_segment: grpc_api_types::payments::CardSegmentType = ForeignFrom::foreign_from(segment);
+                                            i32::from(grpc_segment)
+                                        }),
+                                        funding_source: funding_source.map(|source| {
+                                            let grpc_source: grpc_api_types::payments::FundingSource = ForeignFrom::foreign_from(source);
+                                            i32::from(grpc_source)
+                                        }),
+                                        card_type: card_type.map(|card_type| {
+                                            let grpc_card_type: grpc_api_types::payments::CardType = ForeignFrom::foreign_from(card_type);
+                                            i32::from(grpc_card_type)
+                                        }),
+                                        issuer_name: issuer_name.clone(),
+                                        issuer_country: issuer_country.and_then(|country| {
+                                            grpc_api_types::payments::CountryAlpha2::foreign_try_from(country)
+                                                .inspect_err(|error| tracing::warn!(?error, "Failed to convert processor issuer country to gRPC"))
+                                                .ok()
+                                                .map(i32::from)
+                                        }),
                                     }
                                 )
                             ),
@@ -7954,6 +8004,11 @@ impl ForeignFrom<CardNetwork> for grpc_payment_types::CardNetwork {
             CardNetwork::Prop => Self::Prop,
             CardNetwork::PrivateLabel => Self::PrivateLabel,
             CardNetwork::Dinacard => Self::Dinacard,
+            CardNetwork::AirPlus => Self::AirPlus,
+            CardNetwork::Aurore => Self::Aurore,
+            CardNetwork::EftposAustralia => Self::EftposAustralia,
+            CardNetwork::GeCapital => Self::GeCapital,
+            CardNetwork::Uatp => Self::Uatp,
         }
     }
 }
@@ -11187,6 +11242,10 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
             .flatten();
         let currency = amount.as_ref().map(|amount| amount.currency);
         Ok(Self {
+            payment_method_data: value
+                .payment_method
+                .map(PaymentMethodData::<DefaultPCIHolder>::foreign_try_from)
+                .transpose()?,
             browser_info: value
                 .browser_info
                 .map(BrowserInformation::foreign_try_from)
@@ -11575,6 +11634,10 @@ impl ForeignTryFrom<PaymentServiceIncrementalAuthorizationRequest>
             .transpose()?;
 
         Ok(Self {
+            payment_method_data: value
+                .payment_method
+                .map(PaymentMethodData::<DefaultPCIHolder>::foreign_try_from)
+                .transpose()?,
             currency: amount.currency,
             amount,
             additional_amount,
@@ -12494,12 +12557,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
                 .map(connector_types::SplitRefundsDetails::foreign_try_from)
                 .transpose()?,
             connector_order_id: value.connector_order_id,
-            payment_method_data: value.payment_method.and_then(|pm| {
-                payment_method_data::PaymentMethodData::<
-                    payment_method_data::DefaultPCIHolder,
-                >::convert_to_domain_model_for_non_card_payment_methods(pm)
-                .ok()
-            }),
+            payment_method_data: value
+                .payment_method
+                .map(PaymentMethodData::<DefaultPCIHolder>::foreign_try_from)
+                .transpose()?,
         })
     }
 }
@@ -12950,6 +13011,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
         }?;
 
         Ok(Self {
+            payment_method_data: value
+                .payment_method
+                .map(PaymentMethodData::<DefaultPCIHolder>::foreign_try_from)
+                .transpose()?,
             split_settlement: value
                 .split_settlement
                 .clone()
