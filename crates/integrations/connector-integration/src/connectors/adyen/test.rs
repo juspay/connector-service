@@ -1202,16 +1202,30 @@ mod tests {
             }
         }
 
-        /// `AuthenticationNotRequired` (and the two in-flight codes) are not failures: Authorize
-        /// proceeds without `mpiData`, so the leg succeeds with neither a form nor
+        /// `AuthenticationNotRequired` is not a failure: there was nothing to authenticate, so
+        /// Authorize proceeds without `mpiData` and the leg succeeds with neither a form nor
         /// authentication data.
         #[test]
         fn authentication_not_required_is_pending_without_authentication_data() {
-            for result_code in ["AuthenticationNotRequired", "Received", "Pending"] {
+            let out = pre_authenticate(&result_code_body("AuthenticationNotRequired"), None);
+            assert_eq!(
+                outcome(out.resource_common_data.status, &out.response),
+                (AttemptStatus::Pending, false, false)
+            );
+        }
+
+        /// `Received` / `Pending` mean adyen has not finished authenticating. Continuing would
+        /// authorise with no `mpiData` - no liability shift, and adyen free to start a 3DS flow
+        /// of its own on the money call and challenge the shopper a second time. Only a finished
+        /// result, or an explicit `AuthenticationNotRequired`, may continue.
+        #[test]
+        fn an_unfinished_authentication_does_not_authorise() {
+            for result_code in ["Received", "Pending"] {
                 let out = pre_authenticate(&result_code_body(result_code), None);
                 assert_eq!(
                     outcome(out.resource_common_data.status, &out.response),
-                    (AttemptStatus::Pending, false, false)
+                    (AttemptStatus::AuthenticationFailed, false, false),
+                    "{result_code} must not let the money call run"
                 );
             }
         }

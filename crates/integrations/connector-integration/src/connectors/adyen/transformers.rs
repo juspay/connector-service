@@ -9800,10 +9800,11 @@ pub enum AdyenPostAuthenticateDetails {
         #[serde(rename = "threeds2.fingerprint")]
         fingerprint: String,
     },
-    /// PostAuthenticate leg: outcome of the ACS challenge.
+    /// PostAuthenticate leg: outcome of the ACS challenge. Base64 of the `authorisationToken`,
+    /// so it is as sensitive as the token itself and must not reach a request log in the clear.
     ThreeDsResult {
         #[serde(rename = "threeDSResult")]
-        three_ds_result: String,
+        three_ds_result: Secret<String>,
     },
 }
 
@@ -9814,7 +9815,9 @@ pub enum AdyenPostAuthenticateDetails {
 #[serde(rename_all = "camelCase")]
 pub struct AdyenDetailsRequest {
     details: AdyenPostAuthenticateDetails,
-    payment_data: Option<String>,
+    /// Adyen's handle on the suspended authentication; masked for the same reason as
+    /// `authorisationToken`.
+    payment_data: Option<Secret<String>>,
     authentication_data: AdyenAuthenticationData,
 }
 
@@ -9845,7 +9848,7 @@ pub struct AdyenThreeDs2Action {
     subtype: AdyenThreeDs2Subtype,
     token: Secret<String>,
     authorisation_token: Option<Secret<String>>,
-    payment_data: Option<String>,
+    payment_data: Option<Secret<String>>,
     payment_method_type: Option<PaymentType>,
 }
 
@@ -9957,7 +9960,7 @@ pub struct AdyenThreeDs2ActionResponse {
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AdyenThreeDsState {
-    payment_data: Option<String>,
+    payment_data: Option<Secret<String>>,
     authorisation_token: Option<Secret<String>>,
     /// The browser step the shopper has just been handed, so the caller knows which leg resumes
     /// the ladder. The token cannot say: Adyen returns an `authorisationToken` on the fingerprint
@@ -10038,13 +10041,15 @@ fn encode_adyen_fingerprint_completion() -> String {
 fn encode_adyen_three_ds_result(
     trans_status: &str,
     authorisation_token: &Secret<String>,
-) -> String {
-    STANDARD.encode(
-        serde_json::json!({
-            "transStatus": trans_status,
-            "authorisationToken": authorisation_token.peek(),
-        })
-        .to_string(),
+) -> Secret<String> {
+    Secret::new(
+        STANDARD.encode(
+            serde_json::json!({
+                "transStatus": trans_status,
+                "authorisationToken": authorisation_token.peek(),
+            })
+            .to_string(),
+        ),
     )
 }
 
@@ -10283,11 +10288,20 @@ fn get_adyen_native_outcome(
                 ))),
             }
         }
-        // No authentication needed, or still in flight: Authorize proceeds without mpiData.
-        AdyenAuthenticationStatus::AuthenticationNotRequired
-        | AdyenAuthenticationStatus::Received
-        | AdyenAuthenticationStatus::Pending => {
+        // Nothing to authenticate: Authorize proceeds without mpiData, which is correct - there
+        // is no authentication result to send and none was needed.
+        AdyenAuthenticationStatus::AuthenticationNotRequired => {
             Ok((AttemptStatus::Pending, AdyenNativeOutcome::default()))
+        }
+        // Still in flight. Letting Authorize run here would authorise on an authentication that
+        // has not finished: no mpiData, so no liability shift, and Adyen is free to start a 3DS
+        // flow of its own on the money call and challenge the shopper a second time. Only a
+        // finished result, or an explicit AuthenticationNotRequired, may continue.
+        AdyenAuthenticationStatus::Received | AdyenAuthenticationStatus::Pending => {
+            Err(failed(Some(
+                "adyen has not finished the authentication; it cannot be authorised yet"
+                    .to_string(),
+            )))
         }
         // `Unknown` is the `serde(other)` catch-all: a resultCode this integration has never
         // seen. Grouping it with AuthenticationNotRequired would authorise the payment with no
