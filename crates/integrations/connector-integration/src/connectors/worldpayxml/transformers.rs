@@ -996,7 +996,7 @@ fn build_worldpayxml_recipient_party(
         full_name: requests::WorldpayxmlFullName {
             first: address.get_first_name()?.clone(),
             middle: None,
-            last: address.get_last_name()?.clone(),
+            last: Some(address.get_last_name()?.clone()),
         },
         funding_address: requests::WorldpayxmlFundingAddress {
             address1: address.get_line1()?.clone(),
@@ -1027,7 +1027,7 @@ fn build_worldpayxml_recipient_party(
 }
 
 /// Worldpay has no company-name element, so a corporate sender's name is spread over the
-/// `fullName` parts: first word, middle words, last word. A one-word name fills both first and last.
+/// `fullName` parts: first word, middle words, last word. A one-word name fills only first.
 fn get_worldpayxml_company_full_name(
     company_name: &Secret<String>,
 ) -> Result<requests::WorldpayxmlFullName, Report<IntegrationError>> {
@@ -1037,12 +1037,12 @@ fn get_worldpayxml_company_full_name(
         [name] => Ok(requests::WorldpayxmlFullName {
             first: Secret::new((*name).to_string()),
             middle: None,
-            last: Secret::new((*name).to_string()),
+            last: None,
         }),
         [first, middle @ .., last] => Ok(requests::WorldpayxmlFullName {
             first: Secret::new((*first).to_string()),
             middle: (!middle.is_empty()).then(|| Secret::new(middle.join(" "))),
-            last: Secret::new((*last).to_string()),
+            last: Some(Secret::new((*last).to_string())),
         }),
     }
 }
@@ -1090,7 +1090,7 @@ fn build_worldpayxml_sender_party(
             requests::WorldpayxmlFullName {
                 first: resource_common_data.get_billing_first_name()?,
                 middle: None,
-                last: resource_common_data.get_billing_last_name()?,
+                last: Some(resource_common_data.get_billing_last_name()?),
             },
             requests::WorldpayxmlFundingAddress {
                 address1: resource_common_data.get_billing_line1()?,
@@ -1109,7 +1109,7 @@ fn build_worldpayxml_sender_party(
             requests::WorldpayxmlFullName {
                 first: individual.first_name.clone(),
                 middle: None,
-                last: individual.last_name.clone(),
+                last: Some(individual.last_name.clone()),
             },
             individual
                 .address
@@ -3672,14 +3672,10 @@ mod sender_party_tests {
     }
 
     #[test]
-    fn single_word_company_name_is_first_and_last() {
+    fn single_word_company_name_is_first_only() {
         assert_eq!(
             sender_party_xml(Some(&corporate("Acme", None)), None).expect("sender builds"),
-            expected_xml(
-                "<first>Acme</first><last>Acme</last>",
-                SENDER_ADDRESS_XML,
-                ""
-            ),
+            expected_xml("<first>Acme</first>", SENDER_ADDRESS_XML, ""),
         );
     }
 
