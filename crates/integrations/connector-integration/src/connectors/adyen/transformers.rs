@@ -846,7 +846,7 @@ pub struct Address {
     house_number_or_name: Secret<String>,
     postal_code: Secret<String>,
     state_or_province: Option<Secret<String>>,
-    street: Secret<String>,
+    street: Option<Secret<String>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -6595,24 +6595,17 @@ pub fn get_address_info(
     address.and_then(|add| {
         add.address.as_ref().map(
             |a| -> Result<Address, error_stack::Report<IntegrationError>> {
-                // Adyen requires both `street` and `houseNumberOrName`. `street` is line1;
-                // `houseNumberOrName` is line2 when it carries a value, otherwise line1 again,
-                // so a line1-only address is not refused for a missing street (diverges from
-                // Hyperswitch, which sends line2 as street).
-                let line1 = a.get_line1()?.to_owned();
-                let house_number_or_name = a
-                    .line2
-                    .as_ref()
-                    .filter(|line2| !line2.peek().trim().is_empty())
-                    .cloned()
-                    .unwrap_or_else(|| line1.clone());
+                // Mirror hyperswitch exactly: line1 is `houseNumberOrName`, line2 is `street`,
+                // and `street` is omitted when there is no line2. A line1-only address is not
+                // refused for the missing street - measured on the sandbox, a card payment with
+                // line1 and no line2 is authorised.
                 Ok(Address {
                     city: a.get_city()?.to_owned(),
                     country: a.get_country()?.to_owned(),
-                    house_number_or_name,
+                    house_number_or_name: a.get_line1()?.to_owned(),
                     postal_code: a.get_zip()?.to_owned(),
                     state_or_province: a.state.clone(),
-                    street: line1,
+                    street: a.line2.clone(),
                 })
             },
         )
