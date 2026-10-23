@@ -194,6 +194,31 @@ mod tests {
     }
 
     #[test]
+    fn partial_capture_webhook_is_not_recorded_as_fully_charged(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let connector = Noon::<DefaultPCIHolder>::new();
+        let partial = connector
+            .process_payment_webhook(
+                make_request(&webhook("Capture", "PARTIALLY_CAPTURED", None)),
+                None,
+                None,
+                None,
+            )
+            .map_err(|err| format!("{err:?}"))?;
+        ensure_eq!(partial.status, AttemptStatus::PartialCharged);
+        let full = connector
+            .process_payment_webhook(
+                make_request(&webhook("Capture", "CAPTURED", None)),
+                None,
+                None,
+                None,
+            )
+            .map_err(|err| format!("{err:?}"))?;
+        ensure_eq!(full.status, AttemptStatus::Charged);
+        Ok(())
+    }
+
+    #[test]
     fn payment_status_mapping() -> Result<(), Box<dyn std::error::Error>> {
         ensure_eq!(
             get_payment_status(NoonPaymentStatus::Captured, AttemptStatus::Pending),

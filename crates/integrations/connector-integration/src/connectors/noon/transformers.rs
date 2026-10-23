@@ -4,17 +4,17 @@ use common_utils::{
     ext_traits::Encode,
     pii,
     request::Method,
-    types::{MinorUnit, StringMajorUnit},
+    types::{FloatMajorUnit, FloatMajorUnitForConnector, MinorUnit, Money, StringMajorUnit},
 };
 use domain_types::{
     connector_flow::{
         Authorize, Capture, MandateRevoke, Refund, RepeatPayment, SetupMandate, Void,
     },
     connector_types::{
-        MandateReference, MandateReferenceId, MandateRevokeRequestData, MandateRevokeResponseData,
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        ConnectorEnum, MandateReference, MandateReferenceId, MandateRevokeRequestData,
+        MandateRevokeResponseData, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors::{ConnectorError, IntegrationError, IntegrationErrorContext},
     mandates::MandateDataType,
@@ -849,6 +849,9 @@ pub struct NoonPaymentsOrderResponse {
     error_code: u64,
     error_message: Option<String>,
     reference: Option<String>,
+    /// Major-unit total Noon has captured on the order (absent on some responses).
+    total_captured_amount: Option<f64>,
+    currency: Option<enums::Currency>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -953,6 +956,8 @@ pub(crate) struct NoonPaymentsResponseOutcome {
     pub(crate) status: AttemptStatus,
     pub(crate) response: Result<PaymentsResponseData, ErrorResponse>,
     pub(crate) connector_response: Option<ConnectorResponseData>,
+    /// What Noon reports as captured so far, when it reports a positive total.
+    pub(crate) amount_captured: Option<Money>,
 }
 
 /// Shared mapper for every Noon response that carries `result.order`.
@@ -967,6 +972,7 @@ pub(crate) fn map_noon_payments_response(
     http_code: u16,
 ) -> NoonPaymentsResponseOutcome {
     let connector_response = build_noon_connector_response(&result, flow_data);
+    let amount_captured = noon_amount_captured(&result.order, flow_data, http_code);
     let NoonPaymentsResponseResult {
         order,
         checkout_data,
@@ -1049,7 +1055,30 @@ pub(crate) fn map_noon_payments_response(
         status,
         response,
         connector_response,
+        amount_captured,
     }
+}
+
+/// The captured total as `Money`, so a partial capture is not recorded as the full authorized
+/// amount. Currency is the order's own, else the payment's. `None` when Noon reports no
+/// positive total or the amount cannot be converted (the amount is then simply not reported).
+fn noon_amount_captured(
+    order: &NoonPaymentsOrderResponse,
+    flow_data: &PaymentFlowData,
+    http_code: u16,
+) -> Option<Money> {
+    let total = order.total_captured_amount.filter(|total| *total > 0.0)?;
+    let currency = order
+        .currency
+        .or_else(|| flow_data.amount.as_ref().map(|money| money.currency))?;
+    utils::response_amount_to_money(
+        &FloatMajorUnitForConnector,
+        FloatMajorUnit(total),
+        currency,
+        http_code,
+        ConnectorEnum::Noon,
+    )
+    .ok()
 }
 
 impl<F, T> TryFrom<ResponseRouterData<NoonPaymentsResponse, Self>>
@@ -1061,6 +1090,7 @@ impl<F, T> TryFrom<ResponseRouterData<NoonPaymentsResponse, Self>>
             status,
             response,
             connector_response,
+            amount_captured,
         } = map_noon_payments_response(
             item.response.result,
             &item.router_data.resource_common_data,
@@ -1072,6 +1102,7 @@ impl<F, T> TryFrom<ResponseRouterData<NoonPaymentsResponse, Self>>
                 status,
                 connector_response: connector_response
                     .or(resource_common_data.connector_response.clone()),
+                amount_captured: amount_captured.or(resource_common_data.amount_captured.clone()),
                 ..resource_common_data
             },
             response,
@@ -1227,7 +1258,7 @@ impl TryFrom<ResponseRouterData<NoonVoidResponse, Self>>
         // AUTHORIZED: the reverse failed (spec ## Webhook Events, Reverse: AUTHORIZED =
         // reverse failed). The shared mapper would report that as a successful Authorized
         // response, so it is handled here.
-        let (status, response, connector_response) = match result.order.status {
+        let (status, response, connector_response, amount_captured) = match result.order.status {
             NoonPaymentStatus::Authorized => {
                 let NoonPaymentsResponseResult {
                     order, transaction, ..
@@ -1261,6 +1292,7 @@ impl TryFrom<ResponseRouterData<NoonVoidResponse, Self>>
                         typed_connector_request: None,
                     }),
                     None,
+                    None,
                 )
             }
             // REVERSED / PARTIALLY_REVERSED map to Voided; every other status follows the
@@ -1289,12 +1321,13 @@ impl TryFrom<ResponseRouterData<NoonVoidResponse, Self>>
                     status,
                     response,
                     connector_response,
+                    amount_captured,
                 } = map_noon_payments_response(
                     result,
                     &router_data.resource_common_data,
                     http_code,
                 );
-                (status, response, connector_response)
+                (status, response, connector_response, amount_captured)
             }
         };
 
@@ -1304,6 +1337,7 @@ impl TryFrom<ResponseRouterData<NoonVoidResponse, Self>>
                 status,
                 connector_response: connector_response
                     .or(resource_common_data.connector_response.clone()),
+                amount_captured: amount_captured.or(resource_common_data.amount_captured.clone()),
                 ..resource_common_data
             },
             response,
@@ -1753,6 +1787,8 @@ impl From<NoonWebhookObject> for NoonPaymentsResponse {
                     error_code: 0,
                     error_message: None,
                     reference: None,
+                    total_captured_amount: None,
+                    currency: None,
                 },
                 checkout_data: None,
                 subscription: None,
@@ -2046,6 +2082,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
             status,
             response,
             connector_response,
+            amount_captured,
         } = map_noon_payments_response(
             item.response.result,
             &item.router_data.resource_common_data,
@@ -2057,6 +2094,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 status,
                 connector_response: connector_response
                     .or(resource_common_data.connector_response.clone()),
+                amount_captured: amount_captured.or(resource_common_data.amount_captured.clone()),
                 ..resource_common_data
             },
             response,
@@ -2248,6 +2286,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             status,
             response,
             connector_response,
+            amount_captured,
         } = map_noon_payments_response(
             item.response.0.result,
             &item.router_data.resource_common_data,
@@ -2259,6 +2298,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 status,
                 connector_response: connector_response
                     .or(resource_common_data.connector_response.clone()),
+                amount_captured: amount_captured.or(resource_common_data.amount_captured.clone()),
                 ..resource_common_data
             },
             response,

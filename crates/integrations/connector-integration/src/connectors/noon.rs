@@ -344,8 +344,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         // Same mapping as PSync: AUTHORIZED is Authorized whatever the capture method; LOCKED /
         // unknown statuses are never terminal.
-        let status =
-            noon::get_payment_status(webhook_object.order_status, AttemptStatus::Unspecified);
+        // The webhook carries no currency and no order total, so it cannot say how much was
+        // captured. PARTIALLY_CAPTURED is therefore reported as PartialCharged rather than the
+        // Charged PSync uses, so a partial capture made in Noon's dashboard is not recorded as
+        // the full authorized amount; PSync reports the captured total.
+        let status = match webhook_object.order_status {
+            noon::NoonPaymentStatus::PartiallyCaptured => AttemptStatus::PartialCharged,
+            order_status => noon::get_payment_status(order_status, AttemptStatus::Unspecified),
+        };
 
         let connector_order_id = webhook_object.order_id.to_string();
         Ok(WebhookDetailsResponse {
