@@ -207,18 +207,12 @@ where
                 }])
             }
             Some(common_enums::PaymentMethodType::BancontactIntent) => {
-                let mobile_intent_uri = router_data.request.router_return_url.clone().ok_or(
-                    IntegrationError::MissingRequiredField {
-                        field_name: "router_return_url",
-                        context: Default::default(),
-                    },
-                )?;
                 Some(vec![PproAuthenticationSettings {
                     r#type: PproAuthenticationType::AppIntent,
                     settings: Some(PproAuthSettingsDetails {
                         return_url: None,
                         scan_by: None,
-                        mobile_intent_uri: Some(mobile_intent_uri),
+                        mobile_intent_uri: router_data.request.router_return_url.clone(),
                     }),
                 }])
             }
