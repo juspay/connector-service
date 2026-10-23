@@ -8,24 +8,27 @@ import {
   NetworkErrorCode,
 } from "../src/http_client";
 
+/** Shared test URL to avoid repetition across test cases. */
+const STRIPE_CHARGES_URL = "https://api.stripe.com/v1/charges";
+
 describe("resolveProxyUrl", () => {
   it("returns null when proxy is undefined", () => {
     assert.strictEqual(
-      resolveProxyUrl("https://api.stripe.com/v1/charges", undefined),
+      resolveProxyUrl(STRIPE_CHARGES_URL, undefined),
       null
     );
   });
 
   it("returns null when proxy is null", () => {
     assert.strictEqual(
-      resolveProxyUrl("https://api.stripe.com/v1/charges", null),
+      resolveProxyUrl(STRIPE_CHARGES_URL, null),
       null
     );
   });
 
   it("returns null for empty proxy config", () => {
     assert.strictEqual(
-      resolveProxyUrl("https://api.stripe.com/v1/charges", {}),
+      resolveProxyUrl(STRIPE_CHARGES_URL, {}),
       null
     );
   });
@@ -36,7 +39,7 @@ describe("resolveProxyUrl", () => {
       httpsUrl: "https://proxy.local:8443",
     };
     assert.strictEqual(
-      resolveProxyUrl("https://api.stripe.com/v1/charges", proxy),
+      resolveProxyUrl(STRIPE_CHARGES_URL, proxy),
       "https://proxy.local:8443"
     );
   });
@@ -44,7 +47,7 @@ describe("resolveProxyUrl", () => {
   it("falls back to httpUrl when httpsUrl is absent", () => {
     const proxy = { httpUrl: "http://proxy.local:8080" };
     assert.strictEqual(
-      resolveProxyUrl("https://api.stripe.com/v1/charges", proxy),
+      resolveProxyUrl(STRIPE_CHARGES_URL, proxy),
       "http://proxy.local:8080"
     );
   });
@@ -52,7 +55,7 @@ describe("resolveProxyUrl", () => {
   it("uses httpsUrl when httpUrl is absent", () => {
     const proxy = { httpsUrl: "https://proxy.local:8443" };
     assert.strictEqual(
-      resolveProxyUrl("https://api.stripe.com/v1/charges", proxy),
+      resolveProxyUrl(STRIPE_CHARGES_URL, proxy),
       "https://proxy.local:8443"
     );
   });
@@ -61,12 +64,12 @@ describe("resolveProxyUrl", () => {
     const proxy = {
       httpsUrl: "https://proxy.local:8443",
       bypassUrls: [
-        "https://api.stripe.com/v1/charges",
+        STRIPE_CHARGES_URL,
         "https://internal.service.local",
       ],
     };
     assert.strictEqual(
-      resolveProxyUrl("https://api.stripe.com/v1/charges", proxy),
+      resolveProxyUrl(STRIPE_CHARGES_URL, proxy),
       null
     );
   });
@@ -77,7 +80,7 @@ describe("resolveProxyUrl", () => {
       bypassUrls: ["https://internal.service.local"],
     };
     assert.strictEqual(
-      resolveProxyUrl("https://api.stripe.com/v1/charges", proxy),
+      resolveProxyUrl(STRIPE_CHARGES_URL, proxy),
       "https://proxy.local:8443"
     );
   });
@@ -88,7 +91,7 @@ describe("resolveProxyUrl", () => {
       bypassUrls: [],
     };
     assert.strictEqual(
-      resolveProxyUrl("https://api.stripe.com/v1/charges", proxy),
+      resolveProxyUrl(STRIPE_CHARGES_URL, proxy),
       "http://proxy.local:8080"
     );
   });
@@ -96,7 +99,7 @@ describe("resolveProxyUrl", () => {
   it("applies proxy when bypassUrls is undefined", () => {
     const proxy = { httpUrl: "http://proxy.local:8080" };
     assert.strictEqual(
-      resolveProxyUrl("https://api.stripe.com/v1/charges", proxy),
+      resolveProxyUrl(STRIPE_CHARGES_URL, proxy),
       "http://proxy.local:8080"
     );
   });
@@ -241,7 +244,7 @@ describe("NetworkError", () => {
   });
 
   it("returns NETWORK_ERROR_CODE_UNSPECIFIED for unrecognised codes", () => {
-    const err = new NetworkError("unknown", 99999 as any);
+    const err = new NetworkError("unknown", 99999 as unknown as NetworkErrorCode);
     assert.strictEqual(err.errorCode, "NETWORK_ERROR_CODE_UNSPECIFIED");
   });
 
