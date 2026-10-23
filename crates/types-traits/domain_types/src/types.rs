@@ -23099,7 +23099,7 @@ mod sender_details_tests {
             sender.date_of_birth = secret(date_of_birth);
             assert!(
                 convert(Some(SenderType::Individual(sender))).is_err(),
-                "{date_of_birth} should be rejected"
+                "invalid date_of_birth should be rejected"
             );
         }
     }
