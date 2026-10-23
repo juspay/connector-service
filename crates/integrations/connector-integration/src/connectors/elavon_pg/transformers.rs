@@ -1108,10 +1108,10 @@ fn parse_expiry(
 /// (02/01/00) are translated; a missing or unknown ECI is an error rather than a guess
 /// at how well the shopper was authenticated.
 fn wallet_eci(eci: Option<&str>) -> Result<String, error_stack::Report<IntegrationError>> {
-    match eci.map(|eci| eci.trim_start_matches('0')) {
-        Some("5") | Some("2") => Ok("5".to_string()),
-        Some("6") | Some("1") => Ok("6".to_string()),
-        Some("7") | Some("") => Ok("7".to_string()),
+    match eci.map(str::trim) {
+        Some("5" | "05" | "2" | "02") => Ok("5".to_string()),
+        Some("6" | "06" | "1" | "01") => Ok("6".to_string()),
+        Some("7" | "07" | "0" | "00") => Ok("7".to_string()),
         _ => Err(error_stack::report!(IntegrationError::MissingRequiredField {
             field_name: "wallet.eci_indicator",
             context: IntegrationErrorContext {
@@ -2674,6 +2674,8 @@ mod tests {
     #[test]
     fn missing_or_unknown_eci_is_an_error_not_a_guess() {
         assert!(wallet_eci(None).is_err());
+        assert!(wallet_eci(Some("")).is_err());
+        assert!(wallet_eci(Some("  ")).is_err());
         assert!(wallet_eci(Some("03")).is_err());
         assert!(wallet_eci(Some("garbage")).is_err());
     }
