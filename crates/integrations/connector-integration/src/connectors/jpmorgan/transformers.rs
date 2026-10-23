@@ -514,7 +514,9 @@ fn map_payment_channel_to_jpmorgan_merchant_sales_channel_name(
     }
 }
 
-fn get_statement_descriptor(descriptor: Option<&domain_types::connector_types::BillingDescriptor>) -> Option<String> {
+fn get_statement_descriptor(
+    descriptor: Option<&domain_types::connector_types::BillingDescriptor>,
+) -> Option<String> {
     descriptor.and_then(|descriptor| descriptor.statement_descriptor.clone())
 }
 
@@ -1620,7 +1622,11 @@ fn get_partial_authorization_amounts(
     capture_method: Option<CaptureMethod>,
     enable_partial_authorization: Option<bool>,
     currency: common_enums::Currency,
-) -> (Option<common_utils::types::Money>, Option<common_utils::types::Money>, Option<common_utils::types::Money>) {
+) -> (
+    Option<common_utils::types::Money>,
+    Option<common_utils::types::Money>,
+    Option<common_utils::types::Money>,
+) {
     if response.partial_authorization != Some(true) {
         return (None, None, None);
     }
@@ -1629,7 +1635,10 @@ fn get_partial_authorization_amounts(
         Some(CaptureMethod::Manual) | Some(CaptureMethod::ManualMultiple) => {
             (None, response.amount)
         }
-        _ => (response.amount, Some(common_utils::types::MinorUnit::zero())),
+        _ => (
+            response.amount,
+            Some(common_utils::types::MinorUnit::zero()),
+        ),
     };
 
     let amount_authorized = enable_partial_authorization
