@@ -207,6 +207,9 @@ pub struct AddressDetails {
     /// The address state
     pub state: Option<Secret<String>>,
 
+    /// ISO 3166-2 subdivision code for the address state.
+    pub state_code_iso: Option<Secret<String>>,
+
     /// The first name for the address
     pub first_name: Option<Secret<String>>,
 
@@ -259,6 +262,7 @@ impl AddressDetails {
                 line3: self.line3.or(other.line3.clone()),
                 zip: self.zip.or(other.zip.clone()),
                 state: self.state.or(other.state.clone()),
+                state_code_iso: self.state_code_iso.or(other.state_code_iso.clone()),
                 origin_zip: self.origin_zip.clone().or(other.origin_zip.clone()),
             }
         } else {

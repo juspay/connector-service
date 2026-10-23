@@ -17,7 +17,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
-    router_data::{ConnectorSpecificConfig, ErrorResponse, FlowStatus},
+    router_data::{ConnectorResponseData, ConnectorSpecificConfig, ErrorResponse, FlowStatus},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -307,6 +307,15 @@ pub struct PacoShippingAddress {
     pub ship_addr_line3: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ship_addr_post_code: Option<Secret<String>>,
+}
+
+fn select_paco_billing_state(
+    state_code_iso: Option<Secret<String>>,
+    state: Option<Secret<String>>,
+) -> Option<Secret<String>> {
+    state_code_iso
+        .filter(|state| state.peek().chars().count() <= 3)
+        .or_else(|| state.filter(|state| state.peek().chars().count() <= 3))
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -927,9 +936,10 @@ where
             bill_addr_line2: common.get_optional_billing_line2(),
             bill_addr_line3: common.get_optional_billing_line3(),
             bill_addr_post_code: common.get_optional_billing_zip(),
-            bill_addr_state: common
-                .get_optional_billing_state()
-                .filter(|state| state.peek().chars().count() <= 3),
+            bill_addr_state: select_paco_billing_state(
+                common.get_optional_billing_state_code_iso(),
+                common.get_optional_billing_state(),
+            ),
         });
 
     let paco_shipping_address = common
@@ -1572,6 +1582,8 @@ pub struct PacoPaymentResultBlock {
     #[serde(default)]
     pub order_no: Option<String>,
     #[serde(default)]
+    pub approval_code: Option<String>,
+    #[serde(default)]
     pub controller_internal_id: Option<String>,
     #[serde(default)]
     pub payment_status_info: Option<PacoPaymentStatusInfo>,
@@ -1675,6 +1687,7 @@ impl TwocTwopPacoNonUiResponse {
                 invoice_no2c2p: data.invoice_no2c2p.clone(),
                 order_no: data.order_no.clone(),
                 controller_internal_id: None,
+                approval_code: None,
                 payment_status_info: data.payment_status_info.clone(),
                 prior_payment_response_details: data.psp_response.clone(),
                 payment_page: None,
@@ -1705,6 +1718,7 @@ where
         } = item;
         let result = response.merged_result();
         let api_response = response.api_response.clone();
+        let approval_code = result.and_then(|block| block.approval_code.clone());
 
         let (status, redirection_data, connector_txn_id, connector_response_reference_id, prior) =
             match result {
@@ -1818,6 +1832,12 @@ where
                 status,
                 raw_connector_response: serde_json::to_string(&response).ok().map(Secret::new),
                 raw_connector_status,
+                connector_response: approval_code.and_then(|code| {
+                    router_data
+                        .resource_common_data
+                        .payment_method_type
+                        .map(|pmt| ConnectorResponseData::with_auth_code(code, pmt))
+                }),
                 ..router_data.resource_common_data
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -2180,6 +2200,8 @@ pub struct PacoInquiryData {
     #[serde(default)]
     pub order_no: Option<String>,
     #[serde(default)]
+    pub approval_code: Option<String>,
+    #[serde(default)]
     pub credit_card_authenticated_details: Option<PacoCreditCardAuthenticatedDetails>,
 }
 
@@ -2267,6 +2289,7 @@ impl TryFrom<ResponseRouterData<TwocTwopPacoInquiryResponse, Self>>
             .as_ref()
             .and_then(|d| d.invoice_no2c2p.clone());
         let order = response.data.as_ref().and_then(|d| d.order_no.clone());
+        let approval_code = response.data.as_ref().and_then(|d| d.approval_code.clone());
 
         if matches!(status, AttemptStatus::Failure) {
             let (code, message) = error_code_message(&response.api_response, &None);
@@ -2307,6 +2330,12 @@ impl TryFrom<ResponseRouterData<TwocTwopPacoInquiryResponse, Self>>
                 status,
                 raw_connector_response: serde_json::to_string(&response).ok().map(Secret::new),
                 raw_connector_status,
+                connector_response: approval_code.and_then(|code| {
+                    router_data
+                        .resource_common_data
+                        .payment_method_type
+                        .map(|pmt| ConnectorResponseData::with_auth_code(code, pmt))
+                }),
                 ..router_data.resource_common_data
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -2839,5 +2868,47 @@ impl TryFrom<ResponseRouterData<TwocTwopPacoRefundResponse, Self>>
             },
             ..router_data
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::select_paco_billing_state;
+    use hyperswitch_masking::{PeekInterface, Secret};
+
+    #[test]
+    fn uses_short_legacy_state_when_iso_code_is_too_long() {
+        let state = select_paco_billing_state(
+            Some(Secret::new("US-CA".to_string())),
+            Some(Secret::new("CA".to_string())),
+        );
+
+        assert_eq!(
+            state.map(|value| value.peek().clone()),
+            Some("CA".to_string())
+        );
+    }
+
+    #[test]
+    fn drops_long_values_when_no_short_state_is_available() {
+        let state = select_paco_billing_state(
+            Some(Secret::new("TH-10".to_string())),
+            Some(Secret::new("Bangkok".to_string())),
+        );
+
+        assert!(state.is_none());
+    }
+
+    #[test]
+    fn prefers_short_iso_code_over_legacy_state() {
+        let state = select_paco_billing_state(
+            Some(Secret::new("CA".to_string())),
+            Some(Secret::new("California".to_string())),
+        );
+
+        assert_eq!(
+            state.map(|value| value.peek().clone()),
+            Some("CA".to_string())
+        );
     }
 }
