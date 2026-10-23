@@ -1646,6 +1646,13 @@ message CardConnectorResponse {
   optional string domestic_network = 4; // Domestic (co-branded) card network
   optional string auth_code =
       5; // Unique authorisation code generated for the payment
+  optional CardNetwork processor_card_network = 6; // Normalized network returned by the processor
+  optional string card_subtype = 7; // The card's product/subtype
+  optional CardSegmentType card_segment_type = 8; // Consumer or commercial segment
+  optional FundingSource funding_source = 9; // The card's funding source
+  optional CardType card_type = 10; // Credit, debit, prepaid, or charge
+  optional string issuer_name = 11; // The name of the card issuer
+  optional CountryAlpha2 issuer_country = 12; // The issuer's ISO alpha-2 country
 }
 
 // Additional card information for payment processing.
@@ -2805,6 +2812,9 @@ message PaymentServiceVoidRequest {
   // (platform fees, transfers, etc.), read only by connectors still on the old
   // split_payments contract (e.g. Stripe, Adyen).
   optional SplitPaymentsDetails split_payments = 13;
+
+  // Original payment method, for connectors that require it again on void (e.g. Worldpay RAFT).
+  optional PaymentMethod payment_method = 14;
 }
 
 // Response message for a payment void operation
@@ -3094,6 +3104,9 @@ message PaymentServiceCaptureRequest {
   // Unified, connector-agnostic split settlement: a marketplace/platform cut plus
   // N per-vendor splits. Supersedes split_payments; new connectors read this field.
   optional SplitSettlement split_settlement = 15;
+
+  // Original payment method, for connectors that require it again on capture (e.g. Worldpay RAFT).
+  optional PaymentMethod payment_method = 16;
 }
 
 // Response message for a payment capture operation
@@ -3267,7 +3280,7 @@ message PaymentServiceRefundRequest {
   // Connector-side identifier for the original payment that this refund targets.
   optional string connector_order_id = 18;
 
-  // Optional typed payment method (e.g. wallet number for direct-wallet refunds).
+  // Original payment method, for connectors that require it again on refund (e.g. Worldpay RAFT).
   optional PaymentMethod payment_method = 19;
 
   // Split refund data for platform fee reversals and transfers
@@ -4130,6 +4143,9 @@ message PaymentServiceIncrementalAuthorizationRequest {
 
   // Network transaction ID returned by the original authorization.
   optional string network_transaction_id = 9;
+
+  // Original payment method, for connectors that require it again on an increase (e.g. Worldpay RAFT).
+  optional PaymentMethod payment_method = 10;
 }
 
 // Response message for incremental authorization
