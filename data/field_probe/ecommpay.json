@@ -181,13 +181,13 @@
           }
         },
         "sample": {
-          "url": "https://api.ecommpay.com/v2/payment/card/sale",
+          "url": "https://api.ecommpay.com/v2/payment/applepay/sale",
           "method": "Post",
           "headers": {
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"general\":{\"project_id\":12345,\"payment_id\":\"probe_txn_001\",\"signature\":\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"},\"customer\":{\"id\":\"cust_probe_123\",\"ip_address\":\"203.0.113.10\",\"screen_res\":\"1920x1080\",\"shipping\":{\"country\":\"US\",\"region\":\"WA\",\"city\":\"Seattle\",\"address\":\"12 Main Street\",\"postal\":\"98101\"}},\"payment\":{\"amount\":1000,\"currency\":\"USD\"},\"return_url\":{\"success\":\"https://example.com/payment/complete\",\"decline\":\"https://example.com/payment/return\"},\"card\":{\"pan\":\"4111111111111111\",\"year\":2030,\"month\":3},\"token_data\":{\"token_type\":\"network_token\",\"cryptogram\":\"AAAAAA==\",\"eci\":\"05\"},\"merchant\":{\"descriptor\":\"PROBE DESCRIPTOR\"},\"receipt_data\":{\"total_tax_amount\":100},\"recurring\":{\"register\":true,\"type\":\"U\"}}"
+          "body": "{\"general\":{\"project_id\":12345,\"payment_id\":\"probe_txn_001\",\"signature\":\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"},\"customer\":{\"id\":\"cust_probe_123\",\"ip_address\":\"203.0.113.10\",\"screen_res\":\"1920x1080\",\"shipping\":{\"country\":\"US\",\"region\":\"WA\",\"city\":\"Seattle\",\"address\":\"12 Main Street\",\"postal\":\"98101\"}},\"payment\":{\"amount\":1000,\"currency\":\"USD\"},\"return_url\":{\"success\":\"https://example.com/payment/complete\",\"decline\":\"https://example.com/payment/return\"},\"etoken\":{\"type\":\"apple\",\"decrypted_token\":{\"applicationPrimaryAccountNumber\":\"4111111111111111\",\"applicationExpirationDate\":\"300331\",\"currencyCode\":\"840\",\"transactionAmount\":1000,\"paymentDataType\":\"3DSecure\",\"deviceManufacturerIdentifier\":\"040010030273\",\"paymentData\":{\"onlinePaymentCryptogram\":\"AAAAAA==\",\"eciIndicator\":\"05\"}}},\"merchant\":{\"descriptor\":\"PROBE DESCRIPTOR\"},\"receipt_data\":{\"total_tax_amount\":100},\"recurring\":{\"register\":true,\"type\":\"U\"}}"
         }
       },
       "ApplePayThirdPartySdk": {
@@ -487,6 +487,7 @@
           },
           "capture_method": "AUTOMATIC",
           "customer": {
+            "email": "test@example.com",
             "connector_customer_id": "cust_probe_123"
           },
           "address": {
@@ -527,13 +528,13 @@
           }
         },
         "sample": {
-          "url": "https://api.ecommpay.com/v2/payment/card/sale",
+          "url": "https://api.ecommpay.com/v2/payment/googlepay/sale",
           "method": "Post",
           "headers": {
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"general\":{\"project_id\":12345,\"payment_id\":\"probe_txn_001\",\"signature\":\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"},\"customer\":{\"id\":\"cust_probe_123\",\"ip_address\":\"203.0.113.10\",\"screen_res\":\"1920x1080\",\"shipping\":{\"country\":\"US\",\"region\":\"WA\",\"city\":\"Seattle\",\"address\":\"12 Main Street\",\"postal\":\"98101\"}},\"payment\":{\"amount\":1000,\"currency\":\"USD\"},\"return_url\":{\"success\":\"https://example.com/payment/complete\",\"decline\":\"https://example.com/payment/return\"},\"card\":{\"pan\":\"4111111111111111\",\"year\":2030,\"month\":3},\"token_data\":{\"token_type\":\"network_token\",\"cryptogram\":\"AAAAAA==\",\"eci\":\"05\"},\"merchant\":{\"descriptor\":\"PROBE DESCRIPTOR\"},\"receipt_data\":{\"total_tax_amount\":100},\"recurring\":{\"register\":true,\"type\":\"U\"}}"
+          "body": "{\"general\":{\"project_id\":12345,\"payment_id\":\"probe_txn_001\",\"signature\":\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"},\"customer\":{\"id\":\"cust_probe_123\",\"ip_address\":\"203.0.113.10\",\"email\":\"test@example.com\",\"screen_res\":\"1920x1080\",\"shipping\":{\"country\":\"US\",\"region\":\"WA\",\"city\":\"Seattle\",\"address\":\"12 Main Street\",\"postal\":\"98101\"}},\"payment\":{\"amount\":1000,\"currency\":\"USD\"},\"return_url\":{\"success\":\"https://example.com/payment/complete\",\"decline\":\"https://example.com/payment/return\"},\"etoken\":{\"google_gateway_type\":\"gateway\",\"google_gateway_id\":\"ecommpay\",\"google_tokenization_type\":\"PAYMENT_GATEWAY\",\"decrypted_token\":{\"messageExpiration\":0000000000000,\"paymentMethodDetails\":{\"pan\":\"4111111111111111\",\"expirationMonth\":3,\"expirationYear\":2030,\"eciIndicator\":\"05\",\"cryptogram\":\"AAAAAA==\",\"authMethod\":\"CRYPTOGRAM_3DS\"}}},\"merchant\":{\"descriptor\":\"PROBE DESCRIPTOR\"},\"receipt_data\":{\"total_tax_amount\":100},\"recurring\":{\"register\":true,\"type\":\"U\"}}"
         }
       },
       "GooglePayThirdPartySdk": {
