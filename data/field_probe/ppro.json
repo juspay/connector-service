@@ -748,7 +748,10 @@
           },
           "capture_method": "AUTOMATIC",
           "address": {
-            "billing_address": {}
+            "billing_address": {
+              "first_name": "John",
+              "country_alpha2_code": "US"
+            }
           },
           "auth_type": "NO_THREE_DS",
           "return_url": "https://example.com/return",
@@ -764,7 +767,7 @@
             "request-idempotency-key": "probe_txn_001",
             "via": "HyperSwitch"
           },
-          "body": "{\"paymentMethod\":\"WECHATPAY\",\"paymentMedium\":\"ECOMMERCE\",\"merchantPaymentChargeReference\":\"probe_txn_001\",\"amount\":{\"currency\":\"USD\",\"value\":1000},\"consumer\":{},\"authenticationSettings\":[{\"type\":\"REDIRECT\",\"settings\":{\"returnUrl\":\"https://example.com/return\"}}],\"webhooksUrl\":\"https://example.com/webhook\"}"
+          "body": "{\"paymentMethod\":\"WECHATPAY\",\"paymentMedium\":\"ECOMMERCE\",\"merchantPaymentChargeReference\":\"probe_txn_001\",\"amount\":{\"currency\":\"USD\",\"value\":1000},\"consumer\":{\"name\":\"John\",\"country\":\"US\"},\"authenticationSettings\":[{\"type\":\"SCAN_CODE\"}],\"webhooksUrl\":\"https://example.com/webhook\"}"
         }
       },
       "Webpay": {
