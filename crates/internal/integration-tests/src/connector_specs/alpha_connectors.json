@@ -69,7 +69,9 @@
     "netcetera": {},
     "nexinets": {},
     "nexixpay": {},
-    "nmi": {},
+    "nmi": {
+      "reason": "No NMI sandbox credentials are configured in CI, so certification cannot run; flows are certified locally against the NMI sandbox with the flat NmiConfig credential shape (api_key, public_key). Still uncovered: signed webhook positives (no NMI webhook signing key, and the test harness has no NMI signer), Apple Pay / Google Pay NMI-side decryption (no device or gateway-merchant wallet tokens), and disputes (NMI has no dispute API). Remove this entry once CI holds NMI credentials including a webhook_secret."
+    },
     "noon": {},
     "novalnet": {},
     "nuvei": {},
