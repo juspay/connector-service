@@ -4718,6 +4718,11 @@ impl_enum_foreign_from! {
         Business => Business,
         First => First,
     },
+    Gender => Gender {
+        M => Male,
+        F => Female,
+        X => Other,
+    },
     DepositPaymentType => DepositPaymentType {
         Cash => Cash,
         CreditCard => CreditCard,
@@ -5328,13 +5333,18 @@ impl ForeignTryFrom<grpc_payment_types::Traveller> for connector_types::Travelle
     fn foreign_try_from(
         traveller: grpc_payment_types::Traveller,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        // Read enum getters (which borrow `traveller`) before moving fields out.
+        let gender = Option::<common_enums::Gender>::foreign_from(traveller.gender());
         Ok(Self {
             first_name: traveller.first_name,
             last_name: traveller.last_name,
             phone_number: traveller.phone_number,
             date_of_birth: traveller.date_of_birth,
-            document: traveller.document.as_ref().and_then(map_customer_document_details),
-            gender: traveller.gender,
+            document: traveller
+                .document
+                .as_ref()
+                .and_then(map_customer_document_details),
+            gender,
             loyalty_card: traveller.loyalty_card,
             loyalty_card_issuer: traveller.loyalty_card_issuer,
         })

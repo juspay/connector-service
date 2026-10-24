@@ -97,9 +97,9 @@ pub struct PreRiskCheckRequest {
     pub merchant_details: Option<MerchantDetails>,
     /// Payment method sub-type (e.g. `Card`, `GooglePay`, `UpiCollect`) for risk scoring.
     pub payment_method_type: Option<PaymentMethodType>,
-    /// Billing-side identity document (CPF/CNPJ) — ClearSale `billing.primaryDocument`.
+    /// Billing-side identity document (CPF/CNPJ).
     pub billing_document_data: Option<CustomerDocumentDetails>,
-    /// Shipping/buyer identity document — ClearSale `shipping.primaryDocument`.
+    /// Shipping/buyer identity document.
     /// Falls back to the billing document when absent.
     pub shipping_document_data: Option<CustomerDocumentDetails>,
     /// Domain-specific order context (travel, hotel, airline…) as a typed
@@ -133,9 +133,9 @@ pub struct PostRiskCheckRequest {
     pub connector_transaction_id: Option<String>,
     pub payment_connector: Option<grpc_api_types::payments::Connector>,
     pub address: Option<PaymentAddress>,
-    /// Billing-side identity document (CPF/CNPJ) — ClearSale `billing.primaryDocument`.
+    /// Billing-side identity document (CPF/CNPJ).
     pub billing_document_data: Option<CustomerDocumentDetails>,
-    /// Shipping/buyer identity document — ClearSale `shipping.primaryDocument`.
+    /// Shipping/buyer identity document.
     pub shipping_document_data: Option<CustomerDocumentDetails>,
     pub payment_method_type: Option<PaymentMethodType>,
     pub domain_data: Option<DomainData>,

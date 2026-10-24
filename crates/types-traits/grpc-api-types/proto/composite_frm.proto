@@ -79,10 +79,10 @@ message CompositeFrmPreRiskCheckRequest {
   // Merchant details (id + MCC) for risk scoring.
   optional MerchantDetails merchant_details = 15;
 
-  // Billing-side identity document (CPF/CNPJ) — billing.primaryDocument.
+  // Billing-side identity document (CPF/CNPJ).
   optional CustomerDocumentDetails billing_document_data = 16;
 
-  // Shipping/buyer identity document — shipping.primaryDocument.
+  // Shipping/buyer identity document.
   optional CustomerDocumentDetails shipping_document_data = 17;
 
   // Domain-specific order context (travel, hotel, airline…) as a typed
@@ -138,17 +138,14 @@ message CompositeFrmPostRiskCheckRequest {
   // Billing / shipping address information
   optional PaymentAddress address = 15;
 
-  // Billing-side identity document (CPF/CNPJ) — billing.primaryDocument.
+  // Billing-side identity document (CPF/CNPJ)
   optional CustomerDocumentDetails billing_document_data = 16;
 
-  // Shipping/buyer identity document — shipping.primaryDocument.
+  // Shipping/buyer identity document
   optional CustomerDocumentDetails shipping_document_data = 17;
 
   // Browser/device information for risk scoring (same as CompositeFrmPreRiskCheckRequest).
   optional BrowserInformation browser_info = 18;
-
-  // Merchant details (id + MCC) for risk scoring (same as CompositeFrmPreRiskCheckRequest).
-  optional MerchantDetails merchant_details = 20;
 
   // Domain-specific order context (travel, hotel, airline…) as a typed object
   // (same as CompositeFrmPreRiskCheckRequest).

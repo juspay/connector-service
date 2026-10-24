@@ -5160,11 +5160,11 @@ pub struct HotelSegment {
     pub host: Option<HostDetails>,
     /// Room rate per night, excluding tax.
     pub daily_rate: Option<common_utils::types::Money>,
-    /// State / province of the property (UF for BR) — ClearSale hotels[].state.
+    /// State / province of the property (UF for BR).
     pub hotel_state: Option<String>,
-    /// Reservation creation timestamp (RFC 3339) — ClearSale hotels[].reservationDate.
+    /// Reservation creation timestamp (RFC 3339).
     pub reservation_date_time: Option<String>,
-    /// Reservation hold expiry timestamp (RFC 3339) — ClearSale hotels[].reserveExpirationDate.
+    /// Reservation hold expiry timestamp (RFC 3339).
     pub reservation_expires_date_time: Option<String>,
 }
 
@@ -5212,14 +5212,13 @@ pub struct TravelSegment {
     pub travel_class: Option<common_enums::TravelClass>,
     /// Passenger details for this leg.
     pub passengers: Vec<Traveller>,
-    /// Arrival timestamp (RFC 3339) — ClearSale connections[].arriving.
+    /// Arrival timestamp (RFC 3339).
     pub arrival_date_time: Option<String>,
-    /// Boarding gate opening timestamp (RFC 3339) — ClearSale connections[].boarding.
+    /// Boarding gate opening timestamp (RFC 3339).
     pub boarding_date_time: Option<String>,
-    /// Departure timestamp (RFC 3339) — ClearSale connections[].date.
+    /// Departure timestamp (RFC 3339).
     pub departure_date_time: Option<String>,
-    /// Trip / service / coach / flight number —
-    /// ClearSale connections[].identificationNumber when numeric.
+    /// Trip / service / coach / flight number.
     pub identification_number: Option<String>,
 }
 
@@ -5235,13 +5234,13 @@ pub struct Traveller {
     /// Passenger's date of birth.
     pub date_of_birth: Option<Secret<String>>,
     /// Passenger identity document, when collected per-traveller rather than
-    /// at order level — ClearSale passengers[].identificationType/Number.
+    /// at order level.
     pub document: Option<crate::payment_method_data::CustomerDocumentDetails>,
-    /// M / F / X — ClearSale passengers[].gender.
-    pub gender: Option<String>,
-    /// Passenger loyalty / frequent-traveller card number — ClearSale mileCard.
+    /// Passenger gender.
+    pub gender: Option<common_enums::Gender>,
+    /// Passenger loyalty / frequent-traveller card number.
     pub loyalty_card: Option<Secret<String>>,
-    /// Issuer of the loyalty card (e.g. "Smiles") — ClearSale companyMileCard.
+    /// Issuer of the loyalty card.
     pub loyalty_card_issuer: Option<String>,
 }
 
